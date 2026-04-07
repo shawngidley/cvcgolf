@@ -31,28 +31,30 @@ async function loadSalaries() {
     totalEarnings: earnings[g.id] || 0
   }));
 
-  // Update tier cards with counts
-  const tierConfig = [
-    { salary: 27, cls: 'elite', label: 'Elite' },
-    { salary: 25, cls: 'superstar', label: 'Superstar' },
-    { salary: 23, cls: 'star', label: 'Star' },
-    { salary: 21, cls: 'premium', label: 'Premium' },
-    { salary: 19, cls: 'midupper', label: 'Mid-Upper' },
-    { salary: 17, cls: 'mid', label: 'Mid' },
-    { salary: 15, cls: 'value', label: 'Value' },
-    { salary: 14, cls: 'budget', label: 'Budget' },
-    { salary: 13, cls: 'bargain', label: 'Bargain' }
-  ];
+  // Build tier cards dynamically from actual database salaries
+  const salaryGroups = {};
+  allGolfersData.forEach(g => {
+    if (!salaryGroups[g.salary]) salaryGroups[g.salary] = { tier: g.tier, count: 0 };
+    salaryGroups[g.salary].count++;
+  });
+
+  const sortedSalaries = Object.keys(salaryGroups).map(Number).sort((a, b) => b - a);
 
   const container = document.getElementById('salaryOverview');
-  container.innerHTML = tierConfig.map(t => {
-    const count = allGolfersData.filter(g => g.salary === t.salary).length;
-    return `<div class="salary-tier-card ${t.cls}">
-      <span class="tier-salary">$${t.salary}</span>
-      <span class="tier-label">${t.label}</span>
-      <span class="tier-count">${count} golfers</span>
+  container.innerHTML = sortedSalaries.map(s => {
+    const group = salaryGroups[s];
+    const cls = (group.tier || '').toLowerCase().replace(/[^a-z]/g, '');
+    return `<div class="salary-tier-card ${cls}">
+      <span class="tier-salary">$${s}</span>
+      <span class="tier-label">${group.tier || ''}</span>
+      <span class="tier-count">${group.count} golfers</span>
     </div>`;
   }).join('');
+
+  // Update tier filter dropdown to match
+  const filterEl = document.getElementById('salaryTierFilter');
+  filterEl.innerHTML = '<option value="">All Tiers</option>' +
+    sortedSalaries.map(s => `<option value="${s}">$${s} - ${salaryGroups[s].tier}</option>`).join('');
 
   renderSalaries(allGolfersData);
 }

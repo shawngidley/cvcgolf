@@ -55,6 +55,16 @@ async function loadGolfers() {
     .order('owgr');
 
   allGolfers = data || [];
+
+  // Build tier filter dynamically from actual salaries
+  const tierFilter = document.getElementById('tierFilter');
+  const salarySet = [...new Set(allGolfers.map(g => g.salary))].sort((a, b) => b - a);
+  tierFilter.innerHTML = '<option value="">All Tiers</option>' +
+    salarySet.map(s => {
+      const tier = allGolfers.find(g => g.salary === s)?.tier || '';
+      return `<option value="${s}">$${s} - ${tier}</option>`;
+    }).join('');
+
   renderGolferPool();
 }
 
