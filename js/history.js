@@ -43,11 +43,13 @@ async function loadWeekData() {
   const playerFilter = document.getElementById('playerFilter').value;
   if (!tournamentId) return;
 
+  const tid = parseInt(tournamentId);
+
   // Tournament info
   const { data: tournament } = await supabaseClient
     .from('tournaments')
     .select('*')
-    .eq('id', tournamentId)
+    .eq('id', tid)
     .single();
 
   document.getElementById('weekOverview').style.display = 'block';
@@ -59,39 +61,45 @@ async function loadWeekData() {
     ${tournament.is_major ? '<span class="t-badge badge-major">Major</span>' : ''}
   `;
 
-  // Weekly standings
-  const { data: scores } = await supabaseClient
-    .from('weekly_scores')
-    .select('*, players(name)')
-    .eq('tournament_id', tournamentId)
-    .order('total_earnings', { ascending: false });
-
-  // Compute actual salary from lineups + golfers for each player
+  // Get all players, lineups, and golfer_earnings for this tournament
+  const { data: players } = await supabaseClient.from('players').select('id, name').order('name');
   const { data: allLineups } = await supabaseClient
     .from('lineups')
-    .select('player_id, golfers(salary)')
-    .eq('tournament_id', tournamentId);
+    .select('player_id, golfer_id, slot, golfers(name, salary)')
+    .eq('tournament_id', tid);
+  const { data: golferEarnings } = await supabaseClient
+    .from('golfer_earnings')
+    .select('golfer_id, earnings')
+    .eq('tournament_id', tid);
 
-  const salaryMap = {};
-  if (allLineups) {
-    allLineups.forEach(l => {
-      salaryMap[l.player_id] = (salaryMap[l.player_id] || 0) + (l.golfers?.salary || 0);
+  // Build earnings lookup for this tournament
+  const earningsMap = {};
+  if (golferEarnings) {
+    golferEarnings.forEach(ge => {
+      earningsMap[ge.golfer_id] = parseFloat(ge.earnings || 0);
     });
   }
+
+  // Calculate weekly standings from golfer_earnings + lineups
+  const weekStandings = (players || []).map(p => {
+    const playerLineup = (allLineups || []).filter(l => l.player_id === p.id);
+    const totalEarnings = playerLineup.reduce((sum, l) => sum + (earningsMap[l.golfer_id] || 0), 0);
+    const totalSalary = playerLineup.reduce((sum, l) => sum + (l.golfers?.salary || 0), 0);
+    return { player_id: p.id, name: p.name, total_earnings: totalEarnings, total_salary: totalSalary };
+  }).sort((a, b) => b.total_earnings - a.total_earnings);
 
   const standingsCard = document.getElementById('weeklyStandingsCard');
   standingsCard.style.display = 'block';
 
   const me = getCurrentPlayer();
-  document.getElementById('weekStandingsBody').innerHTML = (scores || []).map((s, i) => {
+  document.getElementById('weekStandingsBody').innerHTML = weekStandings.map((s, i) => {
     const highlight = playerFilter && s.player_id === parseInt(playerFilter) ? 'highlight' : '';
     const isMe = me && s.player_id === me.id ? 'my-row' : '';
-    const salary = salaryMap[s.player_id] || 0;
     return `
       <tr class="${highlight} ${isMe}">
         <td class="rank-cell">${i + 1}</td>
-        <td><strong>${s.players?.name || 'Unknown'}</strong></td>
-        <td>$${salary}</td>
+        <td><strong>${s.name}</strong></td>
+        <td>$${s.total_salary}</td>
         <td>-</td>
         <td class="currency">${formatCurrency(s.total_earnings)}</td>
       </tr>`;
@@ -101,39 +109,25 @@ async function loadWeekData() {
   const detailCard = document.getElementById('lineupDetailCard');
   if (playerFilter) {
     detailCard.style.display = 'block';
-    const { data: player } = await supabaseClient.from('players').select('name').eq('id', playerFilter).single();
+    const player = players?.find(p => p.id === parseInt(playerFilter));
     document.getElementById('lineupDetailTitle').textContent = `${player?.name || 'Player'} - Lineup Detail`;
 
-    const { data: lineup } = await supabaseClient
-      .from('lineups')
-      .select('slot, golfers(name, salary)')
-      .eq('player_id', playerFilter)
-      .eq('tournament_id', tournamentId)
-      .order('slot');
+    const lineup = (allLineups || [])
+      .filter(l => l.player_id === parseInt(playerFilter))
+      .sort((a, b) => a.slot - b.slot);
 
-    if (lineup && lineup.length > 0) {
-      // Get results for these golfers
-      const golferNames = lineup.map(l => l.golfers?.name).filter(Boolean);
-      const { data: results } = await supabaseClient
-        .from('results')
-        .select('*, golfers(name)')
-        .eq('tournament_id', tournamentId);
-
-      const resultMap = {};
-      if (results) results.forEach(r => { resultMap[r.golfers?.name] = r; });
-
+    if (lineup.length > 0) {
       document.getElementById('lineupDetailBody').innerHTML = lineup.map(l => {
         const g = l.golfers;
-        const r = resultMap[g?.name];
-        const score = r ? (r.score_to_par === 0 ? 'E' : r.score_to_par > 0 ? `+${r.score_to_par}` : `${r.score_to_par}`) : '-';
+        const e = earningsMap[l.golfer_id] || 0;
         return `
           <tr>
             <td class="rank-cell">${l.slot}</td>
             <td><strong>${g?.name || '-'}</strong></td>
             <td>$${g?.salary || '-'}</td>
-            <td>${r?.finish_position || '-'}</td>
-            <td>${score}</td>
-            <td class="currency">${formatCurrency(r?.earnings || 0)}</td>
+            <td>-</td>
+            <td>-</td>
+            <td class="currency">${formatCurrency(e)}</td>
           </tr>`;
       }).join('');
     } else {

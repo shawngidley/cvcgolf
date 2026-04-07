@@ -7,14 +7,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadWeeklyGrid() {
   const { data: players } = await supabaseClient.from('players').select('id, name').order('name');
-  const { data: scores } = await supabaseClient.from('weekly_scores').select('player_id, tournament_id, total_earnings');
   const { data: tournaments } = await supabaseClient
     .from('tournaments')
     .select('id, week_number, short_name')
     .eq('is_complete', true)
     .order('sort_order');
+  const { data: lineups } = await supabaseClient.from('lineups').select('player_id, tournament_id, golfer_id');
+  const { data: golferEarnings } = await supabaseClient.from('golfer_earnings').select('golfer_id, tournament_id, earnings');
 
-  if (!players || !scores || !tournaments || tournaments.length === 0) return;
+  if (!players || !tournaments || tournaments.length === 0) return;
+
+  // Build earnings lookup
+  const earningsMap = {};
+  if (golferEarnings) {
+    golferEarnings.forEach(ge => {
+      earningsMap[`${ge.golfer_id}-${ge.tournament_id}`] = parseFloat(ge.earnings || 0);
+    });
+  }
+
+  // Helper: get player's total for a tournament from golfer_earnings + lineups
+  function getPlayerWeekTotal(playerId, tournamentId) {
+    const playerLineup = (lineups || []).filter(l => l.player_id === playerId && l.tournament_id === tournamentId);
+    return playerLineup.reduce((sum, l) => sum + (earningsMap[`${l.golfer_id}-${l.tournament_id}`] || 0), 0);
+  }
 
   // Build header
   const thead = document.querySelector('#weeklyTable thead tr');
@@ -24,9 +39,10 @@ async function loadWeeklyGrid() {
 
   // Build scoreMap
   const scoreMap = {};
-  scores.forEach(s => {
-    const key = `${s.player_id}-${s.tournament_id}`;
-    scoreMap[key] = s.total_earnings;
+  players.forEach(p => {
+    tournaments.forEach(t => {
+      scoreMap[`${p.id}-${t.id}`] = getPlayerWeekTotal(p.id, t.id);
+    });
   });
 
   // Find weekly winners
@@ -35,22 +51,22 @@ async function loadWeeklyGrid() {
     let maxEarnings = 0;
     let winnerId = null;
     players.forEach(p => {
-      const e = parseFloat(scoreMap[`${p.id}-${t.id}`] || 0);
+      const e = scoreMap[`${p.id}-${t.id}`] || 0;
       if (e > maxEarnings) { maxEarnings = e; winnerId = p.id; }
     });
-    weekWinners[t.id] = winnerId;
+    if (maxEarnings > 0) weekWinners[t.id] = winnerId;
   });
 
   // Sort players by total earnings
   const playerTotals = players.map(p => ({
     ...p,
-    total: tournaments.reduce((sum, t) => sum + parseFloat(scoreMap[`${p.id}-${t.id}`] || 0), 0)
+    total: tournaments.reduce((sum, t) => sum + (scoreMap[`${p.id}-${t.id}`] || 0), 0)
   })).sort((a, b) => b.total - a.total);
 
   const currentPlayer = getCurrentPlayer();
   document.getElementById('weeklyBody').innerHTML = playerTotals.map(p => {
     const cells = tournaments.map(t => {
-      const e = parseFloat(scoreMap[`${p.id}-${t.id}`] || 0);
+      const e = scoreMap[`${p.id}-${t.id}`] || 0;
       const isWinner = weekWinners[t.id] === p.id;
       return `<td class="currency${isWinner ? ' winner-row' : ''}">${e > 0 ? formatCurrency(e) : '-'}</td>`;
     }).join('');
@@ -61,16 +77,30 @@ async function loadWeeklyGrid() {
 
 async function loadEarningsChart() {
   const { data: players } = await supabaseClient.from('players').select('id, name').order('name');
-  const { data: scores } = await supabaseClient.from('weekly_scores').select('player_id, tournament_id, total_earnings');
   const { data: tournaments } = await supabaseClient
     .from('tournaments')
     .select('id, week_number, short_name')
     .eq('is_complete', true)
     .order('sort_order');
+  const { data: lineups } = await supabaseClient.from('lineups').select('player_id, tournament_id, golfer_id');
+  const { data: golferEarnings } = await supabaseClient.from('golfer_earnings').select('golfer_id, tournament_id, earnings');
 
-  if (!players || !scores || !tournaments || tournaments.length === 0) {
+  if (!players || !tournaments || tournaments.length === 0) {
     document.querySelector('.chart-container').innerHTML = '<p class="loading">No data for chart yet</p>';
     return;
+  }
+
+  // Build earnings lookup
+  const earningsMap = {};
+  if (golferEarnings) {
+    golferEarnings.forEach(ge => {
+      earningsMap[`${ge.golfer_id}-${ge.tournament_id}`] = parseFloat(ge.earnings || 0);
+    });
+  }
+
+  function getPlayerWeekTotal(playerId, tournamentId) {
+    const playerLineup = (lineups || []).filter(l => l.player_id === playerId && l.tournament_id === tournamentId);
+    return playerLineup.reduce((sum, l) => sum + (earningsMap[`${l.golfer_id}-${l.tournament_id}`] || 0), 0);
   }
 
   const colors = [
@@ -79,13 +109,10 @@ async function loadEarningsChart() {
     '#f39c12', '#e74c3c', '#3498db', '#9b59b6'
   ];
 
-  const scoreMap = {};
-  scores.forEach(s => { scoreMap[`${s.player_id}-${s.tournament_id}`] = parseFloat(s.total_earnings || 0); });
-
   const datasets = players.map((p, idx) => {
     let cum = 0;
     const data = tournaments.map(t => {
-      cum += scoreMap[`${p.id}-${t.id}`] || 0;
+      cum += getPlayerWeekTotal(p.id, t.id);
       return cum;
     });
     return {

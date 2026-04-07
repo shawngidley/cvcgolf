@@ -35,7 +35,7 @@ exports.handler = async (event) => {
       }, { onConflict: 'tournament_id,golfer_id' });
     }
 
-    // Recalculate weekly scores
+    // Recalculate weekly scores from golfer_earnings
     const { data: players } = await supabase.from('players').select('id');
 
     for (const player of players) {
@@ -54,14 +54,14 @@ exports.handler = async (event) => {
 
       for (const l of lineup) {
         totalSalary += l.golfers?.salary || 0;
-        const { data: result } = await supabase
-          .from('results')
+        const { data: ge } = await supabase
+          .from('golfer_earnings')
           .select('earnings')
           .eq('tournament_id', tournament_id)
           .eq('golfer_id', l.golfer_id)
           .single();
 
-        const e = parseFloat(result?.earnings || 0);
+        const e = parseFloat(ge?.earnings || 0);
         totalEarnings += e;
         if (e > bestEarnings) { bestEarnings = e; bestGolfer = l.golfers?.name || ''; }
       }
