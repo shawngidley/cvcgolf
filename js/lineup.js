@@ -173,9 +173,16 @@ function updateUI() {
     }
   }
 
-  // Enable submit if 5 picks and under cap
+  // Enable submit if 5 picks and under cap (disabled for guests)
   const submitBtn = document.getElementById('submitLineup');
-  submitBtn.disabled = selectedGolfers.length !== MAX_PICKS || salaryUsed > SALARY_CAP || isLocked;
+  if (isGuest()) {
+    submitBtn.disabled = true;
+    const msg = document.getElementById('lineupMsg');
+    msg.textContent = 'Guest accounts cannot submit lineups';
+    msg.className = 'lineup-msg error';
+  } else {
+    submitBtn.disabled = selectedGolfers.length !== MAX_PICKS || salaryUsed > SALARY_CAP || isLocked;
+  }
 
   renderGolferPool();
 }
@@ -287,6 +294,7 @@ function removeGolfer(slot) {
 }
 
 async function submitLineup() {
+  if (isGuest()) { showGuestToast(); return; }
   if (isLocked || !currentTournament) return;
   const player = getCurrentPlayer();
   const msg = document.getElementById('lineupMsg');

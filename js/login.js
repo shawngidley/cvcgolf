@@ -59,7 +59,8 @@ async function handleLogin(e) {
   localStorage.setItem('cvc_golf_player', JSON.stringify({
     id: player.id,
     name: player.name,
-    is_commissioner: player.is_commissioner
+    is_commissioner: player.is_commissioner,
+    is_guest: player.is_guest || false
   }));
 
   window.location.href = 'standings.html';

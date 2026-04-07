@@ -5,6 +5,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!player) return;
 
   document.getElementById('playerName').textContent = player.name;
+
+  if (player.is_guest) {
+    // Disable all account forms for guest
+    document.querySelectorAll('input, select, button').forEach(el => {
+      if (!el.closest('nav')) el.disabled = true;
+    });
+    document.querySelectorAll('.account-msg').forEach(el => {
+      el.textContent = 'Guest accounts cannot change settings';
+      el.className = 'account-msg error';
+      el.style.display = 'block';
+    });
+    return;
+  }
+
   await loadPreferences();
 
   document.getElementById('savePassword').addEventListener('click', savePassword);
