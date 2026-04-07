@@ -26,20 +26,6 @@ async function loadStandings() {
   const weeksPlayed = completedWeeks ? completedWeeks.length : 0;
   document.getElementById('weekInfo').textContent = `Through Week ${weeksPlayed} of 27`;
 
-  // Leader cards
-  const leaders = document.getElementById('leaderCards');
-  const medals = ['first', 'second', 'third'];
-  const icons = ['🥇', '🥈', '🥉'];
-  if (standings.length >= 3) {
-    leaders.innerHTML = standings.slice(0, 3).map((s, i) => `
-      <div class="leader-card ${medals[i]}">
-        <div class="leader-medal">${icons[i]}</div>
-        <div class="leader-name">${s.players?.name || 'Unknown'}</div>
-        <div class="leader-earnings">${formatCurrency(s.total_earnings)}</div>
-      </div>
-    `).join('');
-  }
-
   // Table
   document.getElementById('standingsBody').innerHTML = standings.map((s, i) => `
     <tr class="${i === 0 ? 'winner-row' : ''}">
