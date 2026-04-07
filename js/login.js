@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadPlayers() {
-  const { data: players } = await supabase
+  const { data: players } = await supabaseClient
     .from('players')
     .select('id, name')
     .order('name');
@@ -42,7 +42,7 @@ async function handleLogin(e) {
     return;
   }
 
-  const { data: player, error } = await supabase
+  const { data: player, error } = await supabaseClient
     .from('players')
     .select('*')
     .eq('id', playerId)

@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadPlayerDropdown() {
-  const { data: players } = await supabase.from('players').select('id, name').order('name');
+  const { data: players } = await supabaseClient.from('players').select('id, name').order('name');
   const select = document.getElementById('usagePlayerSelect');
   if (players) {
     players.forEach(p => {
@@ -29,7 +29,7 @@ async function loadUsage() {
   const playerId = document.getElementById('usagePlayerSelect').value;
   if (!playerId) return;
 
-  const { data: usage } = await supabase
+  const { data: usage } = await supabaseClient
     .from('golfer_usage')
     .select('*, golfers(name, salary, tier)')
     .eq('player_id', playerId)

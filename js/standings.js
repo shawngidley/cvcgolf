@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadStandings() {
-  const { data: standings, error } = await supabase
+  const { data: standings, error } = await supabaseClient
     .from('standings')
     .select('*, players(name)')
     .order('total_earnings', { ascending: false });
@@ -19,7 +19,7 @@ async function loadStandings() {
   }
 
   // Week info
-  const { data: completedWeeks } = await supabase
+  const { data: completedWeeks } = await supabaseClient
     .from('tournaments')
     .select('week_number')
     .eq('is_complete', true);
@@ -56,9 +56,9 @@ async function loadStandings() {
 }
 
 async function loadWeeklyGrid() {
-  const { data: players } = await supabase.from('players').select('id, name').order('name');
-  const { data: scores } = await supabase.from('weekly_scores').select('player_id, tournament_id, total_earnings');
-  const { data: tournaments } = await supabase
+  const { data: players } = await supabaseClient.from('players').select('id, name').order('name');
+  const { data: scores } = await supabaseClient.from('weekly_scores').select('player_id, tournament_id, total_earnings');
+  const { data: tournaments } = await supabaseClient
     .from('tournaments')
     .select('id, week_number, short_name')
     .eq('is_complete', true)
@@ -108,9 +108,9 @@ async function loadWeeklyGrid() {
 }
 
 async function loadEarningsChart() {
-  const { data: players } = await supabase.from('players').select('id, name').order('name');
-  const { data: scores } = await supabase.from('weekly_scores').select('player_id, tournament_id, total_earnings');
-  const { data: tournaments } = await supabase
+  const { data: players } = await supabaseClient.from('players').select('id, name').order('name');
+  const { data: scores } = await supabaseClient.from('weekly_scores').select('player_id, tournament_id, total_earnings');
+  const { data: tournaments } = await supabaseClient
     .from('tournaments')
     .select('id, week_number, short_name')
     .eq('is_complete', true)

@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadAdminDropdowns() {
-  const { data: tournaments } = await supabase
+  const { data: tournaments } = await supabaseClient
     .from('tournaments')
     .select('*')
     .order('sort_order');
@@ -46,22 +46,22 @@ function setupAdminEvents() {
 async function togglePicks(locked) {
   const id = document.getElementById('adminWeekSelect').value;
   if (!id) return;
-  await supabase.from('tournaments').update({ picks_locked: locked }).eq('id', id);
+  await supabaseClient.from('tournaments').update({ picks_locked: locked }).eq('id', id);
   showMsg('tournamentMsg', `Picks ${locked ? 'locked' : 'unlocked'}.`, 'success');
 }
 
 async function setCurrentTournament() {
   const id = document.getElementById('adminWeekSelect').value;
   if (!id) return;
-  await supabase.from('tournaments').update({ is_current: false }).neq('id', 0);
-  await supabase.from('tournaments').update({ is_current: true }).eq('id', id);
+  await supabaseClient.from('tournaments').update({ is_current: false }).neq('id', 0);
+  await supabaseClient.from('tournaments').update({ is_current: true }).eq('id', id);
   showMsg('tournamentMsg', 'Set as current tournament.', 'success');
 }
 
 async function markComplete() {
   const id = document.getElementById('adminWeekSelect').value;
   if (!id) return;
-  await supabase.from('tournaments').update({ is_complete: true, is_current: false, picks_locked: true }).eq('id', id);
+  await supabaseClient.from('tournaments').update({ is_complete: true, is_current: false, picks_locked: true }).eq('id', id);
   showMsg('tournamentMsg', 'Marked complete.', 'success');
 }
 
@@ -70,7 +70,7 @@ async function loadResultsEntry() {
   if (!tournamentId) return;
 
   // Get all golfers that were picked for this tournament
-  const { data: lineups } = await supabase
+  const { data: lineups } = await supabaseClient
     .from('lineups')
     .select('golfer_id, golfers(id, name, salary)')
     .eq('tournament_id', tournamentId);
@@ -85,7 +85,7 @@ async function loadResultsEntry() {
   const golferList = Object.values(uniqueGolfers).sort((a, b) => b.salary - a.salary);
 
   // Load existing results
-  const { data: existing } = await supabase
+  const { data: existing } = await supabaseClient
     .from('results')
     .select('*')
     .eq('tournament_id', tournamentId);
@@ -135,7 +135,7 @@ async function saveResults() {
 
   for (const [golferId, data] of Object.entries(golferData)) {
     const earnings = parseFloat(data.earnings) || 0;
-    await supabase.from('results').upsert({
+    await supabaseClient.from('results').upsert({
       tournament_id: parseInt(tournamentId),
       golfer_id: parseInt(golferId),
       finish_position: data.position || null,
@@ -152,10 +152,10 @@ async function saveResults() {
 }
 
 async function recalcWeek(tournamentId) {
-  const { data: players } = await supabase.from('players').select('id');
+  const { data: players } = await supabaseClient.from('players').select('id');
 
   for (const player of players) {
-    const { data: lineup } = await supabase
+    const { data: lineup } = await supabaseClient
       .from('lineups')
       .select('golfer_id, golfers(name, salary)')
       .eq('player_id', player.id)
@@ -170,7 +170,7 @@ async function recalcWeek(tournamentId) {
 
     for (const l of lineup) {
       totalSalary += l.golfers?.salary || 0;
-      const { data: result } = await supabase
+      const { data: result } = await supabaseClient
         .from('results')
         .select('earnings')
         .eq('tournament_id', tournamentId)
@@ -182,7 +182,7 @@ async function recalcWeek(tournamentId) {
       if (e > bestEarnings) { bestEarnings = e; bestGolfer = l.golfers?.name || ''; }
     }
 
-    await supabase.from('weekly_scores').upsert({
+    await supabaseClient.from('weekly_scores').upsert({
       player_id: player.id,
       tournament_id: tournamentId,
       total_earnings: totalEarnings,
@@ -197,10 +197,10 @@ async function recalcWeek(tournamentId) {
 }
 
 async function recalcStandings() {
-  const { data: players } = await supabase.from('players').select('id');
+  const { data: players } = await supabaseClient.from('players').select('id');
 
   for (const player of players) {
-    const { data: scores } = await supabase
+    const { data: scores } = await supabaseClient
       .from('weekly_scores')
       .select('total_earnings')
       .eq('player_id', player.id);
@@ -214,19 +214,19 @@ async function recalcStandings() {
     const avg = total / earningsArr.length;
 
     // Count weekly wins
-    const { data: allScores } = await supabase.from('weekly_scores').select('player_id, tournament_id, total_earnings');
+    const { data: allScores } = await supabaseClient.from('weekly_scores').select('player_id, tournament_id, total_earnings');
     const tournamentIds = [...new Set(scores.map((_, i) => i))]; // simplified
     let wins = 0;
 
     // Get unique tournament IDs this player participated in
-    const { data: playerScores } = await supabase
+    const { data: playerScores } = await supabaseClient
       .from('weekly_scores')
       .select('tournament_id, total_earnings')
       .eq('player_id', player.id);
 
     if (playerScores) {
       for (const ps of playerScores) {
-        const { data: weekScores } = await supabase
+        const { data: weekScores } = await supabaseClient
           .from('weekly_scores')
           .select('total_earnings')
           .eq('tournament_id', ps.tournament_id)
@@ -239,7 +239,7 @@ async function recalcStandings() {
       }
     }
 
-    await supabase.from('standings').upsert({
+    await supabaseClient.from('standings').upsert({
       player_id: player.id,
       total_earnings: total,
       weeks_played: earningsArr.length,
@@ -255,7 +255,7 @@ async function recalcStandings() {
 async function recalcEverything() {
   showMsg('recalcMsg', 'Recalculating...', 'success');
 
-  const { data: completedTournaments } = await supabase
+  const { data: completedTournaments } = await supabaseClient
     .from('tournaments')
     .select('id')
     .eq('is_complete', true);
@@ -267,12 +267,12 @@ async function recalcEverything() {
   }
 
   // Rebuild golfer usage
-  const { data: players } = await supabase.from('players').select('id');
+  const { data: players } = await supabaseClient.from('players').select('id');
   for (const player of players) {
     // Delete existing usage
-    await supabase.from('golfer_usage').delete().eq('player_id', player.id);
+    await supabaseClient.from('golfer_usage').delete().eq('player_id', player.id);
 
-    const { data: lineups } = await supabase
+    const { data: lineups } = await supabaseClient
       .from('lineups')
       .select('golfer_id')
       .eq('player_id', player.id);
@@ -283,13 +283,13 @@ async function recalcEverything() {
     lineups.forEach(l => { usage[l.golfer_id] = (usage[l.golfer_id] || 0) + 1; });
 
     for (const [golferId, count] of Object.entries(usage)) {
-      const { data: results } = await supabase
+      const { data: results } = await supabaseClient
         .from('results')
         .select('earnings, tournament_id')
         .eq('golfer_id', parseInt(golferId));
 
       // Only count earnings from tournaments this player actually picked this golfer
-      const { data: pickedTournaments } = await supabase
+      const { data: pickedTournaments } = await supabaseClient
         .from('lineups')
         .select('tournament_id')
         .eq('player_id', player.id)
@@ -300,7 +300,7 @@ async function recalcEverything() {
         .filter(r => pickedTIds.has(r.tournament_id))
         .reduce((sum, r) => sum + parseFloat(r.earnings || 0), 0);
 
-      await supabase.from('golfer_usage').upsert({
+      await supabaseClient.from('golfer_usage').upsert({
         player_id: player.id,
         golfer_id: parseInt(golferId),
         times_used: count,
@@ -316,12 +316,12 @@ async function viewLineups() {
   const tournamentId = document.getElementById('viewLineupsWeek').value;
   if (!tournamentId) return;
 
-  const { data: players } = await supabase.from('players').select('id, name').order('name');
+  const { data: players } = await supabaseClient.from('players').select('id, name').order('name');
   const tbody = document.getElementById('adminLineupsBody');
 
   let rows = '';
   for (const player of players) {
-    const { data: lineup } = await supabase
+    const { data: lineup } = await supabaseClient
       .from('lineups')
       .select('slot, golfers(name, salary)')
       .eq('player_id', player.id)

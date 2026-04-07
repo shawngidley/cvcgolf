@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadDropdowns() {
-  const { data: tournaments } = await supabase
+  const { data: tournaments } = await supabaseClient
     .from('tournaments')
     .select('*')
     .eq('is_complete', true)
@@ -23,7 +23,7 @@ async function loadDropdowns() {
     });
   }
 
-  const { data: players } = await supabase.from('players').select('id, name').order('name');
+  const { data: players } = await supabaseClient.from('players').select('id, name').order('name');
   const playerFilter = document.getElementById('playerFilter');
   if (players) {
     players.forEach(p => {
@@ -41,7 +41,7 @@ async function loadWeekData() {
   if (!tournamentId) return;
 
   // Tournament info
-  const { data: tournament } = await supabase
+  const { data: tournament } = await supabaseClient
     .from('tournaments')
     .select('*')
     .eq('id', tournamentId)
@@ -57,7 +57,7 @@ async function loadWeekData() {
   `;
 
   // Weekly standings
-  const { data: scores } = await supabase
+  const { data: scores } = await supabaseClient
     .from('weekly_scores')
     .select('*, players(name)')
     .eq('tournament_id', tournamentId)
@@ -82,10 +82,10 @@ async function loadWeekData() {
   const detailCard = document.getElementById('lineupDetailCard');
   if (playerFilter) {
     detailCard.style.display = 'block';
-    const { data: player } = await supabase.from('players').select('name').eq('id', playerFilter).single();
+    const { data: player } = await supabaseClient.from('players').select('name').eq('id', playerFilter).single();
     document.getElementById('lineupDetailTitle').textContent = `${player?.name || 'Player'} - Lineup Detail`;
 
-    const { data: lineup } = await supabase
+    const { data: lineup } = await supabaseClient
       .from('lineups')
       .select('slot, golfers(name, salary, tier)')
       .eq('player_id', playerFilter)
@@ -95,7 +95,7 @@ async function loadWeekData() {
     if (lineup && lineup.length > 0) {
       // Get results for these golfers
       const golferNames = lineup.map(l => l.golfers?.name).filter(Boolean);
-      const { data: results } = await supabase
+      const { data: results } = await supabaseClient
         .from('results')
         .select('*, golfers(name)')
         .eq('tournament_id', tournamentId);

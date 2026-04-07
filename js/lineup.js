@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadCurrentTournament() {
   // Find the next unlocked / current tournament
-  const { data: tournaments } = await supabase
+  const { data: tournaments } = await supabaseClient
     .from('tournaments')
     .select('*')
     .order('sort_order');
@@ -43,7 +43,7 @@ async function loadCurrentTournament() {
 }
 
 async function loadGolfers() {
-  const { data } = await supabase
+  const { data } = await supabaseClient
     .from('golfers')
     .select('*')
     .eq('is_active', true)
@@ -58,7 +58,7 @@ async function loadExistingLineup() {
   if (!currentTournament) return;
   const player = getCurrentPlayer();
 
-  const { data: lineup } = await supabase
+  const { data: lineup } = await supabaseClient
     .from('lineups')
     .select('*, golfers(id, name, salary, tier)')
     .eq('player_id', player.id)
@@ -211,7 +211,7 @@ async function submitLineup() {
   }
 
   // Delete existing lineup
-  await supabase
+  await supabaseClient
     .from('lineups')
     .delete()
     .eq('player_id', player.id)
@@ -225,7 +225,7 @@ async function submitLineup() {
     slot: g.slot
   }));
 
-  const { error } = await supabase.from('lineups').insert(rows);
+  const { error } = await supabaseClient.from('lineups').insert(rows);
 
   if (error) {
     msg.textContent = 'Error saving lineup: ' + error.message;

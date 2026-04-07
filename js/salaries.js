@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadSalaries() {
-  const { data: golfers } = await supabase
+  const { data: golfers } = await supabaseClient
     .from('golfers')
     .select('*')
     .eq('is_active', true)
@@ -16,12 +16,12 @@ async function loadSalaries() {
     .order('owgr');
 
   // Get pick counts from lineups
-  const { data: lineups } = await supabase.from('lineups').select('golfer_id');
+  const { data: lineups } = await supabaseClient.from('lineups').select('golfer_id');
   const pickCounts = {};
   if (lineups) lineups.forEach(l => { pickCounts[l.golfer_id] = (pickCounts[l.golfer_id] || 0) + 1; });
 
   // Get total earnings from results
-  const { data: results } = await supabase.from('results').select('golfer_id, earnings');
+  const { data: results } = await supabaseClient.from('results').select('golfer_id, earnings');
   const earnings = {};
   if (results) results.forEach(r => { earnings[r.golfer_id] = (earnings[r.golfer_id] || 0) + parseFloat(r.earnings || 0); });
 
