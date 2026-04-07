@@ -535,18 +535,6 @@ body {
 .g-usage.usage-liv { background: #fde8e8; color: #c0392b; font-size: 0.65rem; }
 .g-usage.usage-liv-maxed { background: #e0e0e0; color: #757575; font-size: 0.65rem; }
 
-.liv-note {
-  padding: 0.5rem 0.75rem;
-  margin-bottom: 0.5rem;
-  background: #fde8e8;
-  border: 1px solid #f5c6cb;
-  border-radius: var(--radius);
-  font-size: 0.78rem;
-  color: #721c24;
-  font-family: -apple-system, sans-serif;
-}
-
-.liv-note .g-usage { vertical-align: middle; }
 
 /* ===== HISTORY CONTROLS ===== */
 .history-controls, .picks-controls {
