@@ -4,6 +4,9 @@
 
 [build.environment]
   NODE_VERSION = "18"
+  TWILIO_ACCOUNT_SID = "REPLACE_WITH_YOUR_SID"
+  TWILIO_AUTH_TOKEN = "REPLACE_WITH_YOUR_TOKEN"
+  TWILIO_PHONE_NUMBER = "REPLACE_WITH_YOUR_NUMBER"
 
 [[headers]]
   for = "/*"
@@ -16,3 +19,6 @@
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
+
+[functions."send-reminders"]
+  schedule = "0 12 * * *"

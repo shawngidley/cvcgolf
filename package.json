@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "CVC Fantasy Golf League - 2026 Season",
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0"
+    "@supabase/supabase-js": "^2.39.0",
+    "twilio": "^5.0.0"
   }
 }

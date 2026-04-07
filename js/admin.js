@@ -41,6 +41,8 @@ function setupAdminEvents() {
   document.getElementById('saveResultsBtn').addEventListener('click', saveResults);
   document.getElementById('recalcBtn').addEventListener('click', recalcEverything);
   document.getElementById('viewLineupsWeek').addEventListener('change', viewLineups);
+  document.getElementById('sendTestSmsBtn').addEventListener('click', sendTestSms);
+  document.getElementById('testSmsPhone').addEventListener('input', formatTestPhone);
 }
 
 async function togglePicks(locked) {
@@ -342,6 +344,41 @@ async function viewLineups() {
   }
 
   tbody.innerHTML = rows;
+}
+
+async function sendTestSms() {
+  const raw = document.getElementById('testSmsPhone').value.replace(/\D/g, '');
+  if (raw.length !== 10) {
+    showMsg('smsMsg', 'Enter a valid 10-digit phone number.', 'error');
+    return;
+  }
+
+  showMsg('smsMsg', 'Sending...', 'success');
+
+  try {
+    const res = await fetch('/.netlify/functions/send-test-sms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone_number: '+1' + raw })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showMsg('smsMsg', data.message, 'success');
+    } else {
+      showMsg('smsMsg', data.error || 'Failed to send SMS.', 'error');
+    }
+  } catch (err) {
+    showMsg('smsMsg', 'Error: ' + err.message, 'error');
+  }
+}
+
+function formatTestPhone(e) {
+  let val = e.target.value.replace(/\D/g, '');
+  if (val.length > 10) val = val.slice(0, 10);
+  if (val.length >= 7) val = `(${val.slice(0,3)}) ${val.slice(3,6)}-${val.slice(6)}`;
+  else if (val.length >= 4) val = `(${val.slice(0,3)}) ${val.slice(3)}`;
+  else if (val.length >= 1) val = `(${val}`;
+  e.target.value = val;
 }
 
 function showMsg(id, text, type) {

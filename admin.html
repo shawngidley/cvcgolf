@@ -91,6 +91,22 @@
         <p class="admin-msg" id="recalcMsg"></p>
       </div>
 
+      <!-- Test SMS -->
+      <div class="card">
+        <h2>Test SMS (Twilio)</h2>
+        <p>Send a test text message to verify Twilio is configured correctly.</p>
+        <div class="admin-controls" style="margin-top:0.75rem;">
+          <div class="form-group" style="margin-bottom:0;">
+            <div class="phone-input-group">
+              <span class="phone-prefix">+1</span>
+              <input type="tel" id="testSmsPhone" placeholder="(555) 123-4567" style="max-width:220px;">
+            </div>
+          </div>
+          <button class="btn btn-primary" id="sendTestSmsBtn">Send Test SMS</button>
+        </div>
+        <p class="admin-msg" id="smsMsg"></p>
+      </div>
+
       <!-- Player Management -->
       <div class="card">
         <h2>View All Lineups This Week</h2>
