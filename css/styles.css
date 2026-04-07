@@ -514,6 +514,23 @@ body {
 .golfer-row .g-salary { font-weight: 700; color: var(--augusta); min-width: 35px; text-align: right; }
 .golfer-row .g-tier { font-size: 0.7rem; color: var(--gray-500); min-width: 70px; text-align: right; }
 
+/* Golfer usage badges */
+.golfer-row .g-usage {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 8px;
+  white-space: nowrap;
+  margin-left: 4px;
+}
+.g-usage.usage-green { background: #e6f4ea; color: #1e7e34; }
+.g-usage.usage-yellow { background: #fff8e1; color: #b8860b; }
+.g-usage.usage-red { background: #fde8e8; color: #c62828; }
+.g-usage.usage-major { background: #e8eaf6; color: #3949ab; font-size: 0.65rem; }
+.g-usage.usage-major-maxed { background: #e0e0e0; color: #757575; font-size: 0.65rem; }
+.golfer-row.maxed-out { opacity: 0.35; text-decoration: line-through; }
+.golfer-row.major-maxed { opacity: 0.45; }
+
 /* ===== HISTORY CONTROLS ===== */
 .history-controls, .picks-controls {
   display: flex;

@@ -2,17 +2,20 @@
 
 const SALARY_CAP = 100;
 const MAX_PICKS = 5;
+const MAX_USES = 5;
+const MAX_MAJOR_USES = 2;
 let selectedGolfers = [];
 let allGolfers = [];
 let currentTournament = null;
 let isLocked = false;
+let golferUsageMap = {};   // golfer_id -> { times_used, major_uses }
 
 document.addEventListener('DOMContentLoaded', async () => {
   const player = getCurrentPlayer();
   if (!player) return;
 
   await loadCurrentTournament();
-  await loadGolfers();
+  await Promise.all([loadGolfers(), loadGolferUsage()]);
   await loadExistingLineup();
   setupControls();
 });
@@ -52,6 +55,40 @@ async function loadGolfers() {
 
   allGolfers = data || [];
   renderGolferPool();
+}
+
+async function loadGolferUsage() {
+  const player = getCurrentPlayer();
+  if (!player) return;
+  golferUsageMap = {};
+
+  // Get overall usage from golfer_usage table
+  const { data: usage } = await supabaseClient
+    .from('golfer_usage')
+    .select('golfer_id, times_used')
+    .eq('player_id', player.id);
+
+  if (usage) {
+    usage.forEach(u => {
+      golferUsageMap[u.golfer_id] = { times_used: u.times_used, major_uses: 0 };
+    });
+  }
+
+  // Get major usage by counting lineups in major tournaments
+  const { data: majorLineups } = await supabaseClient
+    .from('lineups')
+    .select('golfer_id, tournaments!inner(is_major)')
+    .eq('player_id', player.id)
+    .eq('tournaments.is_major', true);
+
+  if (majorLineups) {
+    majorLineups.forEach(l => {
+      if (!golferUsageMap[l.golfer_id]) {
+        golferUsageMap[l.golfer_id] = { times_used: 0, major_uses: 0 };
+      }
+      golferUsageMap[l.golfer_id].major_uses++;
+    });
+  }
 }
 
 async function loadExistingLineup() {
@@ -128,15 +165,37 @@ function updateUI() {
   renderGolferPool();
 }
 
+function getUsageInfo(golferId) {
+  const usage = golferUsageMap[golferId] || { times_used: 0, major_uses: 0 };
+  return usage;
+}
+
+function getUsageClass(timesUsed) {
+  if (timesUsed >= MAX_USES) return 'usage-red';
+  if (timesUsed >= 3) return 'usage-yellow';
+  return 'usage-green';
+}
+
 function renderGolferPool() {
   const search = (document.getElementById('golferSearch')?.value || '').toLowerCase();
   const tierFilter = document.getElementById('tierFilter')?.value || '';
   const salaryRemaining = SALARY_CAP - getSalaryUsed();
   const selectedIds = new Set(selectedGolfers.map(g => g.id));
+  const isMajorWeek = currentTournament?.is_major || false;
 
   let filtered = allGolfers;
   if (search) filtered = filtered.filter(g => g.name.toLowerCase().includes(search));
   if (tierFilter) filtered = filtered.filter(g => g.salary === parseInt(tierFilter));
+
+  // Sort: available first, maxed out at bottom
+  filtered = [...filtered].sort((a, b) => {
+    const aUsage = getUsageInfo(a.id);
+    const bUsage = getUsageInfo(b.id);
+    const aMaxed = aUsage.times_used >= MAX_USES || (isMajorWeek && aUsage.major_uses >= MAX_MAJOR_USES);
+    const bMaxed = bUsage.times_used >= MAX_USES || (isMajorWeek && bUsage.major_uses >= MAX_MAJOR_USES);
+    if (aMaxed !== bMaxed) return aMaxed ? 1 : -1;
+    return b.salary - a.salary || a.owgr - b.owgr;
+  });
 
   const list = document.getElementById('golferList');
   if (filtered.length === 0) {
@@ -146,15 +205,25 @@ function renderGolferPool() {
 
   list.innerHTML = filtered.map(g => {
     const isSelected = selectedIds.has(g.id);
+    const usage = getUsageInfo(g.id);
+    const maxedOut = usage.times_used >= MAX_USES;
+    const majorMaxed = isMajorWeek && usage.major_uses >= MAX_MAJOR_USES;
     const tooExpensive = g.salary > salaryRemaining && !isSelected;
     const full = selectedGolfers.length >= MAX_PICKS && !isSelected;
-    const disabled = tooExpensive || full || isLocked;
+    const disabled = tooExpensive || full || isLocked || maxedOut || majorMaxed;
 
-    return `<div class="golfer-row ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''}"
+    const usageClass = getUsageClass(usage.times_used);
+    const usageBadge = `<span class="g-usage ${usageClass}">${usage.times_used}/${MAX_USES}</span>`;
+    const majorBadge = (isMajorWeek && usage.major_uses >= MAX_MAJOR_USES)
+      ? '<span class="g-usage usage-major-maxed">Major 2/2</span>'
+      : (isMajorWeek ? `<span class="g-usage usage-major">Major ${usage.major_uses}/2</span>` : '');
+
+    return `<div class="golfer-row ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''} ${maxedOut ? 'maxed-out' : ''} ${majorMaxed && !maxedOut ? 'major-maxed' : ''}"
       data-id="${g.id}" data-name="${g.name}" data-salary="${g.salary}" data-tier="${g.tier}">
       <span class="g-name">${g.name}</span>
+      ${majorBadge}
+      ${usageBadge}
       <span class="g-salary">$${g.salary}</span>
-      <span class="g-tier">${g.tier}</span>
     </div>`;
   }).join('');
 
