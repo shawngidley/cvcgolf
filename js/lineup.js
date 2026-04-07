@@ -75,15 +75,18 @@ async function loadGolferUsage() {
   if (!player) return;
   golferUsageMap = {};
 
-  // Get overall usage from golfer_usage table
-  const { data: usage } = await supabaseClient
-    .from('golfer_usage')
-    .select('golfer_id, times_used')
+  // Count usage directly from lineups table
+  const { data: allLineups } = await supabaseClient
+    .from('lineups')
+    .select('golfer_id')
     .eq('player_id', player.id);
 
-  if (usage) {
-    usage.forEach(u => {
-      golferUsageMap[u.golfer_id] = { times_used: u.times_used, major_uses: 0 };
+  if (allLineups) {
+    allLineups.forEach(l => {
+      if (!golferUsageMap[l.golfer_id]) {
+        golferUsageMap[l.golfer_id] = { times_used: 0, major_uses: 0 };
+      }
+      golferUsageMap[l.golfer_id].times_used++;
     });
   }
 
