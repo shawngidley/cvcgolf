@@ -89,7 +89,17 @@ async function loadWeekData() {
     const playerLineup = (allLineups || []).filter(l => l.player_id === p.id);
     const totalEarnings = playerLineup.reduce((sum, l) => sum + (earningsMap[l.golfer_id]?.earnings || 0), 0);
     const totalSalary = playerLineup.reduce((sum, l) => sum + (l.golfers?.salary || 0), 0);
-    return { player_id: p.id, name: p.name, total_earnings: totalEarnings, total_salary: totalSalary };
+
+    // Find best pick (golfer with highest earnings)
+    let bestPick = { name: '-', earnings: 0, position: '-' };
+    for (const l of playerLineup) {
+      const ge = earningsMap[l.golfer_id];
+      if (ge && ge.earnings > bestPick.earnings) {
+        bestPick = { name: l.golfers?.name || '-', earnings: ge.earnings, position: ge.position || '-' };
+      }
+    }
+
+    return { player_id: p.id, name: p.name, total_earnings: totalEarnings, total_salary: totalSalary, bestPick };
   }).sort((a, b) => b.total_earnings - a.total_earnings);
 
   const standingsCard = document.getElementById('weeklyStandingsCard');
@@ -99,15 +109,17 @@ async function loadWeekData() {
   document.getElementById('weekStandingsBody').innerHTML = weekStandings.map((s, i) => {
     const highlight = playerFilter && s.player_id === parseInt(playerFilter) ? 'highlight' : '';
     const isMe = me && s.player_id === me.id ? 'my-row' : '';
+    const bestPickText = s.bestPick.earnings > 0 ? `${s.bestPick.name} (${formatCurrency(s.bestPick.earnings)})` : '-';
     return `
       <tr class="${highlight} ${isMe}">
         <td class="rank-cell">${i + 1}</td>
         <td><strong>${s.name}</strong></td>
         <td>$${s.total_salary}</td>
-        <td>-</td>
+        <td>${bestPickText}</td>
+        <td>${s.bestPick.earnings > 0 ? s.bestPick.position : '-'}</td>
         <td class="currency">${formatCurrency(s.total_earnings)}</td>
       </tr>`;
-  }).join('') || '<tr><td colspan="5" class="loading">No scores</td></tr>';
+  }).join('') || '<tr><td colspan="6" class="loading">No scores</td></tr>';
 
   // Lineup detail for selected player
   const detailCard = document.getElementById('lineupDetailCard');
