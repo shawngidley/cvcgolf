@@ -14,7 +14,7 @@ async function loadStandings() {
 
   if (error || !standings || standings.length === 0) {
     document.getElementById('standingsBody').innerHTML =
-      '<tr><td colspan="8" class="loading">No standings data yet. Run seed.sql first.</td></tr>';
+      '<tr><td colspan="7" class="loading">No standings data yet. Run seed.sql first.</td></tr>';
     return;
   }
 
@@ -24,7 +24,7 @@ async function loadStandings() {
     .select('week_number')
     .eq('is_complete', true);
   const weeksPlayed = completedWeeks ? completedWeeks.length : 0;
-  document.getElementById('weekInfo').textContent = `Through Week ${weeksPlayed} of 27`;
+  document.getElementById('weekInfo').textContent = `Through Week ${weeksPlayed} of 21`;
 
   // Table
   document.getElementById('standingsBody').innerHTML = standings.map((s, i) => `
@@ -32,7 +32,6 @@ async function loadStandings() {
       <td class="rank-cell">${i + 1}</td>
       <td><strong>${s.players?.name || 'Unknown'}</strong></td>
       <td class="currency">${formatCurrency(s.total_earnings)}</td>
-      <td>${s.weeks_played || 0}</td>
       <td>${s.weekly_wins || 0}</td>
       <td class="currency">${formatCurrency(s.best_week)}</td>
       <td class="currency">${formatCurrency(s.worst_week)}</td>
