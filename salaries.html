@@ -68,8 +68,37 @@
   </main>
 
   <footer class="footer">
-    <p>&copy; 2026 CVC Fantasy Golf League</p>
+    <p>&copy; 2003&ndash;2026 CVC Fantasy Golf League. All rights reserved.</p>
+    <p>Website designed and developed by Shawn Gidley. <span class="footer-separator">|</span> <a href="#" onclick="document.getElementById('termsModal').classList.add('open');return false;">Terms of Use</a></p>
   </footer>
+
+  <div class="modal-overlay" id="termsModal" onclick="if(event.target===this)this.classList.remove('open')">
+    <div class="modal">
+      <button class="modal-close" onclick="document.getElementById('termsModal').classList.remove('open')">&times;</button>
+      <h2>TERMS OF USE</h2>
+      <p><strong>CVC Fantasy Golf League</strong> &bull; Effective February 1, 2026</p>
+      <h3>1. OWNERSHIP</h3>
+      <p>The CVC Fantasy Golf League system, including but not limited to its ruleset, scoring methodology, salary cap structure, golfer usage limits, playoff format, and all original content published at golf.cvcfantasysports.com, is the collective intellectual property of the CVC Fantasy Golf League, established in 2003 by the Chagrin Valley Conference. The league website has been designed and developed by Shawn Gidley (the &ldquo;Developer&rdquo;) and is maintained on behalf of the league. This system has been continuously developed and refined since 2003 through 2026.</p>
+      <h3>2. PERMITTED USE</h3>
+      <p>Access to this website is granted solely to members of the CVC Fantasy Golf League for personal, non-commercial use in connection with league participation.</p>
+      <h3>3. PROHIBITED USE</h3>
+      <p>No portion of this website, its design, ruleset, code, or content may be reproduced, copied, adapted, distributed, publicly displayed, sold, sublicensed, or used to create derivative works without the express prior written consent of the Developer.</p>
+      <h3>4. COMMERCIAL LICENSING</h3>
+      <p>Any party interested in licensing the CVC Fantasy Golf League system, ruleset, or website design for commercial purposes must contact the Developer directly at <a href="mailto:shawngidley@gmail.com">shawngidley@gmail.com</a> to discuss licensing terms.</p>
+      <h3>5. INTELLECTUAL PROPERTY NOTICE</h3>
+      <p>The league rules, scoring system, and operational design represented on this site constitute original creative and functional works protected under United States copyright law (17 U.S.C. &sect; 101 et seq.), with copyright originating in 2003. All rights reserved. Registration of copyright is pending with the U.S. Copyright Office (copyright.gov).</p>
+      <h3>6. COPYRIGHT REGISTRATION</h3>
+      <p>To learn more about U.S. copyright registration visit:</p>
+      <ul>
+        <li>Registration portal: <a href="https://copyright.gov/registration" target="_blank">copyright.gov/registration</a></li>
+        <li>Literary works guide: <a href="https://copyright.gov/registration/literary-works" target="_blank">copyright.gov/registration/literary-works</a></li>
+        <li>Computer program guide: <a href="https://copyright.gov/circs/circ61.pdf" target="_blank">copyright.gov/circs/circ61.pdf</a></li>
+        <li>File online (eCO): <a href="https://eco.copyright.gov" target="_blank">eco.copyright.gov</a></li>
+      </ul>
+      <h3>7. CHANGES</h3>
+      <p>The Developer reserves the right to update these Terms at any time. Continued use of the site constitutes acceptance of any revised Terms.</p>
+    </div>
+  </div>
 
   <script src="js/supabase-client.js"></script>
   <script src="js/auth.js"></script>
