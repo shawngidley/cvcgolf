@@ -29,7 +29,7 @@ async function loadStandings() {
   // Table
   const player = getCurrentPlayer();
   document.getElementById('standingsBody').innerHTML = standings.map((s, i) => `
-    <tr class="${i === 0 ? 'winner-row' : ''} ${player && s.player_id === player.id ? 'my-row' : ''}">
+    <tr class="${player && s.player_id === player.id ? 'my-row' : ''}">
       <td class="rank-cell">${i + 1}</td>
       <td><strong>${s.players?.name || 'Unknown'}</strong></td>
       <td class="currency">${formatCurrency(s.total_earnings)}</td>
