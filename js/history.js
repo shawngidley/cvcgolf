@@ -88,7 +88,7 @@ async function loadWeekData() {
     const isMe = me && s.player_id === me.id ? 'my-row' : '';
     const salary = salaryMap[s.player_id] || 0;
     return `
-      <tr class="${i === 0 ? 'winner-row' : ''} ${highlight} ${isMe}">
+      <tr class="${highlight} ${isMe}">
         <td class="rank-cell">${i + 1}</td>
         <td><strong>${s.players?.name || 'Unknown'}</strong></td>
         <td>$${salary}</td>
