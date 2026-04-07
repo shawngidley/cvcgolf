@@ -30,6 +30,15 @@ async function loadAdminDropdowns() {
       });
     }
   });
+
+  // Auto-select current week for View Lineups and load it
+  if (tournaments) {
+    const currentWeek = tournaments.find(t => t.is_current) || tournaments.find(t => !t.is_complete);
+    if (currentWeek) {
+      document.getElementById('viewLineupsWeek').value = currentWeek.id;
+      viewLineups();
+    }
+  }
 }
 
 function setupAdminEvents() {
