@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Standings - CVC Fantasy Golf 2026</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="standings.html" class="nav-logo">
+        <div class="nav-badge">CVC</div>
+        <span>Fantasy Golf</span>
+      </a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="standings.html" class="active">Standings</a></li>
+        <li><a href="lineup.html">Lineup</a></li>
+        <li><a href="history.html">History</a></li>
+        <li><a href="usage.html">Usage</a></li>
+        <li><a href="schedule.html">Schedule</a></li>
+        <li><a href="salaries.html">Salaries</a></li>
+        <li><a href="rules.html">Rules</a></li>
+        <li><a href="admin.html" class="nav-admin" id="adminLink" style="display:none;">Admin</a></li>
+        <li><a href="#" class="nav-logout" id="logoutLink">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="container">
+    <header class="page-header">
+      <h1>2026 Season Standings</h1>
+      <p class="subtitle" id="weekInfo">Through Week 8 of 27</p>
+    </header>
+
+    <div class="leader-cards" id="leaderCards"></div>
+
+    <div class="card">
+      <h2>Overall Standings</h2>
+      <div class="table-responsive">
+        <table class="data-table" id="standingsTable">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Player</th>
+              <th class="currency">Total Earnings</th>
+              <th>Weeks</th>
+              <th>Weekly Wins</th>
+              <th class="currency">Best Week</th>
+              <th class="currency">Worst Week</th>
+              <th class="currency">Avg/Week</th>
+            </tr>
+          </thead>
+          <tbody id="standingsBody">
+            <tr><td colspan="8" class="loading">Loading standings...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Cumulative Earnings</h2>
+      <div class="chart-container">
+        <canvas id="earningsChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Weekly Results</h2>
+      <div class="table-responsive">
+        <table class="data-table" id="weeklyTable">
+          <thead>
+            <tr>
+              <th>Player</th>
+            </tr>
+          </thead>
+          <tbody id="weeklyBody">
+            <tr><td class="loading">Loading weekly data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>&copy; 2026 CVC Fantasy Golf League</p>
+  </footer>
+
+  <script src="js/supabase-client.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/standings.js"></script>
+</body>
+</html>

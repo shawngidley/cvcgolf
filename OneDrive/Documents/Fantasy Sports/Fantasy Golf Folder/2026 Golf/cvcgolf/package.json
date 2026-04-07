@@ -1,0 +1,8 @@
+{
+  "name": "cvc-fantasy-golf-2026",
+  "version": "1.0.0",
+  "description": "CVC Fantasy Golf League - 2026 Season",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}

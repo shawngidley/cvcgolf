@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>History - CVC Fantasy Golf 2026</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="standings.html" class="nav-logo">
+        <div class="nav-badge">CVC</div>
+        <span>Fantasy Golf</span>
+      </a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="standings.html">Standings</a></li>
+        <li><a href="lineup.html">Lineup</a></li>
+        <li><a href="history.html" class="active">History</a></li>
+        <li><a href="usage.html">Usage</a></li>
+        <li><a href="schedule.html">Schedule</a></li>
+        <li><a href="salaries.html">Salaries</a></li>
+        <li><a href="rules.html">Rules</a></li>
+        <li><a href="admin.html" class="nav-admin" id="adminLink" style="display:none;">Admin</a></li>
+        <li><a href="#" class="nav-logout" id="logoutLink">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="container">
+    <header class="page-header">
+      <h1>Weekly History</h1>
+      <p class="subtitle">View lineups and results by week</p>
+    </header>
+
+    <div class="history-controls">
+      <div class="select-group">
+        <label for="weekSelect">Week:</label>
+        <select id="weekSelect">
+          <option value="">Select a week...</option>
+        </select>
+      </div>
+      <div class="select-group">
+        <label for="playerFilter">Player:</label>
+        <select id="playerFilter">
+          <option value="">All Players</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card" id="weekOverview" style="display:none;">
+      <h2 id="weekTitle"></h2>
+      <div class="week-meta" id="weekMeta"></div>
+    </div>
+
+    <div class="card" id="weeklyStandingsCard" style="display:none;">
+      <h3>Weekly Fantasy Standings</h3>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Player</th>
+              <th>Lineup (Salary)</th>
+              <th>Best Pick</th>
+              <th class="currency">Weekly Earnings</th>
+            </tr>
+          </thead>
+          <tbody id="weekStandingsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" id="lineupDetailCard" style="display:none;">
+      <h3 id="lineupDetailTitle">Lineup Details</h3>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Slot</th>
+              <th>Golfer</th>
+              <th>Salary</th>
+              <th>Finish</th>
+              <th>Score</th>
+              <th class="currency">Earnings</th>
+            </tr>
+          </thead>
+          <tbody id="lineupDetailBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>&copy; 2026 CVC Fantasy Golf League</p>
+  </footer>
+
+  <script src="js/supabase-client.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/history.js"></script>
+</body>
+</html>

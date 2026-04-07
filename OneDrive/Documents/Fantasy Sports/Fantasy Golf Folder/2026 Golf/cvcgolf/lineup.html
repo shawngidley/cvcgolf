@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Set Lineup - CVC Fantasy Golf 2026</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="standings.html" class="nav-logo">
+        <div class="nav-badge">CVC</div>
+        <span>Fantasy Golf</span>
+      </a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="standings.html">Standings</a></li>
+        <li><a href="lineup.html" class="active">Lineup</a></li>
+        <li><a href="history.html">History</a></li>
+        <li><a href="usage.html">Usage</a></li>
+        <li><a href="schedule.html">Schedule</a></li>
+        <li><a href="salaries.html">Salaries</a></li>
+        <li><a href="rules.html">Rules</a></li>
+        <li><a href="admin.html" class="nav-admin" id="adminLink" style="display:none;">Admin</a></li>
+        <li><a href="#" class="nav-logout" id="logoutLink">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="container">
+    <header class="page-header">
+      <h1>Set Your Lineup</h1>
+      <p class="subtitle" id="tournamentInfo">Loading tournament info...</p>
+    </header>
+
+    <div class="lineup-status" id="lineupStatus">
+      <div class="salary-cap">
+        <span class="cap-label">Salary Used:</span>
+        <span class="cap-amount" id="salaryUsed">$0</span>
+        <span class="cap-divider">/</span>
+        <span class="cap-total">$100</span>
+      </div>
+      <div class="picks-count">
+        <span id="picksCount">0</span>/5 Golfers Selected
+      </div>
+    </div>
+
+    <div id="lockedMessage" class="alert alert-warning" style="display:none;">
+      Picks are locked for this tournament. You can view your lineup below.
+    </div>
+
+    <div class="lineup-grid">
+      <div class="card lineup-card">
+        <h2>Your Lineup</h2>
+        <div class="lineup-slots" id="lineupSlots">
+          <div class="lineup-slot empty" data-slot="1"><span class="slot-num">1</span><span class="slot-name">Empty</span><span class="slot-salary"></span></div>
+          <div class="lineup-slot empty" data-slot="2"><span class="slot-num">2</span><span class="slot-name">Empty</span><span class="slot-salary"></span></div>
+          <div class="lineup-slot empty" data-slot="3"><span class="slot-num">3</span><span class="slot-name">Empty</span><span class="slot-salary"></span></div>
+          <div class="lineup-slot empty" data-slot="4"><span class="slot-num">4</span><span class="slot-name">Empty</span><span class="slot-salary"></span></div>
+          <div class="lineup-slot empty" data-slot="5"><span class="slot-num">5</span><span class="slot-name">Empty</span><span class="slot-salary"></span></div>
+        </div>
+        <button class="btn btn-primary btn-full" id="submitLineup" disabled>Submit Lineup</button>
+        <p class="lineup-msg" id="lineupMsg"></p>
+      </div>
+
+      <div class="card golfer-pool-card">
+        <h2>Available Golfers</h2>
+        <div class="pool-controls">
+          <input type="text" id="golferSearch" class="search-input" placeholder="Search golfers...">
+          <select id="tierFilter">
+            <option value="">All Tiers</option>
+            <option value="27">$27 - Elite</option>
+            <option value="25">$25 - Superstar</option>
+            <option value="23">$23 - Star</option>
+            <option value="21">$21 - Premium</option>
+            <option value="19">$19 - Mid-Upper</option>
+            <option value="17">$17 - Mid</option>
+            <option value="15">$15 - Value</option>
+            <option value="14">$14 - Budget</option>
+            <option value="13">$13 - Bargain</option>
+          </select>
+        </div>
+        <div class="golfer-list" id="golferList">
+          <p class="loading">Loading golfers...</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>&copy; 2026 CVC Fantasy Golf League</p>
+  </footer>
+
+  <script src="js/supabase-client.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/lineup.js"></script>
+</body>
+</html>

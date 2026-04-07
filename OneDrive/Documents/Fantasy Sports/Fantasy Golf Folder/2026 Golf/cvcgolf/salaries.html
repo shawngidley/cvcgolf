@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Salaries - CVC Fantasy Golf 2026</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="standings.html" class="nav-logo">
+        <div class="nav-badge">CVC</div>
+        <span>Fantasy Golf</span>
+      </a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="standings.html">Standings</a></li>
+        <li><a href="lineup.html">Lineup</a></li>
+        <li><a href="history.html">History</a></li>
+        <li><a href="usage.html">Usage</a></li>
+        <li><a href="schedule.html">Schedule</a></li>
+        <li><a href="salaries.html" class="active">Salaries</a></li>
+        <li><a href="rules.html">Rules</a></li>
+        <li><a href="admin.html" class="nav-admin" id="adminLink" style="display:none;">Admin</a></li>
+        <li><a href="#" class="nav-logout" id="logoutLink">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="container">
+    <header class="page-header">
+      <h1>Golfer Salaries</h1>
+      <p class="subtitle">100+ golfers across 9 salary tiers ($13 - $27)</p>
+    </header>
+
+    <div class="salary-overview" id="salaryOverview">
+      <div class="salary-tier-card elite"><span class="tier-salary">$27</span><span class="tier-label">Elite</span><span class="tier-count" id="count27">0</span></div>
+      <div class="salary-tier-card superstar"><span class="tier-salary">$25</span><span class="tier-label">Superstar</span><span class="tier-count" id="count25">0</span></div>
+      <div class="salary-tier-card star"><span class="tier-salary">$23</span><span class="tier-label">Star</span><span class="tier-count" id="count23">0</span></div>
+      <div class="salary-tier-card premium"><span class="tier-salary">$21</span><span class="tier-label">Premium</span><span class="tier-count" id="count21">0</span></div>
+      <div class="salary-tier-card midupper"><span class="tier-salary">$19</span><span class="tier-label">Mid-Upper</span><span class="tier-count" id="count19">0</span></div>
+      <div class="salary-tier-card mid"><span class="tier-salary">$17</span><span class="tier-label">Mid</span><span class="tier-count" id="count17">0</span></div>
+      <div class="salary-tier-card value"><span class="tier-salary">$15</span><span class="tier-label">Value</span><span class="tier-count" id="count15">0</span></div>
+      <div class="salary-tier-card budget"><span class="tier-salary">$14</span><span class="tier-label">Budget</span><span class="tier-count" id="count14">0</span></div>
+      <div class="salary-tier-card bargain"><span class="tier-salary">$13</span><span class="tier-label">Bargain</span><span class="tier-count" id="count13">0</span></div>
+    </div>
+
+    <div class="card">
+      <div class="pool-controls">
+        <input type="text" id="salarySearch" class="search-input" placeholder="Search golfers...">
+        <select id="salaryTierFilter">
+          <option value="">All Tiers</option>
+          <option value="27">$27 - Elite</option>
+          <option value="25">$25 - Superstar</option>
+          <option value="23">$23 - Star</option>
+          <option value="21">$21 - Premium</option>
+          <option value="19">$19 - Mid-Upper</option>
+          <option value="17">$17 - Mid</option>
+          <option value="15">$15 - Value</option>
+          <option value="14">$14 - Budget</option>
+          <option value="13">$13 - Bargain</option>
+        </select>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table" id="salaryTable">
+          <thead>
+            <tr>
+              <th>OWGR</th>
+              <th>Golfer</th>
+              <th>Salary</th>
+              <th>Tier</th>
+              <th class="currency">Season Earnings</th>
+              <th>Times Picked (League)</th>
+            </tr>
+          </thead>
+          <tbody id="salaryBody">
+            <tr><td colspan="6" class="loading">Loading salaries...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>&copy; 2026 CVC Fantasy Golf League</p>
+  </footer>
+
+  <script src="js/supabase-client.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/salaries.js"></script>
+</body>
+</html>
