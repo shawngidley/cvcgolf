@@ -49,8 +49,8 @@ function renderSalaries(golfers) {
   }
 
   tbody.innerHTML = golfers.map(g => `
-    <tr>
-      <td class="rank-cell">${g.owgr || '-'}</td>
+    <tr class="${g.is_liv ? 'liv-row' : ''}">
+      <td class="rank-cell">${g.is_liv ? 'LIV' : (g.owgr || '-')}</td>
       <td><strong>${g.name}</strong></td>
       <td><strong>$${g.salary}</strong></td>
       <td>${g.tier}</td>

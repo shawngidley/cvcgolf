@@ -531,6 +531,11 @@ body {
 .golfer-row.maxed-out { opacity: 0.35; text-decoration: line-through; }
 .golfer-row.major-maxed { opacity: 0.45; }
 
+/* LIV golfer styles */
+.data-table tbody tr.liv-row { background: #fde8e8; }
+.data-table tbody tr.liv-row:hover { background: #f8d0d0; }
+.liv-row .rank-cell { color: var(--red); font-weight: 700; }
+
 /* LIV golfer usage badges */
 .g-usage.usage-liv { background: #fde8e8; color: #c0392b; font-size: 0.65rem; }
 .g-usage.usage-liv-maxed { background: #e0e0e0; color: #757575; font-size: 0.65rem; }
