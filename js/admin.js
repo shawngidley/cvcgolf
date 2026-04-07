@@ -18,7 +18,7 @@ async function loadAdminDropdowns() {
     .select('*')
     .order('sort_order');
 
-  const selects = ['adminWeekSelect', 'resultsWeekSelect', 'viewLineupsWeek'];
+  const selects = ['adminWeekSelect', 'resultsWeekSelect', 'viewLineupsWeek', 'earningsWeekSelect'];
   selects.forEach(id => {
     const el = document.getElementById(id);
     if (el && tournaments) {
@@ -43,6 +43,9 @@ function setupAdminEvents() {
   document.getElementById('viewLineupsWeek').addEventListener('change', viewLineups);
   document.getElementById('sendTestSmsBtn').addEventListener('click', sendTestSms);
   document.getElementById('testSmsPhone').addEventListener('input', formatTestPhone);
+  document.getElementById('pullEarningsBtn').addEventListener('click', pullEarnings);
+  document.getElementById('saveEarningsBtn').addEventListener('click', saveEarnings);
+  document.getElementById('showAllEarningsBtn').addEventListener('click', toggleAllEarnings);
 }
 
 async function togglePicks(locked) {
@@ -379,6 +382,151 @@ function formatTestPhone(e) {
   else if (val.length >= 4) val = `(${val.slice(0,3)}) ${val.slice(3)}`;
   else if (val.length >= 1) val = `(${val}`;
   e.target.value = val;
+}
+
+// ===== EARNINGS SCRAPER =====
+
+let earningsData = null;
+let showAllGolfers = false;
+
+async function pullEarnings() {
+  const tournamentId = document.getElementById('earningsWeekSelect').value;
+  if (!tournamentId) {
+    showMsg('earningsMsg', 'Select a tournament first.', 'error');
+    return;
+  }
+
+  showMsg('earningsMsg', 'Fetching earnings from ESPN... This may take 30-60 seconds.', 'success');
+  document.getElementById('earningsPreview').style.display = 'none';
+  document.getElementById('pullEarningsBtn').disabled = true;
+
+  try {
+    const res = await fetch('/.netlify/functions/scrape-pga-earnings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tournament_id: parseInt(tournamentId) })
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      showMsg('earningsMsg', data.error || 'Failed to fetch earnings.', 'error');
+      document.getElementById('pullEarningsBtn').disabled = false;
+      return;
+    }
+
+    earningsData = data;
+    showAllGolfers = false;
+
+    document.getElementById('earningsEventName').textContent = `(ESPN: ${data.espn_event}${data.is_complete ? ' - Final' : ' - In Progress'})`;
+
+    renderEarningsTable();
+
+    const picked = data.results.filter(r => r.is_picked).length;
+    const lowConf = data.results.filter(r => r.is_picked && r.confidence_score < 0.8).length;
+    let msg = `Found ${data.total_golfers} golfers, ${picked} picked by league members.`;
+    if (lowConf > 0) msg += ` WARNING: ${lowConf} golfer(s) with low match confidence.`;
+    showMsg('earningsMsg', msg, lowConf > 0 ? 'error' : 'success');
+
+    document.getElementById('earningsPreview').style.display = 'block';
+  } catch (err) {
+    showMsg('earningsMsg', 'Error: ' + err.message, 'error');
+  }
+
+  document.getElementById('pullEarningsBtn').disabled = false;
+}
+
+function renderEarningsTable() {
+  if (!earningsData) return;
+
+  const filtered = showAllGolfers
+    ? earningsData.results.filter(r => r.matched_db_id && r.earnings > 0)
+    : earningsData.results.filter(r => r.is_picked);
+
+  const tbody = document.getElementById('earningsBody');
+  tbody.innerHTML = filtered.map(r => {
+    const confClass = r.confidence_score >= 0.9 ? 'success' : r.confidence_score >= 0.8 ? '' : 'error';
+    const confIcon = r.confidence_score >= 0.9 ? '✓' : r.confidence_score >= 0.8 ? '~' : '⚠';
+    return `<tr${r.confidence_score < 0.8 ? ' style="background:var(--gold-light)"' : ''}>
+      <td><strong>${r.espn_name}</strong></td>
+      <td>${r.position || '-'}</td>
+      <td>${r.score || '-'}</td>
+      <td><input type="number" class="earnings-input" data-golfer-id="${r.matched_db_id || ''}" data-espn-id="${r.espn_id}" value="${r.earnings || 0}" style="width:110px; padding:0.25rem 0.4rem; border:1px solid var(--gray-300); border-radius:var(--radius); font-size:0.85rem;"></td>
+      <td>${r.matched_db_name || '<em style="color:var(--red)">No match</em>'}</td>
+      <td class="${confClass}">${confIcon} ${(r.confidence_score * 100).toFixed(0)}%</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('showAllEarningsBtn').textContent = showAllGolfers ? 'Show Picked Only' : 'Show All Golfers';
+}
+
+function toggleAllEarnings() {
+  showAllGolfers = !showAllGolfers;
+  renderEarningsTable();
+}
+
+async function saveEarnings() {
+  const tournamentId = document.getElementById('earningsWeekSelect').value;
+  if (!tournamentId) return;
+
+  const inputs = document.querySelectorAll('#earningsBody .earnings-input');
+  const updates = [];
+
+  inputs.forEach(input => {
+    const golferId = input.dataset.golferId;
+    const earnings = parseInt(input.value) || 0;
+    if (golferId && earnings >= 0) {
+      updates.push({ golfer_id: parseInt(golferId), earnings });
+    }
+  });
+
+  if (updates.length === 0) {
+    showMsg('saveEarningsMsg', 'No earnings to save.', 'error');
+    return;
+  }
+
+  showMsg('saveEarningsMsg', 'Saving earnings...', 'success');
+  document.getElementById('saveEarningsBtn').disabled = true;
+
+  try {
+    // Save to golfer_earnings table
+    for (const u of updates) {
+      await supabaseClient.from('golfer_earnings').upsert({
+        golfer_id: u.golfer_id,
+        tournament_id: parseInt(tournamentId),
+        earnings: u.earnings,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'golfer_id,tournament_id' });
+    }
+
+    // Also update the results table (existing system)
+    for (const u of updates) {
+      // Find matching result from ESPN data for position/score
+      const espnResult = earningsData?.results?.find(r => r.matched_db_id === u.golfer_id);
+      await supabaseClient.from('results').upsert({
+        tournament_id: parseInt(tournamentId),
+        golfer_id: u.golfer_id,
+        finish_position: espnResult?.position || null,
+        score_to_par: espnResult?.score ? parseScoreToPar(espnResult.score) : 0,
+        earnings: u.earnings,
+        made_cut: u.earnings > 0 || (espnResult?.position && espnResult.position !== 'CUT')
+      }, { onConflict: 'tournament_id,golfer_id' });
+    }
+
+    // Recalculate weekly scores and standings
+    await recalcWeek(parseInt(tournamentId));
+
+    showMsg('saveEarningsMsg', `Saved ${updates.length} golfer earnings and recalculated standings!`, 'success');
+  } catch (err) {
+    showMsg('saveEarningsMsg', 'Error saving: ' + err.message, 'error');
+  }
+
+  document.getElementById('saveEarningsBtn').disabled = false;
+}
+
+function parseScoreToPar(scoreStr) {
+  if (!scoreStr || scoreStr === 'E') return 0;
+  const n = parseInt(scoreStr);
+  return isNaN(n) ? 0 : n;
 }
 
 function showMsg(id, text, type) {

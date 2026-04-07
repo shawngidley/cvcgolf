@@ -84,6 +84,46 @@
         <p class="admin-msg" id="resultsMsg"></p>
       </div>
 
+      <!-- Pull Earnings -->
+      <div class="card">
+        <h2>Pull Tournament Earnings</h2>
+        <p class="subtitle">Scrape golfer earnings from ESPN for a completed tournament</p>
+        <div class="admin-controls" style="margin-bottom: 1rem;">
+          <div class="select-group">
+            <label for="earningsWeekSelect">Tournament:</label>
+            <select id="earningsWeekSelect">
+              <option value="">Select week...</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" id="pullEarningsBtn">Pull Earnings from ESPN</button>
+        </div>
+        <p class="admin-msg" id="earningsMsg"></p>
+        <div id="earningsPreview" style="display:none;">
+          <h3 style="margin: 1rem 0 0.5rem;">Earnings Preview <span id="earningsEventName" style="font-size:0.8rem; color:var(--gray-500);"></span></h3>
+          <p style="font-size:0.8rem; color:var(--gray-500); margin-bottom:0.5rem;">Review and edit earnings before saving. Only golfers picked by league members are shown.</p>
+          <div class="table-responsive">
+            <table class="data-table" id="earningsTable">
+              <thead>
+                <tr>
+                  <th>Golfer</th>
+                  <th>Pos</th>
+                  <th>Score</th>
+                  <th>Earnings ($)</th>
+                  <th>DB Match</th>
+                  <th>Conf</th>
+                </tr>
+              </thead>
+              <tbody id="earningsBody"></tbody>
+            </table>
+          </div>
+          <div style="margin-top:1rem; display:flex; gap:0.5rem;">
+            <button class="btn btn-primary" id="saveEarningsBtn">Save Earnings & Recalculate</button>
+            <button class="btn btn-secondary" id="showAllEarningsBtn">Show All Golfers</button>
+          </div>
+          <p class="admin-msg" id="saveEarningsMsg"></p>
+        </div>
+      </div>
+
       <!-- Recalculate Standings -->
       <div class="card">
         <h2>Recalculate All Standings</h2>
