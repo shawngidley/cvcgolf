@@ -14,13 +14,16 @@ async function loadDropdowns() {
     .order('sort_order', { ascending: false });
 
   const weekSelect = document.getElementById('weekSelect');
-  if (tournaments) {
+  if (tournaments && tournaments.length > 0) {
     tournaments.forEach(t => {
       const opt = document.createElement('option');
       opt.value = t.id;
       opt.textContent = `Week ${t.week_number}: ${t.short_name}`;
       weekSelect.appendChild(opt);
     });
+    // Auto-select the most recent week and load its data
+    weekSelect.value = tournaments[0].id;
+    loadWeekData();
   }
 
   const { data: players } = await supabaseClient.from('players').select('id, name').order('name');
