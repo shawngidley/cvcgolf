@@ -31,7 +31,7 @@ async function loadSalaries() {
     totalEarnings: earnings[g.id] || 0
   }));
 
-  // Build salary cards dynamically from actual database salaries
+  // Build salary filter dropdown from actual database salaries
   const salaryGroups = {};
   allGolfersData.forEach(g => {
     if (!salaryGroups[g.salary]) salaryGroups[g.salary] = 0;
@@ -40,15 +40,6 @@ async function loadSalaries() {
 
   const sortedSalaries = Object.keys(salaryGroups).map(Number).sort((a, b) => b - a);
 
-  const container = document.getElementById('salaryOverview');
-  container.innerHTML = sortedSalaries.map(s => {
-    return `<div class="salary-card">
-      <span class="salary-card-amount">$${s}</span>
-      <span class="salary-card-count">${salaryGroups[s]} golfers</span>
-    </div>`;
-  }).join('');
-
-  // Update salary filter dropdown
   const filterEl = document.getElementById('salaryFilter');
   filterEl.innerHTML = '<option value="">All Salaries</option>' +
     sortedSalaries.map(s => `<option value="${s}">$${s}</option>`).join('');
