@@ -82,11 +82,13 @@ async function loadWeekData() {
   const standingsCard = document.getElementById('weeklyStandingsCard');
   standingsCard.style.display = 'block';
 
+  const me = getCurrentPlayer();
   document.getElementById('weekStandingsBody').innerHTML = (scores || []).map((s, i) => {
     const highlight = playerFilter && s.player_id === parseInt(playerFilter) ? 'highlight' : '';
+    const isMe = me && s.player_id === me.id ? 'my-row' : '';
     const salary = salaryMap[s.player_id] || 0;
     return `
-      <tr class="${i === 0 ? 'winner-row' : ''} ${highlight}">
+      <tr class="${i === 0 ? 'winner-row' : ''} ${highlight} ${isMe}">
         <td class="rank-cell">${i + 1}</td>
         <td><strong>${s.players?.name || 'Unknown'}</strong></td>
         <td>$${salary}</td>

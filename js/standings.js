@@ -27,8 +27,9 @@ async function loadStandings() {
   document.getElementById('weekInfo').textContent = `Through Week ${weeksPlayed} of 21`;
 
   // Table
+  const player = getCurrentPlayer();
   document.getElementById('standingsBody').innerHTML = standings.map((s, i) => `
-    <tr class="${i === 0 ? 'winner-row' : ''}">
+    <tr class="${i === 0 ? 'winner-row' : ''} ${player && s.player_id === player.id ? 'my-row' : ''}">
       <td class="rank-cell">${i + 1}</td>
       <td><strong>${s.players?.name || 'Unknown'}</strong></td>
       <td class="currency">${formatCurrency(s.total_earnings)}</td>
@@ -82,13 +83,15 @@ async function loadWeeklyGrid() {
     total: tournaments.reduce((sum, t) => sum + parseFloat(scoreMap[`${p.id}-${t.id}`] || 0), 0)
   })).sort((a, b) => b.total - a.total);
 
+  const currentPlayer = getCurrentPlayer();
   document.getElementById('weeklyBody').innerHTML = playerTotals.map(p => {
     const cells = tournaments.map(t => {
       const e = parseFloat(scoreMap[`${p.id}-${t.id}`] || 0);
       const isWinner = weekWinners[t.id] === p.id;
       return `<td class="currency${isWinner ? ' winner-row' : ''}">${e > 0 ? formatCurrency(e) : '-'}</td>`;
     }).join('');
-    return `<tr><td><strong>${p.name.split(' ').pop()}</strong></td>${cells}</tr>`;
+    const meClass = currentPlayer && p.id === currentPlayer.id ? 'my-row' : '';
+    return `<tr class="${meClass}"><td><strong>${p.name.split(' ').pop()}</strong></td>${cells}</tr>`;
   }).join('');
 }
 
