@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Salaries - CVC Fantasy Golf 2026</title>
+  <title>Weekly Results - CVC Fantasy Golf 2026</title>
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 </head>
 <body>
   <nav class="navbar">
@@ -21,11 +22,11 @@
       <ul class="nav-links" id="navLinks">
         <li><a href="standings.html">Standings</a></li>
         <li><a href="lineup.html">Lineup</a></li>
-        <li><a href="weekly-results.html">Weekly Results</a></li>
+        <li><a href="weekly-results.html" class="active">Weekly Results</a></li>
         <li><a href="history.html">History</a></li>
         <li><a href="usage.html">Usage</a></li>
         <li><a href="schedule.html">Schedule</a></li>
-        <li><a href="salaries.html" class="active">Salaries</a></li>
+        <li><a href="salaries.html">Salaries</a></li>
         <li><a href="rules.html">Rules</a></li>
         <li><a href="account.html">Account</a></li>
         <li><a href="admin.html" class="nav-admin" id="adminLink" style="display:none;">Admin</a></li>
@@ -36,34 +37,30 @@
 
   <main class="container">
     <header class="page-header">
-      <h1>Golfer Salaries</h1>
-      <p class="subtitle">100+ golfers with salaries from $13 - $27</p>
+      <h1>Weekly Results</h1>
+      <p class="subtitle">Earnings by week and cumulative totals</p>
     </header>
 
-    <div class="salary-overview" id="salaryOverview"></div>
-
     <div class="card">
-      <div class="pool-controls">
-        <input type="text" id="salarySearch" class="search-input" placeholder="Search golfers...">
-        <select id="salaryFilter">
-          <option value="">All Salaries</option>
-        </select>
-      </div>
+      <h2>Weekly Earnings Grid</h2>
       <div class="table-responsive">
-        <table class="data-table" id="salaryTable">
+        <table class="data-table" id="weeklyTable">
           <thead>
             <tr>
-              <th>OWGR</th>
-              <th>Golfer</th>
-              <th>Salary</th>
-              <th class="currency">Season Earnings</th>
-              <th>Times Picked (League)</th>
+              <th>Player</th>
             </tr>
           </thead>
-          <tbody id="salaryBody">
-            <tr><td colspan="5" class="loading">Loading salaries...</td></tr>
+          <tbody id="weeklyBody">
+            <tr><td class="loading">Loading weekly data...</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Cumulative Earnings</h2>
+      <div class="chart-container">
+        <canvas id="earningsChart"></canvas>
       </div>
     </div>
   </main>
@@ -103,6 +100,6 @@
 
   <script src="js/supabase-client.js"></script>
   <script src="js/auth.js"></script>
-  <script src="js/salaries.js"></script>
+  <script src="js/weekly-results.js"></script>
 </body>
 </html>

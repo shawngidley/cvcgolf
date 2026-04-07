@@ -7,7 +7,6 @@
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 </head>
 <body>
   <nav class="navbar">
@@ -22,6 +21,7 @@
       <ul class="nav-links" id="navLinks">
         <li><a href="standings.html" class="active">Standings</a></li>
         <li><a href="lineup.html">Lineup</a></li>
+        <li><a href="weekly-results.html">Weekly Results</a></li>
         <li><a href="history.html">History</a></li>
         <li><a href="usage.html">Usage</a></li>
         <li><a href="schedule.html">Schedule</a></li>
@@ -62,28 +62,6 @@
       </div>
     </div>
 
-    <div class="card">
-      <h2>Cumulative Earnings</h2>
-      <div class="chart-container">
-        <canvas id="earningsChart"></canvas>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Weekly Results</h2>
-      <div class="table-responsive">
-        <table class="data-table" id="weeklyTable">
-          <thead>
-            <tr>
-              <th>Player</th>
-            </tr>
-          </thead>
-          <tbody id="weeklyBody">
-            <tr><td class="loading">Loading weekly data...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
   </main>
 
   <footer class="footer">
