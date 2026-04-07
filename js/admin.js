@@ -448,8 +448,8 @@ function renderEarningsTable() {
   if (!earningsData) return;
 
   const filtered = showAllGolfers
-    ? earningsData.results.filter(r => r.matched_db_id && r.earnings > 0)
-    : earningsData.results.filter(r => r.is_picked);
+    ? earningsData.results
+    : earningsData.results.filter(r => r.earnings > 0 || r.espn_id);
 
   const golferOptions = (allGolfersCache || []).map(g => `<option value="${g.id}">${g.name}</option>`).join('');
 

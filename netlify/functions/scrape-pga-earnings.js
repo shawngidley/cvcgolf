@@ -33,26 +33,23 @@ exports.handler = async (event) => {
       return { statusCode: 404, headers: HEADERS, body: JSON.stringify({ error: 'Tournament not found' }) };
     }
 
-    // Get our golfers from the database (ones picked for this tournament)
+    // Get unique golfers picked for this tournament from lineups
     const { data: lineups } = await supabase
       .from('lineups')
       .select('golfer_id, golfers(id, name)')
       .eq('tournament_id', tournament_id);
 
-    const dbGolfers = {};
+    const pickedGolfers = {};
     if (lineups) {
       lineups.forEach(l => {
-        if (l.golfers) dbGolfers[l.golfers.id] = l.golfers.name;
+        if (l.golfers) pickedGolfers[l.golfers.id] = { id: l.golfers.id, name: l.golfers.name };
       });
     }
+    const pickedList = Object.values(pickedGolfers);
 
-    // Also get ALL golfers for broader matching
-    const { data: allGolfers } = await supabase
-      .from('golfers')
-      .select('id, name')
-      .eq('is_active', true);
-
-    const allGolferNames = (allGolfers || []).map(g => ({ id: g.id, name: g.name }));
+    if (pickedList.length === 0) {
+      return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ success: true, results: [], total_golfers: 0, picked_golfers: 0, warning: 'No golfers picked for this tournament' }) };
+    }
 
     // Step 1: Find the ESPN event for this tournament date
     const dateStr = tournament.start_date.replace(/-/g, '');
@@ -74,66 +71,74 @@ exports.handler = async (event) => {
     const eventName = espnEvent.name;
     const isComplete = espnEvent.status?.type?.completed === true;
 
-    // Step 2: Get competitor list from ESPN with names
+    // Step 2: Get competitor list from ESPN
     const competitors = espnEvent.competitions?.[0]?.competitors || [];
-
-    // Build ESPN name -> data map
     const espnGolfers = competitors.map(c => ({
       espnId: c.id,
       name: c.athlete?.displayName || c.athlete?.fullName || '',
       score: c.score || ''
     }));
 
-    // Step 3: Pre-match all ESPN golfers to our DB
-    const matchedGolfers = espnGolfers.map(eg => ({
-      ...eg,
-      match: fuzzyMatch(eg.name, allGolferNames)
-    }));
+    // Step 3: For each picked golfer, find their ESPN match
+    const matchedPicked = pickedList.map(pg => {
+      const espnMatch = findEspnMatch(pg.name, espnGolfers);
+      return { ...pg, espnMatch };
+    });
 
-    // Fetch earnings in batches of 20 to avoid rate limiting
+    // Step 4: Fetch earnings only for picked golfers that matched an ESPN competitor
     const results = [];
     const batchSize = 20;
 
-    for (let i = 0; i < matchedGolfers.length; i += batchSize) {
-      const batch = matchedGolfers.slice(i, i + batchSize);
-      const batchResults = await Promise.all(batch.map(async (eg) => {
-        try {
-          const { earnings, position } = await fetchGolferEarnings(eventId, eg.espnId);
+    for (let i = 0; i < matchedPicked.length; i += batchSize) {
+      const batch = matchedPicked.slice(i, i + batchSize);
+      const batchResults = await Promise.all(batch.map(async (pg) => {
+        if (!pg.espnMatch) {
           return {
-            espn_name: eg.name,
-            espn_id: eg.espnId,
-            score: eg.score,
+            espn_name: null,
+            espn_id: null,
+            score: null,
+            earnings: 0,
+            position: null,
+            matched_db_name: pg.name,
+            matched_db_id: pg.id,
+            confidence_score: 0,
+            is_picked: true
+          };
+        }
+        try {
+          const { earnings, position } = await fetchGolferEarnings(eventId, pg.espnMatch.espnId);
+          return {
+            espn_name: pg.espnMatch.name,
+            espn_id: pg.espnMatch.espnId,
+            score: pg.espnMatch.score,
             earnings,
             position,
-            matched_db_name: eg.match ? eg.match.name : null,
-            matched_db_id: eg.match ? eg.match.id : null,
-            confidence_score: eg.match ? eg.match.confidence : 0,
-            is_picked: eg.match ? !!dbGolfers[eg.match.id] : false
+            matched_db_name: pg.name,
+            matched_db_id: pg.id,
+            confidence_score: pg.espnMatch.confidence,
+            is_picked: true
           };
         } catch {
           return {
-            espn_name: eg.name,
-            espn_id: eg.espnId,
-            score: eg.score,
+            espn_name: pg.espnMatch.name,
+            espn_id: pg.espnMatch.espnId,
+            score: pg.espnMatch.score,
             earnings: 0,
             position: null,
-            matched_db_name: eg.match ? eg.match.name : null,
-            matched_db_id: eg.match ? eg.match.id : null,
-            confidence_score: eg.match ? eg.match.confidence : 0,
-            is_picked: eg.match ? !!dbGolfers[eg.match.id] : false
+            matched_db_name: pg.name,
+            matched_db_id: pg.id,
+            confidence_score: pg.espnMatch.confidence,
+            is_picked: true
           };
         }
       }));
       results.push(...batchResults);
     }
 
-    // Sort: picked golfers first, then by earnings desc
-    results.sort((a, b) => {
-      if (a.is_picked !== b.is_picked) return b.is_picked - a.is_picked;
-      return (b.earnings || 0) - (a.earnings || 0);
-    });
+    // Sort by earnings desc
+    results.sort((a, b) => (b.earnings || 0) - (a.earnings || 0));
 
-    const unmatched = results.filter(r => r.is_picked === false && r.confidence_score < 0.8 && r.earnings > 0);
+    const unmatched = results.filter(r => !r.espn_id);
 
     return {
       statusCode: 200,
@@ -146,7 +151,7 @@ exports.handler = async (event) => {
         tournament_id: tournament_id,
         tournament_name: tournament.name,
         total_golfers: results.length,
-        picked_golfers: results.filter(r => r.is_picked).length,
+        picked_golfers: results.length,
         unmatched_count: unmatched.length,
         results: results
       })
@@ -191,62 +196,57 @@ async function fetchGolferEarnings(eventId, competitorId) {
   return { earnings, position };
 }
 
-function fuzzyMatch(espnName, dbGolfers) {
-  if (!espnName) return null;
+// Find the best ESPN competitor match for a given DB golfer name
+function findEspnMatch(dbName, espnGolfers) {
+  if (!dbName || !espnGolfers.length) return null;
 
   const normalize = (s) => s.toLowerCase()
     .replace(/[^a-z\s]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 
-  const espnNorm = normalize(espnName);
-  const espnParts = espnNorm.split(' ');
-  const espnFirst = espnParts[0];
-  const espnLast = espnParts[espnParts.length - 1];
+  const dbNorm = normalize(dbName);
+  const dbParts = dbNorm.split(' ');
+  const dbFirst = dbParts[0];
+  const dbLast = dbParts[dbParts.length - 1];
 
   let bestMatch = null;
   let bestScore = 0;
 
-  for (const g of dbGolfers) {
-    const dbNorm = normalize(g.name);
+  for (const eg of espnGolfers) {
+    const espnNorm = normalize(eg.name);
+    if (!espnNorm) continue;
 
     // Exact match
-    if (espnNorm === dbNorm) {
-      return { id: g.id, name: g.name, confidence: 1.0 };
+    if (dbNorm === espnNorm) {
+      return { ...eg, confidence: 1.0 };
     }
 
-    const dbParts = dbNorm.split(' ');
-    const dbFirst = dbParts[0];
-    const dbLast = dbParts[dbParts.length - 1];
+    const espnParts = espnNorm.split(' ');
+    const espnFirst = espnParts[0];
+    const espnLast = espnParts[espnParts.length - 1];
 
-    // Compare last names using Levenshtein
-    const lastLev = levenshtein(espnLast, dbLast);
-    const lastMaxLen = Math.max(espnLast.length, dbLast.length);
+    // Last names must be very similar
+    const lastLev = levenshtein(dbLast, espnLast);
+    const lastMaxLen = Math.max(dbLast.length, espnLast.length);
     const lastSimilarity = 1 - (lastLev / lastMaxLen);
-
-    // Last names must be very similar (e.g. "mccarty" vs "mccarthy" = ok, "lee" vs "smith" = no)
     if (lastSimilarity < 0.7) continue;
 
-    // Compare first names using Levenshtein
-    const firstLev = levenshtein(espnFirst, dbFirst);
-    const firstMaxLen = Math.max(espnFirst.length, dbFirst.length);
+    // First names must share the same initial
+    if (dbFirst[0] !== espnFirst[0]) continue;
+
+    // First name similarity check
+    const firstLev = levenshtein(dbFirst, espnFirst);
+    const firstMaxLen = Math.max(dbFirst.length, espnFirst.length);
     const firstSimilarity = 1 - (firstLev / firstMaxLen);
 
-    // First names must share at least the same initial — reject completely different first names
-    // e.g. "matt" vs "denny" = reject, "kh" vs "min" = reject
-    if (espnFirst[0] !== dbFirst[0]) continue;
-
-    // First name must also be reasonably similar (not just same initial)
-    // Allow abbreviated names (e.g. "jt" matching "justin") but not "matt" vs "maverick"
-    const isAbbreviated = espnFirst.length <= 2 || dbFirst.length <= 2;
+    const isAbbreviated = dbFirst.length <= 2 || espnFirst.length <= 2;
     if (!isAbbreviated && firstSimilarity < 0.6) continue;
 
-    // Calculate weighted score: 40% first name, 60% last name
     let score;
-    if (espnFirst === dbFirst && espnLast === dbLast) {
+    if (dbFirst === espnFirst && dbLast === espnLast) {
       score = 0.95;
-    } else if (espnFirst === dbFirst && lastSimilarity >= 0.85) {
-      // Same first name, very similar last name (e.g. typo or accent difference)
+    } else if (dbFirst === espnFirst && lastSimilarity >= 0.85) {
       score = 0.9;
     } else {
       score = (firstSimilarity * 0.4) + (lastSimilarity * 0.6);
@@ -254,7 +254,7 @@ function fuzzyMatch(espnName, dbGolfers) {
 
     if (score > bestScore) {
       bestScore = score;
-      bestMatch = { id: g.id, name: g.name, confidence: parseFloat(score.toFixed(2)) };
+      bestMatch = { ...eg, confidence: parseFloat(score.toFixed(2)) };
     }
   }
 
