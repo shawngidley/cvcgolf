@@ -239,7 +239,7 @@ function fuzzyMatch(espnName, dbGolfers) {
     // First name must also be reasonably similar (not just same initial)
     // Allow abbreviated names (e.g. "jt" matching "justin") but not "matt" vs "maverick"
     const isAbbreviated = espnFirst.length <= 2 || dbFirst.length <= 2;
-    if (!isAbbreviated && firstSimilarity < 0.4) continue;
+    if (!isAbbreviated && firstSimilarity < 0.6) continue;
 
     // Calculate weighted score: 40% first name, 60% last name
     let score;

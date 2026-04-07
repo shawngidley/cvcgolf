@@ -388,6 +388,8 @@ function formatTestPhone(e) {
 
 let earningsData = null;
 let showAllGolfers = false;
+let allGolfersCache = null;
+let ignoredEarningsRows = new Set();
 
 async function pullEarnings() {
   const tournamentId = document.getElementById('earningsWeekSelect').value;
@@ -416,6 +418,13 @@ async function pullEarnings() {
 
     earningsData = data;
     showAllGolfers = false;
+    ignoredEarningsRows = new Set();
+
+    // Fetch all golfers for the DB Match dropdown
+    if (!allGolfersCache) {
+      const { data: golfers } = await supabaseClient.from('golfers').select('id, name').eq('is_active', true).order('name');
+      allGolfersCache = golfers || [];
+    }
 
     document.getElementById('earningsEventName').textContent = `(ESPN: ${data.espn_event}${data.is_complete ? ' - Final' : ' - In Progress'})`;
 
@@ -442,19 +451,46 @@ function renderEarningsTable() {
     ? earningsData.results.filter(r => r.matched_db_id && r.earnings > 0)
     : earningsData.results.filter(r => r.is_picked);
 
+  const golferOptions = (allGolfersCache || []).map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+
   const tbody = document.getElementById('earningsBody');
-  tbody.innerHTML = filtered.map(r => {
+  tbody.innerHTML = filtered.map((r, idx) => {
+    const isIgnored = ignoredEarningsRows.has(r.espn_id);
     const confClass = r.confidence_score >= 0.9 ? 'success' : r.confidence_score >= 0.8 ? '' : 'error';
     const confIcon = r.confidence_score >= 0.9 ? '✓' : r.confidence_score >= 0.8 ? '~' : '⚠';
-    return `<tr${r.confidence_score < 0.8 ? ' style="background:var(--gold-light)"' : ''}>
+    const rowStyle = isIgnored ? ' style="opacity:0.4; text-decoration:line-through;"' : r.confidence_score < 0.8 ? ' style="background:var(--gold-light)"' : '';
+    return `<tr${rowStyle} data-espn-id="${r.espn_id}">
       <td><strong>${r.espn_name}</strong></td>
       <td>${r.position || '-'}</td>
       <td>${r.score || '-'}</td>
-      <td><input type="number" class="earnings-input" data-golfer-id="${r.matched_db_id || ''}" data-espn-id="${r.espn_id}" value="${r.earnings || 0}" style="width:110px; padding:0.25rem 0.4rem; border:1px solid var(--gray-300); border-radius:var(--radius); font-size:0.85rem;"></td>
-      <td>${r.matched_db_name || '<em style="color:var(--red)">No match</em>'}</td>
+      <td><input type="number" class="earnings-input" data-golfer-id="${r.matched_db_id || ''}" data-espn-id="${r.espn_id}" value="${r.earnings || 0}" style="width:110px; padding:0.25rem 0.4rem; border:1px solid var(--gray-300); border-radius:var(--radius); font-size:0.85rem;"${isIgnored ? ' disabled' : ''}></td>
+      <td>
+        <select class="db-match-select" data-espn-id="${r.espn_id}" style="width:160px; padding:0.25rem 0.4rem; border:1px solid var(--gray-300); border-radius:var(--radius); font-size:0.85rem;"${isIgnored ? ' disabled' : ''}>
+          <option value="">-- No match --</option>
+          ${golferOptions}
+        </select>
+      </td>
       <td class="${confClass}">${confIcon} ${(r.confidence_score * 100).toFixed(0)}%</td>
+      <td><button class="btn btn-sm" onclick="toggleIgnoreRow('${r.espn_id}')" style="padding:0.15rem 0.5rem; font-size:0.75rem; background:${isIgnored ? 'var(--green)' : 'var(--red)'}; color:#fff; border:none; border-radius:var(--radius); cursor:pointer;">${isIgnored ? 'Restore' : 'Ignore'}</button></td>
     </tr>`;
   }).join('');
+
+  // Set selected values for DB Match dropdowns
+  filtered.forEach(r => {
+    if (r.matched_db_id) {
+      const select = tbody.querySelector(`select[data-espn-id="${r.espn_id}"]`);
+      if (select) select.value = r.matched_db_id;
+    }
+  });
+
+  // Listen for dropdown changes to update the golfer ID on the earnings input
+  tbody.querySelectorAll('.db-match-select').forEach(select => {
+    select.addEventListener('change', function() {
+      const espnId = this.dataset.espnId;
+      const input = tbody.querySelector(`.earnings-input[data-espn-id="${espnId}"]`);
+      if (input) input.dataset.golferId = this.value;
+    });
+  });
 
   document.getElementById('showAllEarningsBtn').textContent = showAllGolfers ? 'Show Picked Only' : 'Show All Golfers';
 }
@@ -464,18 +500,32 @@ function toggleAllEarnings() {
   renderEarningsTable();
 }
 
+function toggleIgnoreRow(espnId) {
+  if (ignoredEarningsRows.has(espnId)) {
+    ignoredEarningsRows.delete(espnId);
+  } else {
+    ignoredEarningsRows.add(espnId);
+  }
+  renderEarningsTable();
+}
+
 async function saveEarnings() {
   const tournamentId = document.getElementById('earningsWeekSelect').value;
   if (!tournamentId) return;
 
-  const inputs = document.querySelectorAll('#earningsBody .earnings-input');
+  const rows = document.querySelectorAll('#earningsBody tr');
   const updates = [];
 
-  inputs.forEach(input => {
-    const golferId = input.dataset.golferId;
-    const earnings = parseInt(input.value) || 0;
+  rows.forEach(row => {
+    const espnId = row.dataset.espnId;
+    if (ignoredEarningsRows.has(espnId)) return;
+    const input = row.querySelector('.earnings-input');
+    const select = row.querySelector('.db-match-select');
+    const golferId = select ? select.value : input?.dataset.golferId;
+    const earnings = parseInt(input?.value) || 0;
     if (golferId && earnings >= 0) {
-      updates.push({ golfer_id: parseInt(golferId), earnings });
+      const espnResult = earningsData?.results?.find(r => r.espn_id === espnId);
+      updates.push({ golfer_id: parseInt(golferId), earnings, espnResult });
     }
   });
 
@@ -500,15 +550,13 @@ async function saveEarnings() {
 
     // Also update the results table (existing system)
     for (const u of updates) {
-      // Find matching result from ESPN data for position/score
-      const espnResult = earningsData?.results?.find(r => r.matched_db_id === u.golfer_id);
       await supabaseClient.from('results').upsert({
         tournament_id: parseInt(tournamentId),
         golfer_id: u.golfer_id,
-        finish_position: espnResult?.position || null,
-        score_to_par: espnResult?.score ? parseScoreToPar(espnResult.score) : 0,
+        finish_position: u.espnResult?.position || null,
+        score_to_par: u.espnResult?.score ? parseScoreToPar(u.espnResult.score) : 0,
         earnings: u.earnings,
-        made_cut: u.earnings > 0 || (espnResult?.position && espnResult.position !== 'CUT')
+        made_cut: u.earnings > 0 || (u.espnResult?.position && u.espnResult.position !== 'CUT')
       }, { onConflict: 'tournament_id,golfer_id' });
     }
 
