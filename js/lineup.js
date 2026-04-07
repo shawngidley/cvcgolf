@@ -171,11 +171,9 @@ function getUsageInfo(golferId) {
   return usage;
 }
 
-function getUsageClass(timesUsed, isLiv) {
-  const max = isLiv ? MAX_LIV_USES : MAX_USES;
-  if (timesUsed >= max) return 'usage-red';
-  if (isLiv && timesUsed >= 1) return 'usage-yellow';
-  if (!isLiv && timesUsed >= 3) return 'usage-yellow';
+function getUsageClass(timesUsed) {
+  if (timesUsed >= MAX_USES) return 'usage-red';
+  if (timesUsed >= 3) return 'usage-yellow';
   return 'usage-green';
 }
 
@@ -209,7 +207,7 @@ function renderGolferPool() {
   }
 
   // LIV note at top of list
-  const livNote = '<div class="liv-note">LIV golfers (marked <span class="liv-badge">LIV</span>) may only be used 2 times total.</div>';
+  const livNote = '<div class="liv-note">LIV golfers (shown with <span class="g-usage usage-liv">LIV 0/2</span>) may only be used 2 times total.</div>';
 
   list.innerHTML = livNote + filtered.map(g => {
     const isSelected = selectedIds.has(g.id);
@@ -222,16 +220,21 @@ function renderGolferPool() {
     const full = selectedGolfers.length >= MAX_PICKS && !isSelected;
     const disabled = tooExpensive || full || isLocked || maxedOut || majorMaxed;
 
-    const usageClass = getUsageClass(usage.times_used, isLiv);
-    const usageBadge = `<span class="g-usage ${usageClass}">${usage.times_used}/${maxUses}</span>`;
-    const livBadge = isLiv ? '<span class="liv-badge">LIV</span>' : '';
+    const usageClass = getUsageClass(usage.times_used);
+    const usageBadge = `<span class="g-usage ${usageClass}">${usage.times_used}/${MAX_USES}</span>`;
+    const livBadge = isLiv
+      ? (usage.times_used >= MAX_LIV_USES
+        ? '<span class="g-usage usage-liv-maxed">LIV 2/2</span>'
+        : `<span class="g-usage usage-liv">LIV ${usage.times_used}/2</span>`)
+      : '';
     const majorBadge = (isMajorWeek && usage.major_uses >= MAX_MAJOR_USES)
       ? '<span class="g-usage usage-major-maxed">Major 2/2</span>'
       : (isMajorWeek ? `<span class="g-usage usage-major">Major ${usage.major_uses}/2</span>` : '');
 
     return `<div class="golfer-row ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''} ${maxedOut ? 'maxed-out' : ''} ${majorMaxed && !maxedOut ? 'major-maxed' : ''}"
       data-id="${g.id}" data-name="${g.name}" data-salary="${g.salary}" data-tier="${g.tier}">
-      <span class="g-name">${g.name}${livBadge}</span>
+      <span class="g-name">${g.name}</span>
+      ${livBadge}
       ${majorBadge}
       ${usageBadge}
       <span class="g-salary">$${g.salary}</span>
