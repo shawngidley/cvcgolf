@@ -339,30 +339,38 @@ async function viewLineups() {
     });
   }
 
-  const submitted = players.filter(p => lineupsByPlayer[p.id]?.length > 0);
-  const missing = players.filter(p => !lineupsByPlayer[p.id]?.length);
-
   let rows = '';
 
-  for (const player of submitted) {
+  for (const player of players) {
     const lineup = lineupsByPlayer[player.id];
-    const salary = lineup.reduce((s, l) => s + (l.golfers?.salary || 0), 0);
-    const cells = [1, 2, 3, 4, 5].map(slot => {
-      const pick = lineup.find(l => l.slot === slot);
-      return `<td>${pick?.golfers?.name || '-'}</td>`;
-    }).join('');
-    const status = salary > 100 ? '<span style="color:var(--red)">OVER CAP</span>' : '<span style="color:var(--augusta)">OK</span>';
-    rows += `<tr><td><strong>${player.name}</strong></td>${cells}<td>$${salary}</td><td>${status}</td></tr>`;
+    if (lineup && lineup.length > 0) {
+      const salary = lineup.reduce((s, l) => s + (l.golfers?.salary || 0), 0);
+      const cells = [1, 2, 3, 4, 5].map(slot => {
+        const pick = lineup.find(l => l.slot === slot);
+        return `<td>${pick?.golfers?.name || '-'}</td>`;
+      }).join('');
+      const capStatus = salary > 100 ? ' <span style="color:var(--red); font-size:0.7rem;">OVER CAP</span>' : '';
+      rows += `<tr>
+        <td><strong>${player.name}</strong></td>
+        ${cells}
+        <td>$${salary}${capStatus}</td>
+        <td><span style="background:var(--augusta); color:#fff; padding:0.15rem 0.5rem; border-radius:var(--radius); font-size:0.75rem;">Submitted</span></td>
+      </tr>`;
+    } else {
+      rows += `<tr style="background:var(--gold-light);">
+        <td><strong>${player.name}</strong></td>
+        <td colspan="5" style="color:var(--red); text-align:center;">No lineup submitted</td>
+        <td>-</td>
+        <td><span style="background:var(--red); color:#fff; padding:0.15rem 0.5rem; border-radius:var(--radius); font-size:0.75rem;">Not Submitted</span></td>
+      </tr>`;
+    }
   }
 
-  for (const player of missing) {
-    rows += `<tr style="background:var(--gold-light);"><td><strong>${player.name}</strong></td><td colspan="5" style="color:var(--red); text-align:center;">No lineup submitted</td><td>-</td><td style="color:var(--red);">MISSING</td></tr>`;
-  }
-
-  // Summary row
+  const submittedCount = players.filter(p => lineupsByPlayer[p.id]?.length > 0).length;
+  const missingCount = players.length - submittedCount;
   rows += `<tr style="border-top:2px solid var(--gray-400); font-weight:600;">
-    <td colspan="6">${submitted.length} of ${players.length} lineups submitted</td>
-    <td colspan="2" style="color:${missing.length > 0 ? 'var(--red)' : 'var(--augusta)'};">${missing.length > 0 ? missing.length + ' missing' : 'All in!'}</td>
+    <td colspan="6">${submittedCount} of ${players.length} lineups submitted</td>
+    <td colspan="2" style="color:${missingCount > 0 ? 'var(--red)' : 'var(--augusta)'};">${missingCount > 0 ? missingCount + ' missing' : 'All in!'}</td>
   </tr>`;
 
   tbody.innerHTML = rows;
