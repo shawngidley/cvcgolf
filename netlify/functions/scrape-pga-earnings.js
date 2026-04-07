@@ -196,6 +196,20 @@ async function fetchGolferEarnings(eventId, competitorId) {
   return { earnings, position };
 }
 
+// Exact name mappings: ESPN name -> DB name (bypasses fuzzy matching entirely)
+const EXACT_MATCHES = {
+  'matt mccarty': 'matt mccarty',
+  'k.h. lee': 'k.h. lee',
+};
+
+// Blocked pairs: prevent specific wrong matches [espnName, dbName]
+const BLOCKED_PAIRS = [
+  ['matt mccarty', 'denny mccarthy'],
+  ['denny mccarthy', 'matt mccarty'],
+  ['k.h. lee', 'min woo lee'],
+  ['min woo lee', 'k.h. lee'],
+];
+
 // Find the best ESPN competitor match for a given DB golfer name
 function findEspnMatch(dbName, espnGolfers) {
   if (!dbName || !espnGolfers.length) return null;
@@ -210,6 +224,15 @@ function findEspnMatch(dbName, espnGolfers) {
   const dbFirst = dbParts[0];
   const dbLast = dbParts[dbParts.length - 1];
 
+  // Check exact match list first
+  for (const eg of espnGolfers) {
+    const espnNorm = normalize(eg.name);
+    const exactTarget = EXACT_MATCHES[espnNorm];
+    if (exactTarget && exactTarget === dbNorm) {
+      return { ...eg, confidence: 1.0 };
+    }
+  }
+
   let bestMatch = null;
   let bestScore = 0;
 
@@ -217,10 +240,13 @@ function findEspnMatch(dbName, espnGolfers) {
     const espnNorm = normalize(eg.name);
     if (!espnNorm) continue;
 
-    // Exact match
+    // Exact string match
     if (dbNorm === espnNorm) {
       return { ...eg, confidence: 1.0 };
     }
+
+    // Check blocklist
+    if (BLOCKED_PAIRS.some(([a, b]) => normalize(a) === espnNorm && normalize(b) === dbNorm)) continue;
 
     const espnParts = espnNorm.split(' ');
     const espnFirst = espnParts[0];
@@ -235,13 +261,14 @@ function findEspnMatch(dbName, espnGolfers) {
     // First names must share the same initial
     if (dbFirst[0] !== espnFirst[0]) continue;
 
-    // First name similarity check
+    // First name similarity check — must be at least 70% similar
     const firstLev = levenshtein(dbFirst, espnFirst);
     const firstMaxLen = Math.max(dbFirst.length, espnFirst.length);
     const firstSimilarity = 1 - (firstLev / firstMaxLen);
 
+    // Allow abbreviated names (e.g. "jt" matching "justin") but require 70% for full names
     const isAbbreviated = dbFirst.length <= 2 || espnFirst.length <= 2;
-    if (!isAbbreviated && firstSimilarity < 0.6) continue;
+    if (!isAbbreviated && firstSimilarity < 0.7) continue;
 
     let score;
     if (dbFirst === espnFirst && dbLast === espnLast) {
