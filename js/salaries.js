@@ -31,28 +31,26 @@ async function loadSalaries() {
     totalEarnings: earnings[g.id] || 0
   }));
 
-  // Update tier cards with golfer names
+  // Update tier cards with counts
   const tierConfig = [
-    { salary: 27, cls: 'elite' },
-    { salary: 25, cls: 'superstar' },
-    { salary: 23, cls: 'star' },
-    { salary: 21, cls: 'premium' },
-    { salary: 19, cls: 'midupper' },
-    { salary: 17, cls: 'mid' },
-    { salary: 15, cls: 'value' },
-    { salary: 14, cls: 'budget' },
-    { salary: 13, cls: 'bargain' }
+    { salary: 27, cls: 'elite', label: 'Elite' },
+    { salary: 25, cls: 'superstar', label: 'Superstar' },
+    { salary: 23, cls: 'star', label: 'Star' },
+    { salary: 21, cls: 'premium', label: 'Premium' },
+    { salary: 19, cls: 'midupper', label: 'Mid-Upper' },
+    { salary: 17, cls: 'mid', label: 'Mid' },
+    { salary: 15, cls: 'value', label: 'Value' },
+    { salary: 14, cls: 'budget', label: 'Budget' },
+    { salary: 13, cls: 'bargain', label: 'Bargain' }
   ];
 
   const container = document.getElementById('salaryOverview');
   container.innerHTML = tierConfig.map(t => {
-    const golfers = allGolfersData.filter(g => g.salary === t.salary);
-    const names = golfers.map(g => g.name.split(' ').pop()).join(', ');
+    const count = allGolfersData.filter(g => g.salary === t.salary).length;
     return `<div class="salary-tier-card ${t.cls}">
       <span class="tier-salary">$${t.salary}</span>
-      <span class="tier-label">${golfers[0]?.tier || ''}</span>
-      <span class="tier-count">${golfers.length} golfers</span>
-      <span class="tier-names">${names}</span>
+      <span class="tier-label">${t.label}</span>
+      <span class="tier-count">${count} golfers</span>
     </div>`;
   }).join('');
 
