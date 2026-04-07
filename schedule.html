@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Schedule - CVC Fantasy Golf 2026</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="standings.html" class="nav-logo">
+        <div class="nav-badge">CVC</div>
+        <span>Fantasy Golf</span>
+      </a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="standings.html">Standings</a></li>
+        <li><a href="lineup.html">Lineup</a></li>
+        <li><a href="history.html">History</a></li>
+        <li><a href="usage.html">Usage</a></li>
+        <li><a href="schedule.html" class="active">Schedule</a></li>
+        <li><a href="salaries.html">Salaries</a></li>
+        <li><a href="rules.html">Rules</a></li>
+        <li><a href="admin.html" class="nav-admin" id="adminLink" style="display:none;">Admin</a></li>
+        <li><a href="#" class="nav-logout" id="logoutLink">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="container">
+    <header class="page-header">
+      <h1>2026 Tournament Schedule</h1>
+      <p class="subtitle">27 tournaments &bull; January through August</p>
+    </header>
+
+    <div class="schedule-filters">
+      <button class="filter-btn active" data-filter="all">All (27)</button>
+      <button class="filter-btn" data-filter="major">Majors (4)</button>
+      <button class="filter-btn" data-filter="signature">Signature (12)</button>
+      <button class="filter-btn" data-filter="complete">Completed</button>
+      <button class="filter-btn" data-filter="upcoming">Upcoming</button>
+    </div>
+
+    <div class="schedule-grid" id="scheduleGrid">
+      <p class="loading">Loading schedule...</p>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>&copy; 2026 CVC Fantasy Golf League</p>
+  </footer>
+
+  <script src="js/supabase-client.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/schedule.js"></script>
+</body>
+</html>

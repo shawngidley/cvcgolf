@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - CVC Fantasy Golf 2026</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="standings.html" class="nav-logo">
+        <div class="nav-badge">CVC</div>
+        <span>Fantasy Golf</span>
+      </a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="standings.html">Standings</a></li>
+        <li><a href="lineup.html">Lineup</a></li>
+        <li><a href="history.html">History</a></li>
+        <li><a href="usage.html">Usage</a></li>
+        <li><a href="schedule.html">Schedule</a></li>
+        <li><a href="salaries.html">Salaries</a></li>
+        <li><a href="rules.html">Rules</a></li>
+        <li><a href="admin.html" class="nav-admin active" id="adminLink">Admin</a></li>
+        <li><a href="#" class="nav-logout" id="logoutLink">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="container">
+    <header class="page-header">
+      <h1>Commissioner Admin Panel</h1>
+      <p class="subtitle">Manage tournaments, results, and standings</p>
+    </header>
+
+    <div id="adminDenied" class="alert alert-warning" style="display:none;">
+      Access denied. Commissioner only.
+    </div>
+
+    <div id="adminPanel" style="display:none;">
+
+      <!-- Tournament Management -->
+      <div class="card">
+        <h2>Tournament Management</h2>
+        <div class="admin-controls">
+          <div class="select-group">
+            <label for="adminWeekSelect">Tournament Week:</label>
+            <select id="adminWeekSelect">
+              <option value="">Select week...</option>
+            </select>
+          </div>
+          <div class="admin-actions">
+            <button class="btn btn-secondary" id="lockPicksBtn">Lock Picks</button>
+            <button class="btn btn-secondary" id="unlockPicksBtn">Unlock Picks</button>
+            <button class="btn btn-secondary" id="setCurrentBtn">Set as Current</button>
+            <button class="btn btn-primary" id="markCompleteBtn">Mark Complete</button>
+          </div>
+        </div>
+        <p class="admin-msg" id="tournamentMsg"></p>
+      </div>
+
+      <!-- Enter Results -->
+      <div class="card">
+        <h2>Enter Tournament Results</h2>
+        <p class="subtitle">Enter earnings for each golfer that was picked by any player this week</p>
+        <div class="select-group" style="margin-bottom: 1rem;">
+          <label for="resultsWeekSelect">Week:</label>
+          <select id="resultsWeekSelect">
+            <option value="">Select week...</option>
+          </select>
+        </div>
+        <div id="resultsEntryArea">
+          <p class="loading">Select a week to enter results</p>
+        </div>
+        <button class="btn btn-primary" id="saveResultsBtn" style="display:none;">Save Results & Recalculate</button>
+        <p class="admin-msg" id="resultsMsg"></p>
+      </div>
+
+      <!-- Recalculate Standings -->
+      <div class="card">
+        <h2>Recalculate All Standings</h2>
+        <p>Rebuilds all weekly scores, season standings, and usage from raw lineup and result data.</p>
+        <button class="btn btn-warning" id="recalcBtn">Recalculate Everything</button>
+        <p class="admin-msg" id="recalcMsg"></p>
+      </div>
+
+      <!-- Player Management -->
+      <div class="card">
+        <h2>View All Lineups This Week</h2>
+        <div class="select-group" style="margin-bottom: 1rem;">
+          <label for="viewLineupsWeek">Week:</label>
+          <select id="viewLineupsWeek">
+            <option value="">Select week...</option>
+          </select>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table" id="adminLineupsTable">
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>G1</th>
+                <th>G2</th>
+                <th>G3</th>
+                <th>G4</th>
+                <th>G5</th>
+                <th>Salary</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="adminLineupsBody">
+              <tr><td colspan="8" class="loading">Select a week</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>&copy; 2026 CVC Fantasy Golf League</p>
+  </footer>
+
+  <script src="js/supabase-client.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

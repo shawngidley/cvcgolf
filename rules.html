@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rules - CVC Fantasy Golf 2026</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="standings.html" class="nav-logo">
+        <div class="nav-badge">CVC</div>
+        <span>Fantasy Golf</span>
+      </a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="standings.html">Standings</a></li>
+        <li><a href="lineup.html">Lineup</a></li>
+        <li><a href="history.html">History</a></li>
+        <li><a href="usage.html">Usage</a></li>
+        <li><a href="schedule.html">Schedule</a></li>
+        <li><a href="salaries.html">Salaries</a></li>
+        <li><a href="rules.html" class="active">Rules</a></li>
+        <li><a href="admin.html" class="nav-admin" id="adminLink" style="display:none;">Admin</a></li>
+        <li><a href="#" class="nav-logout" id="logoutLink">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="container">
+    <header class="page-header">
+      <h1>League Rules</h1>
+      <p class="subtitle">CVC Fantasy Golf 2026 - Official Rules</p>
+    </header>
+
+    <div class="rules-content">
+      <div class="card rule-card">
+        <h2>1. League Format</h2>
+        <ul>
+          <li><strong>14 players</strong> compete across <strong>27 PGA Tour tournaments</strong></li>
+          <li>Season: The Sentry (Jan) through FedEx St. Jude Championship (Aug)</li>
+          <li>Winner determined by <strong>total accumulated PGA Tour earnings</strong> from picked golfers</li>
+          <li>Dollar-for-dollar scoring based on official PGA Tour prize money</li>
+        </ul>
+      </div>
+
+      <div class="card rule-card">
+        <h2>2. Weekly Lineups</h2>
+        <ul>
+          <li>Select <strong>5 golfers</strong> each week</li>
+          <li>Total salary must not exceed <strong>$100 salary cap</strong></li>
+          <li>Picks lock at the first tee time Thursday morning</li>
+          <li>No picks = $0 earnings for that week</li>
+          <li>No limit on how many times a golfer can be used per season</li>
+        </ul>
+      </div>
+
+      <div class="card rule-card">
+        <h2>3. Salary Tiers</h2>
+        <div class="tier-grid">
+          <div class="tier-box tier-elite"><h3>$27 - Elite</h3><p>Top 3 OWGR</p></div>
+          <div class="tier-box tier-superstar"><h3>$25 - Superstar</h3><p>OWGR 4-6</p></div>
+          <div class="tier-box tier-star"><h3>$23 - Star</h3><p>OWGR 7-10</p></div>
+          <div class="tier-box tier-premium"><h3>$21 - Premium</h3><p>OWGR 11-16</p></div>
+          <div class="tier-box tier-midupper"><h3>$19 - Mid-Upper</h3><p>OWGR 17-24</p></div>
+          <div class="tier-box tier-mid"><h3>$17 - Mid</h3><p>OWGR 25-36</p></div>
+          <div class="tier-box tier-value"><h3>$15 - Value</h3><p>OWGR 37-50</p></div>
+          <div class="tier-box tier-budget"><h3>$14 - Budget</h3><p>OWGR 51-70</p></div>
+          <div class="tier-box tier-bargain"><h3>$13 - Bargain</h3><p>OWGR 71+</p></div>
+        </div>
+      </div>
+
+      <div class="card rule-card">
+        <h2>4. Scoring</h2>
+        <ul>
+          <li>Your weekly score = <strong>sum of official PGA Tour earnings</strong> from your 5 golfers</li>
+          <li>Missed cut = $0 earnings for that golfer</li>
+          <li>WD mid-tournament = keeps earned money up to that point</li>
+          <li>All earnings are real PGA Tour purse distributions</li>
+        </ul>
+      </div>
+
+      <div class="card rule-card">
+        <h2>5. Season Prizes</h2>
+        <div class="prizes-grid">
+          <div class="prize-box first"><div class="prize-place">1st Place</div><div class="prize-amount">$500</div></div>
+          <div class="prize-box second"><div class="prize-place">2nd Place</div><div class="prize-amount">$250</div></div>
+          <div class="prize-box third"><div class="prize-place">3rd Place</div><div class="prize-amount">$100</div></div>
+          <div class="prize-box weekly"><div class="prize-place">Most Weekly Wins</div><div class="prize-amount">$50</div></div>
+        </div>
+        <p style="margin-top:1rem; color: var(--gray-600); font-size: 0.9rem;">Entry fee: $75 per player &bull; Total pot: $1,050</p>
+      </div>
+
+      <div class="card rule-card">
+        <h2>6. Commissioner</h2>
+        <ul>
+          <li>Commissioner enters tournament results each week via admin panel</li>
+          <li>Results are final once posted; standings auto-calculate</li>
+          <li>Commissioner has final say on disputes</li>
+          <li>Salary adjustments may occur mid-season based on OWGR changes</li>
+        </ul>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>&copy; 2026 CVC Fantasy Golf League</p>
+  </footer>
+
+  <script src="js/auth.js"></script>
+  <script>
+    document.getElementById('navToggle')?.addEventListener('click', () => {
+      document.getElementById('navLinks').classList.toggle('open');
+    });
+  </script>
+</body>
+</html>
