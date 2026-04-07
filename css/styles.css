@@ -761,6 +761,46 @@ body {
 .toggle-switch input:checked + .toggle-slider { background: var(--augusta); }
 .toggle-switch input:checked + .toggle-slider::before { transform: translateX(22px); }
 
+/* ===== BREAKDOWN PAGE ===== */
+.breakdown-table { border-collapse: collapse; }
+.breakdown-table th, .breakdown-table td { text-align: center; padding: 0.35rem 0.4rem; font-size: 0.8rem; }
+.breakdown-golfer-col { text-align: left !important; white-space: nowrap; position: sticky; left: 0; background: var(--white); z-index: 2; min-width: 140px; }
+thead .breakdown-golfer-col { background: var(--augusta-dark) !important; }
+.breakdown-player-th { vertical-align: bottom; padding-bottom: 0.5rem !important; }
+.rotated-header {
+  writing-mode: vertical-rl;
+  transform: rotate(225deg);
+  white-space: nowrap;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.breakdown-total-th, .breakdown-total-cell {
+  background: var(--augusta-dark) !important;
+  color: var(--white) !important;
+  font-weight: 700;
+}
+.breakdown-earnings-th {
+  background: var(--augusta) !important;
+  color: var(--white) !important;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.breakdown-earnings-cell { font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 600; }
+.breakdown-cell { min-width: 36px; }
+.breakdown-x { color: var(--augusta-dark); font-weight: 700; font-size: 0.9rem; }
+.breakdown-even td { background-color: var(--white); }
+.breakdown-odd td { background-color: var(--augusta-pale); }
+.breakdown-even .breakdown-golfer-col { background: var(--white); }
+.breakdown-odd .breakdown-golfer-col { background: var(--augusta-pale); }
+.breakdown-hot td { background-color: var(--gold-light) !important; }
+.breakdown-hot .breakdown-golfer-col { background: var(--gold-light) !important; }
+.breakdown-hot .breakdown-total-cell { background: var(--augusta-dark) !important; color: var(--white) !important; }
+
 /* ===== FOOTER ===== */
 .footer {
   text-align: center;

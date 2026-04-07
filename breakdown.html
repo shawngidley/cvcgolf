@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Salaries - CVC Fantasy Golf 2026</title>
+  <title>Breakdown - CVC Fantasy Golf 2026</title>
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -22,11 +22,11 @@
         <li><a href="standings.html">Standings</a></li>
         <li><a href="lineup.html">Lineup</a></li>
         <li><a href="weekly-results.html">Weekly Results</a></li>
-        <li><a href="breakdown.html">Breakdown</a></li>
+        <li><a href="breakdown.html" class="active">Breakdown</a></li>
         <li><a href="history.html">History</a></li>
         <li><a href="usage.html">Usage</a></li>
         <li><a href="schedule.html">Schedule</a></li>
-        <li><a href="salaries.html" class="active">Salaries</a></li>
+        <li><a href="salaries.html">Salaries</a></li>
         <li><a href="rules.html">Rules</a></li>
         <li><a href="account.html">Account</a></li>
         <li><a href="admin.html" class="nav-admin" id="adminLink" style="display:none;">Admin</a></li>
@@ -37,34 +37,35 @@
 
   <main class="container">
     <header class="page-header">
-      <h1>Golfer Salaries</h1>
-      <p class="subtitle">100+ golfers with salaries from $13 - $27</p>
+      <h1>Breakdown</h1>
+      <p class="subtitle">Weekly lineup breakdown matrix</p>
     </header>
 
-    <div class="salary-overview" id="salaryOverview"></div>
+    <div class="alert alert-info" style="background: var(--augusta-pale); border-left: 4px solid var(--augusta); padding: 0.75rem 1rem; border-radius: var(--radius); margin-bottom: 1.5rem;">
+      Lineup breakdown is available after lineups lock for each tournament.
+    </div>
 
     <div class="card">
-      <div class="pool-controls">
-        <input type="text" id="salarySearch" class="search-input" placeholder="Search golfers...">
-        <select id="salaryFilter">
-          <option value="">All Salaries</option>
+      <div class="select-group" style="margin-bottom: 1rem;">
+        <label for="tournamentSelect">Tournament:</label>
+        <select id="tournamentSelect">
+          <option value="">Select a tournament...</option>
         </select>
       </div>
-      <div class="table-responsive">
-        <table class="data-table" id="salaryTable">
-          <thead>
-            <tr>
-              <th>OWGR</th>
-              <th>Golfer</th>
-              <th>Salary</th>
-              <th class="currency">Season Earnings</th>
-              <th>Times Picked (League)</th>
-            </tr>
-          </thead>
-          <tbody id="salaryBody">
-            <tr><td colspan="5" class="loading">Loading salaries...</td></tr>
-          </tbody>
-        </table>
+
+      <div id="breakdownContainer" style="display:none;">
+        <div class="table-responsive">
+          <table class="data-table breakdown-table" id="breakdownTable">
+            <thead>
+              <tr id="breakdownHead"></tr>
+            </thead>
+            <tbody id="breakdownBody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div id="noData" style="display:none; text-align:center; padding:2rem; color:var(--gray-500);">
+        No lineup data available for this tournament.
       </div>
     </div>
   </main>
@@ -104,6 +105,6 @@
 
   <script src="js/supabase-client.js"></script>
   <script src="js/auth.js"></script>
-  <script src="js/salaries.js"></script>
+  <script src="js/breakdown.js"></script>
 </body>
 </html>
