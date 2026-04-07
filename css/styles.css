@@ -531,6 +531,10 @@ body {
 .golfer-row.maxed-out { opacity: 0.35; text-decoration: line-through; }
 .golfer-row.major-maxed { opacity: 0.45; }
 
+/* Golfer profile links */
+.golfer-link { color: var(--augusta-dark); text-decoration: none; }
+.golfer-link:hover { text-decoration: underline; }
+
 /* LIV golfer styles */
 .data-table tbody tr.liv-row { background: #fde8e8; }
 .data-table tbody tr.liv-row:hover { background: #f8d0d0; }
