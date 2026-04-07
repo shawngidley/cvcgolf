@@ -86,7 +86,7 @@ async function loadPreferences() {
     document.getElementById('remindersEnabled').checked = prefs.reminders_enabled || false;
     document.getElementById('timezone').value = prefs.timezone || 'ET';
     document.getElementById('reminder1Day').value = prefs.reminder1_day || 'Tuesday';
-    document.getElementById('reminder1Time').value = prefs.reminder1_time || '9pm';
+    document.getElementById('reminder1Time').value = prefs.reminder1_time || '1130pm';
     document.getElementById('reminder2Day').value = prefs.reminder2_day || 'Wednesday';
     document.getElementById('reminder2Time').value = prefs.reminder2_time || '9am';
   }
@@ -134,7 +134,7 @@ async function savePreferences() {
 }
 
 function enforceThursdayLock() {
-  const normalTimes = '<option value="9am">9:00 AM</option><option value="12pm">12:00 PM</option><option value="3pm">3:00 PM</option><option value="6pm">6:00 PM</option><option value="9pm">9:00 PM</option>';
+  const normalTimes = '<option value="6am">6:00 AM</option><option value="7am">7:00 AM</option><option value="8am">8:00 AM</option><option value="9am">9:00 AM</option><option value="10am">10:00 AM</option><option value="11am">11:00 AM</option><option value="12pm">12:00 PM</option><option value="3pm">3:00 PM</option><option value="6pm">6:00 PM</option><option value="1130pm">11:30 PM</option>';
   const thursdayTimes = '<option value="6am" selected>6:00 AM ET</option>';
 
   [1, 2].forEach(n => {

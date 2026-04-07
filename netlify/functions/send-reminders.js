@@ -15,9 +15,18 @@ const TZ_MAP = {
   PT: 'America/Los_Angeles'
 };
 
-// Map reminder time codes to hour values
+// Map reminder time codes to { hour, minute } values
 const TIME_MAP = {
-  '6am': 6, '9am': 9, '12pm': 12, '3pm': 15, '6pm': 18, '9pm': 21
+  '6am': { hour: 6, minute: 0 },
+  '7am': { hour: 7, minute: 0 },
+  '8am': { hour: 8, minute: 0 },
+  '9am': { hour: 9, minute: 0 },
+  '10am': { hour: 10, minute: 0 },
+  '11am': { hour: 11, minute: 0 },
+  '12pm': { hour: 12, minute: 0 },
+  '3pm': { hour: 15, minute: 0 },
+  '6pm': { hour: 18, minute: 0 },
+  '1130pm': { hour: 23, minute: 30 }
 };
 
 exports.handler = async (event) => {
@@ -85,14 +94,18 @@ exports.handler = async (event) => {
 
         // Thursday reminders are always 6am ET regardless of user timezone
         const checkDay = reminder.day;
-        let checkHour = TIME_MAP[reminder.time];
+        const checkTime = TIME_MAP[reminder.time];
+        if (!checkTime) continue;
 
         if (reminder.day === 'Thursday') {
           // Force ET for Thursday
           const etNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
           if (days[etNow.getDay()] !== 'Thursday' || etNow.getHours() !== 6) continue;
         } else {
-          if (currentDay !== checkDay || currentHour !== checkHour) continue;
+          const currentMinute = localNow.getMinutes();
+          // Allow a 14-minute window past the target minute to handle cron drift
+          const minuteDiff = currentMinute - checkTime.minute;
+          if (currentDay !== checkDay || currentHour !== checkTime.hour || minuteDiff < 0 || minuteDiff > 14) continue;
         }
 
         const message = `⛳ CVC Fantasy Golf — ${tournament.name} lineup deadline is ${deadlineDay} by first tee time. Submit at golf.cvcfantasysports.com`;
