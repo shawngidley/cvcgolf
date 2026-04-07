@@ -1,6 +1,9 @@
 /* CVC Fantasy Golf 2026 - Augusta National Aesthetic */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@400;700&display=swap');
 
 :root {
+  --font-heading: 'Playfair Display', Georgia, serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   /* Augusta greens */
   --augusta-dark: #0d3b1e;
   --augusta: #1a5c2e;
@@ -41,8 +44,10 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+h1, h2, h3 { font-family: var(--font-heading); }
+
 body {
-  font-family: 'Georgia', 'Times New Roman', serif;
+  font-family: var(--font-body);
   background: url('../amen-corner.avif') no-repeat center center fixed;
   background-size: cover;
   color: var(--gray-800);
@@ -96,7 +101,7 @@ body {
   display: inline-block;
   background: var(--augusta);
   color: var(--gold);
-  font-family: 'Georgia', serif;
+  font-family: var(--font-heading);
   font-size: 2rem;
   font-weight: 700;
   padding: 0.5rem 1.25rem;
@@ -129,7 +134,7 @@ body {
   font-weight: 600;
   color: var(--gray-600);
   margin-bottom: 0.3rem;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-body);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -140,7 +145,7 @@ body {
   border: 1px solid var(--gray-300);
   border-radius: var(--radius);
   font-size: 0.95rem;
-  font-family: -apple-system, sans-serif;
+  font-family: var(--font-body);
   background: var(--white);
   color: var(--gray-800);
 }
@@ -155,14 +160,14 @@ body {
   color: var(--red);
   font-size: 0.85rem;
   margin-top: 0.75rem;
-  font-family: -apple-system, sans-serif;
+  font-family: var(--font-body);
 }
 
 .login-footer {
   margin-top: 1.5rem;
   font-size: 0.8rem;
   color: var(--gray-500);
-  font-family: -apple-system, sans-serif;
+  font-family: var(--font-body);
 }
 
 /* ===== BUTTONS ===== */
@@ -171,7 +176,7 @@ body {
   padding: 0.6rem 1.25rem;
   border: none;
   border-radius: var(--radius);
-  font-family: -apple-system, sans-serif;
+  font-family: var(--font-body);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -228,7 +233,7 @@ body {
   padding: 0.2rem 0.5rem;
   border-radius: 3px;
   letter-spacing: 2px;
-  font-family: -apple-system, sans-serif;
+  font-family: var(--font-body);
 }
 
 .nav-links {
@@ -245,7 +250,7 @@ body {
   border-radius: var(--radius);
   font-size: 0.82rem;
   font-weight: 500;
-  font-family: -apple-system, sans-serif;
+  font-family: var(--font-body);
   transition: all 0.2s;
   white-space: nowrap;
 }
@@ -281,7 +286,7 @@ body {
 /* ===== PAGE HEADER ===== */
 .page-header { margin-bottom: 1.5rem; }
 .page-header h1 { font-size: 1.75rem; color: var(--augusta-dark); }
-.subtitle { color: var(--gray-500); font-size: 0.9rem; font-family: -apple-system, sans-serif; }
+.subtitle { color: var(--gray-500); font-size: 0.9rem; font-family: var(--font-body); }
 
 /* ===== CARDS ===== */
 .card {
@@ -294,7 +299,7 @@ body {
 }
 
 .card h2 { font-size: 1.15rem; color: var(--augusta-dark); margin-bottom: 0.75rem; }
-.card h3 { font-size: 1rem; color: var(--gray-700); margin-bottom: 0.5rem; font-family: -apple-system, sans-serif; }
+.card h3 { font-size: 1rem; color: var(--gray-700); margin-bottom: 0.5rem; }
 
 /* ===== LEADER CARDS ===== */
 .leader-cards { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
@@ -314,7 +319,7 @@ body {
 
 .leader-medal { font-size: 1.75rem; margin-bottom: 0.25rem; }
 .leader-name { font-weight: 700; font-size: 1rem; color: var(--gray-800); }
-.leader-earnings { font-size: 0.9rem; color: var(--gray-600); font-family: -apple-system, sans-serif; margin-top: 0.15rem; }
+.leader-earnings { font-size: 0.9rem; color: var(--gray-600); font-family: var(--font-body); margin-top: 0.15rem; }
 
 /* ===== TABLES ===== */
 .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -322,7 +327,7 @@ body {
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-family: -apple-system, sans-serif;
+  font-family: var(--font-body);
   font-size: 0.85rem;
 }
 
@@ -352,10 +357,10 @@ body {
 .data-table tbody tr.highlight { background: var(--gold-light); }
 .data-table tbody tr.winner-row { background: linear-gradient(90deg, var(--gold-light), var(--ivory)); font-weight: 600; }
 .rank-cell { font-weight: 700; color: var(--augusta); width: 45px; }
-.loading { text-align: center; color: var(--gray-500); padding: 2rem; font-style: italic; font-family: -apple-system, sans-serif; }
+.loading { text-align: center; color: var(--gray-500); padding: 2rem; font-style: italic; font-family: var(--font-body); }
 
 /* ===== ALERTS ===== */
-.alert { padding: 1rem; border-radius: var(--radius); margin-bottom: 1rem; font-family: -apple-system, sans-serif; }
+.alert { padding: 1rem; border-radius: var(--radius); margin-bottom: 1rem; font-family: var(--font-body); }
 .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffc107; }
 .alert-success { background: #d4edda; color: #155724; border: 1px solid #28a745; }
 .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
@@ -372,7 +377,7 @@ body {
   font-size: 0.82rem;
   font-weight: 500;
   color: var(--gray-600);
-  font-family: -apple-system, sans-serif;
+  font-family: var(--font-body);
   transition: all 0.2s;
 }
 
@@ -396,11 +401,11 @@ body {
 .tournament-card.complete { opacity: 0.65; }
 .tournament-card.current { border-left-color: var(--red); box-shadow: var(--shadow-md); }
 
-.t-week { font-size: 0.7rem; text-transform: uppercase; color: var(--gray-500); font-family: -apple-system, sans-serif; letter-spacing: 0.05em; }
+.t-week { font-size: 0.7rem; text-transform: uppercase; color: var(--gray-500); font-family: var(--font-body); letter-spacing: 0.05em; }
 .t-name { font-weight: 700; font-size: 1rem; color: var(--gray-900); margin: 0.15rem 0; }
-.t-course { color: var(--gray-600); font-size: 0.82rem; font-family: -apple-system, sans-serif; }
-.t-details { display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--gray-500); margin-top: 0.5rem; font-family: -apple-system, sans-serif; }
-.t-badge { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 999px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; font-family: -apple-system, sans-serif; letter-spacing: 0.03em; }
+.t-course { color: var(--gray-600); font-size: 0.82rem; font-family: var(--font-body); }
+.t-details { display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--gray-500); margin-top: 0.5rem; font-family: var(--font-body); }
+.t-badge { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 999px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; font-family: var(--font-body); letter-spacing: 0.03em; }
 .badge-major { background: var(--gold-light); color: var(--gold-dark); }
 .badge-signature { background: #dbe8f0; color: var(--blue); }
 .badge-complete { background: var(--augusta-pale); color: var(--augusta); }
@@ -416,7 +421,7 @@ body {
   border-radius: var(--radius-lg);
   margin-bottom: 1.25rem;
   box-shadow: var(--shadow);
-  font-family: -apple-system, sans-serif;
+  font-family: var(--font-body);
 }
 
 .salary-cap { display: flex; align-items: center; gap: 0.35rem; }
@@ -439,7 +444,7 @@ body {
   background: var(--gray-100);
   border-radius: var(--radius);
   border: 1px dashed var(--gray-300);
-  font-family: -apple-system, sans-serif;
+  font-family: var(--font-body);
   cursor: default;
   transition: all 0.2s;
 }
@@ -460,7 +465,7 @@ body {
   text-align: center;
   font-size: 0.85rem;
   margin-top: 0.5rem;
-  font-family: -apple-system, sans-serif;
+  font-family: var(--font-body);
 }
 
 .lineup-msg.success { color: var(--augusta); }
@@ -480,7 +485,7 @@ body {
   border: 1px solid var(--gray-300);
   border-radius: var(--radius);
   font-size: 0.85rem;
-  font-family: -apple-system, sans-serif;
+  font-family: var(--font-body);
 }
 
 .search-input:focus { outline: none; border-color: var(--augusta); }
@@ -490,7 +495,7 @@ body {
   border: 1px solid var(--gray-300);
   border-radius: var(--radius);
   font-size: 0.85rem;
-  font-family: -apple-system, sans-serif;
+  font-family: var(--font-body);
   background: var(--white);
 }
 
@@ -502,7 +507,7 @@ body {
   padding: 0.45rem 0.6rem;
   border-radius: var(--radius);
   cursor: pointer;
-  font-family: -apple-system, sans-serif;
+  font-family: var(--font-body);
   font-size: 0.85rem;
   transition: background 0.15s;
   border: 1px solid transparent;
@@ -562,7 +567,7 @@ body {
   color: var(--gray-600);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  font-family: -apple-system, sans-serif;
+  font-family: var(--font-body);
 }
 
 .select-group select {
@@ -570,7 +575,7 @@ body {
   border: 1px solid var(--gray-300);
   border-radius: var(--radius);
   font-size: 0.85rem;
-  font-family: -apple-system, sans-serif;
+  font-family: var(--font-body);
   background: var(--white);
   min-width: 200px;
 }
@@ -584,7 +589,7 @@ body {
   margin-bottom: 0.75rem;
   font-size: 0.85rem;
   color: var(--gray-600);
-  font-family: -apple-system, sans-serif;
+  font-family: var(--font-body);
 }
 
 /* ===== USAGE PAGE ===== */
@@ -605,8 +610,8 @@ body {
   box-shadow: var(--shadow);
 }
 
-.stat-value { display: block; font-size: 1.25rem; font-weight: 700; color: var(--augusta); font-family: -apple-system, sans-serif; }
-.stat-label { display: block; font-size: 0.75rem; color: var(--gray-500); margin-top: 0.15rem; font-family: -apple-system, sans-serif; }
+.stat-value { display: block; font-size: 1.25rem; font-weight: 700; color: var(--augusta); font-family: var(--font-body); }
+.stat-label { display: block; font-size: 0.75rem; color: var(--gray-500); margin-top: 0.15rem; font-family: var(--font-body); }
 
 .usage-bar {
   display: inline-block;
@@ -634,10 +639,10 @@ body {
   border: 1px solid var(--gray-200);
 }
 
-.salary-tier-card .tier-salary { display: block; font-size: 1.1rem; font-weight: 700; font-family: -apple-system, sans-serif; }
-.salary-tier-card .tier-label { display: block; font-size: 0.65rem; color: var(--gray-600); font-family: -apple-system, sans-serif; text-transform: uppercase; }
-.salary-tier-card .tier-count { display: block; font-size: 0.75rem; color: var(--gray-500); font-family: -apple-system, sans-serif; margin-top: 0.1rem; }
-.salary-tier-card .tier-names { display: block; font-size: 0.7rem; color: var(--gray-600); font-family: -apple-system, sans-serif; margin-top: 0.35rem; line-height: 1.4; white-space: normal; }
+.salary-tier-card .tier-salary { display: block; font-size: 1.1rem; font-weight: 700; font-family: var(--font-body); }
+.salary-tier-card .tier-label { display: block; font-size: 0.65rem; color: var(--gray-600); font-family: var(--font-body); text-transform: uppercase; }
+.salary-tier-card .tier-count { display: block; font-size: 0.75rem; color: var(--gray-500); font-family: var(--font-body); margin-top: 0.1rem; }
+.salary-tier-card .tier-names { display: block; font-size: 0.7rem; color: var(--gray-600); font-family: var(--font-body); margin-top: 0.35rem; line-height: 1.4; white-space: normal; }
 
 .salary-tier-card.elite { background: linear-gradient(135deg, #f7f0d8, #f5ecc0); border-color: var(--gold); }
 .salary-tier-card.elite .tier-salary { color: var(--gold-dark); }
@@ -651,12 +656,12 @@ body {
 .rules-content { max-width: 800px; }
 .rule-card { margin-bottom: 1.25rem; }
 .rule-card h2 { color: var(--augusta-dark); padding-bottom: 0.4rem; border-bottom: 2px solid var(--augusta-pale); }
-.rule-card ul { padding-left: 1.5rem; font-family: -apple-system, sans-serif; }
+.rule-card ul { padding-left: 1.5rem; font-family: var(--font-body); }
 .rule-card li { margin-bottom: 0.4rem; color: var(--gray-700); font-size: 0.9rem; }
 
 .tier-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.75rem; margin-top: 0.75rem; }
 
-.tier-box { padding: 0.75rem; border-radius: var(--radius); text-align: center; font-family: -apple-system, sans-serif; }
+.tier-box { padding: 0.75rem; border-radius: var(--radius); text-align: center; font-family: var(--font-body); }
 .tier-box h3 { font-size: 0.85rem; margin-bottom: 0.15rem; }
 .tier-box p { font-size: 0.8rem; color: var(--gray-600); }
 .tier-elite { background: var(--gold-light); border: 1px solid var(--gold); }
@@ -676,7 +681,7 @@ body {
   border-radius: var(--radius);
   text-align: center;
   border: 1px solid var(--gray-200);
-  font-family: -apple-system, sans-serif;
+  font-family: var(--font-body);
 }
 
 .prize-box.first { background: linear-gradient(135deg, #f7f0d8, #f5ecc0); border-color: var(--gold); }
@@ -692,7 +697,7 @@ body {
 /* ===== ADMIN ===== */
 .admin-controls { display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; }
 .admin-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-.admin-msg { font-size: 0.85rem; margin-top: 0.5rem; font-family: -apple-system, sans-serif; }
+.admin-msg { font-size: 0.85rem; margin-top: 0.5rem; font-family: var(--font-body); }
 .admin-msg.success { color: var(--augusta); }
 .admin-msg.error { color: var(--red); }
 
@@ -701,7 +706,7 @@ body {
   grid-template-columns: 1fr 100px 80px 100px;
   gap: 0.5rem;
   align-items: center;
-  font-family: -apple-system, sans-serif;
+  font-family: var(--font-body);
   font-size: 0.85rem;
 }
 
@@ -712,7 +717,7 @@ body {
   border: 1px solid var(--gray-300);
   border-radius: var(--radius);
   font-size: 0.85rem;
-  font-family: -apple-system, sans-serif;
+  font-family: var(--font-body);
 }
 
 .results-entry-grid input:focus { outline: none; border-color: var(--augusta); }
@@ -726,7 +731,7 @@ body {
   font-weight: 600;
   color: var(--gray-600);
   margin-bottom: 0.25rem;
-  font-family: -apple-system, sans-serif;
+  font-family: var(--font-body);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -736,7 +741,7 @@ body {
   border: 1px solid var(--gray-300);
   border-radius: var(--radius);
   font-size: 0.9rem;
-  font-family: -apple-system, sans-serif;
+  font-family: var(--font-body);
   background: var(--white);
 }
 .account-form input:focus, .account-form select:focus {
@@ -744,7 +749,7 @@ body {
   border-color: var(--augusta);
   box-shadow: 0 0 0 3px rgba(26,92,46,0.15);
 }
-.account-msg { font-size: 0.85rem; margin-top: 0.75rem; font-family: -apple-system, sans-serif; }
+.account-msg { font-size: 0.85rem; margin-top: 0.75rem; font-family: var(--font-body); }
 .account-msg.success { color: var(--augusta); }
 .account-msg.error { color: var(--red); }
 .form-row { display: flex; gap: 1rem; }
@@ -771,7 +776,7 @@ body {
   font-size: 0.8rem;
   border-top: 1px solid var(--gray-200);
   margin-top: 1.5rem;
-  font-family: -apple-system, sans-serif;
+  font-family: var(--font-body);
 }
 
 /* ===== CURRENCY ===== */
