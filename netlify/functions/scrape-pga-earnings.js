@@ -196,19 +196,21 @@ async function fetchGolferEarnings(eventId, competitorId) {
   return { earnings, position };
 }
 
-// Exact name mappings: ESPN name -> DB name (bypasses fuzzy matching entirely)
-const EXACT_MATCHES = {
-  'matt mccarty': 'matt mccarty',
-  'k.h. lee': 'k.h. lee',
+// Hardcoded name corrections: ESPN name -> DB name (or null to skip entirely)
+const NAME_CORRECTIONS = {
+  'Matt McCarty': 'Matt McCarty',
+  'Nico Echavarria': 'Nico Echavarria',
+  'K.H. Lee': null,       // ignore - not in our league
+  'Ryan Palmer': null,     // ignore - not in our league
+  'Gordon Sargent': null,  // ignore - not in our league
 };
 
-// Blocked pairs: prevent specific wrong matches [espnName, dbName]
-const BLOCKED_PAIRS = [
-  ['matt mccarty', 'denny mccarthy'],
-  ['denny mccarthy', 'matt mccarty'],
-  ['k.h. lee', 'min woo lee'],
-  ['min woo lee', 'k.h. lee'],
-];
+// Build normalized lookup from NAME_CORRECTIONS
+const NAME_CORRECTIONS_NORM = {};
+Object.entries(NAME_CORRECTIONS).forEach(([espn, db]) => {
+  const key = espn.toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
+  NAME_CORRECTIONS_NORM[key] = db ? db.toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim() : null;
+});
 
 // Find the best ESPN competitor match for a given DB golfer name
 function findEspnMatch(dbName, espnGolfers) {
@@ -224,12 +226,19 @@ function findEspnMatch(dbName, espnGolfers) {
   const dbFirst = dbParts[0];
   const dbLast = dbParts[dbParts.length - 1];
 
-  // Check exact match list first
+  // Check NAME_CORRECTIONS first — direct ESPN-to-DB mapping
   for (const eg of espnGolfers) {
     const espnNorm = normalize(eg.name);
-    const exactTarget = EXACT_MATCHES[espnNorm];
-    if (exactTarget && exactTarget === dbNorm) {
-      return { ...eg, confidence: 1.0 };
+    if (espnNorm in NAME_CORRECTIONS_NORM) {
+      const correctedDb = NAME_CORRECTIONS_NORM[espnNorm];
+      // null means skip this ESPN golfer entirely
+      if (correctedDb === null) continue;
+      // If the correction points to our DB golfer, it's a match
+      if (correctedDb === dbNorm) {
+        return { ...eg, confidence: 1.0 };
+      }
+      // Otherwise this ESPN golfer is reserved for a different DB golfer — skip
+      continue;
     }
   }
 
@@ -240,13 +249,13 @@ function findEspnMatch(dbName, espnGolfers) {
     const espnNorm = normalize(eg.name);
     if (!espnNorm) continue;
 
+    // Skip ESPN golfers that are handled by NAME_CORRECTIONS
+    if (espnNorm in NAME_CORRECTIONS_NORM) continue;
+
     // Exact string match
     if (dbNorm === espnNorm) {
       return { ...eg, confidence: 1.0 };
     }
-
-    // Check blocklist
-    if (BLOCKED_PAIRS.some(([a, b]) => normalize(a) === espnNorm && normalize(b) === dbNorm)) continue;
 
     const espnParts = espnNorm.split(' ');
     const espnFirst = espnParts[0];
