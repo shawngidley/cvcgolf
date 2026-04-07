@@ -324,27 +324,46 @@ async function viewLineups() {
   const { data: players } = await supabaseClient.from('players').select('id, name').order('name');
   const tbody = document.getElementById('adminLineupsBody');
 
-  let rows = '';
-  for (const player of players) {
-    const { data: lineup } = await supabaseClient
-      .from('lineups')
-      .select('slot, golfers(name, salary)')
-      .eq('player_id', player.id)
-      .eq('tournament_id', tournamentId)
-      .order('slot');
+  // Fetch all lineups for this tournament in one query
+  const { data: allLineups } = await supabaseClient
+    .from('lineups')
+    .select('player_id, slot, golfers(name, salary)')
+    .eq('tournament_id', tournamentId)
+    .order('slot');
 
-    if (!lineup || lineup.length === 0) {
-      rows += `<tr><td>${player.name}</td><td colspan="5">-</td><td>-</td><td class="lineup-msg error">No lineup</td></tr>`;
-    } else {
-      const salary = lineup.reduce((s, l) => s + (l.golfers?.salary || 0), 0);
-      const cells = [1, 2, 3, 4, 5].map(slot => {
-        const pick = lineup.find(l => l.slot === slot);
-        return `<td>${pick?.golfers?.name || '-'}</td>`;
-      }).join('');
-      const status = salary > 100 ? '<span style="color:var(--red)">OVER CAP</span>' : '<span style="color:var(--augusta)">OK</span>';
-      rows += `<tr><td><strong>${player.name}</strong></td>${cells}<td>$${salary}</td><td>${status}</td></tr>`;
-    }
+  const lineupsByPlayer = {};
+  if (allLineups) {
+    allLineups.forEach(l => {
+      if (!lineupsByPlayer[l.player_id]) lineupsByPlayer[l.player_id] = [];
+      lineupsByPlayer[l.player_id].push(l);
+    });
   }
+
+  const submitted = players.filter(p => lineupsByPlayer[p.id]?.length > 0);
+  const missing = players.filter(p => !lineupsByPlayer[p.id]?.length);
+
+  let rows = '';
+
+  for (const player of submitted) {
+    const lineup = lineupsByPlayer[player.id];
+    const salary = lineup.reduce((s, l) => s + (l.golfers?.salary || 0), 0);
+    const cells = [1, 2, 3, 4, 5].map(slot => {
+      const pick = lineup.find(l => l.slot === slot);
+      return `<td>${pick?.golfers?.name || '-'}</td>`;
+    }).join('');
+    const status = salary > 100 ? '<span style="color:var(--red)">OVER CAP</span>' : '<span style="color:var(--augusta)">OK</span>';
+    rows += `<tr><td><strong>${player.name}</strong></td>${cells}<td>$${salary}</td><td>${status}</td></tr>`;
+  }
+
+  for (const player of missing) {
+    rows += `<tr style="background:var(--gold-light);"><td><strong>${player.name}</strong></td><td colspan="5" style="color:var(--red); text-align:center;">No lineup submitted</td><td>-</td><td style="color:var(--red);">MISSING</td></tr>`;
+  }
+
+  // Summary row
+  rows += `<tr style="border-top:2px solid var(--gray-400); font-weight:600;">
+    <td colspan="6">${submitted.length} of ${players.length} lineups submitted</td>
+    <td colspan="2" style="color:${missing.length > 0 ? 'var(--red)' : 'var(--augusta)'};">${missing.length > 0 ? missing.length + ' missing' : 'All in!'}</td>
+  </tr>`;
 
   tbody.innerHTML = rows;
 }
