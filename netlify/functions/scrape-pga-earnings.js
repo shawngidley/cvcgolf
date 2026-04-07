@@ -200,6 +200,9 @@ function fuzzyMatch(espnName, dbGolfers) {
     .trim();
 
   const espnNorm = normalize(espnName);
+  const espnParts = espnNorm.split(' ');
+  const espnFirst = espnParts[0];
+  const espnLast = espnParts[espnParts.length - 1];
 
   let bestMatch = null;
   let bestScore = 0;
@@ -212,46 +215,46 @@ function fuzzyMatch(espnName, dbGolfers) {
       return { id: g.id, name: g.name, confidence: 1.0 };
     }
 
-    // Last name match with first initial
-    const espnParts = espnNorm.split(' ');
     const dbParts = dbNorm.split(' ');
-    const espnLast = espnParts[espnParts.length - 1];
+    const dbFirst = dbParts[0];
     const dbLast = dbParts[dbParts.length - 1];
 
-    if (espnLast === dbLast) {
-      // Same last name - check first name similarity
-      const espnFirst = espnParts[0];
-      const dbFirst = dbParts[0];
+    // Compare last names using Levenshtein
+    const lastLev = levenshtein(espnLast, dbLast);
+    const lastMaxLen = Math.max(espnLast.length, dbLast.length);
+    const lastSimilarity = 1 - (lastLev / lastMaxLen);
 
-      if (espnFirst === dbFirst) {
-        // Full match
-        if (0.95 > bestScore) {
-          bestScore = 0.95;
-          bestMatch = { id: g.id, name: g.name, confidence: 0.95 };
-        }
-      } else if (espnFirst[0] === dbFirst[0]) {
-        // First initial matches
-        if (0.85 > bestScore) {
-          bestScore = 0.85;
-          bestMatch = { id: g.id, name: g.name, confidence: 0.85 };
-        }
-      } else {
-        // Same last name, different first
-        if (0.6 > bestScore) {
-          bestScore = 0.6;
-          bestMatch = { id: g.id, name: g.name, confidence: 0.6 };
-        }
-      }
+    // Last names must be very similar (e.g. "mccarty" vs "mccarthy" = ok, "lee" vs "smith" = no)
+    if (lastSimilarity < 0.7) continue;
+
+    // Compare first names using Levenshtein
+    const firstLev = levenshtein(espnFirst, dbFirst);
+    const firstMaxLen = Math.max(espnFirst.length, dbFirst.length);
+    const firstSimilarity = 1 - (firstLev / firstMaxLen);
+
+    // First names must share at least the same initial — reject completely different first names
+    // e.g. "matt" vs "denny" = reject, "kh" vs "min" = reject
+    if (espnFirst[0] !== dbFirst[0]) continue;
+
+    // First name must also be reasonably similar (not just same initial)
+    // Allow abbreviated names (e.g. "jt" matching "justin") but not "matt" vs "maverick"
+    const isAbbreviated = espnFirst.length <= 2 || dbFirst.length <= 2;
+    if (!isAbbreviated && firstSimilarity < 0.4) continue;
+
+    // Calculate weighted score: 40% first name, 60% last name
+    let score;
+    if (espnFirst === dbFirst && espnLast === dbLast) {
+      score = 0.95;
+    } else if (espnFirst === dbFirst && lastSimilarity >= 0.85) {
+      // Same first name, very similar last name (e.g. typo or accent difference)
+      score = 0.9;
+    } else {
+      score = (firstSimilarity * 0.4) + (lastSimilarity * 0.6);
     }
 
-    // Levenshtein-based similarity for edge cases
-    const lev = levenshtein(espnNorm, dbNorm);
-    const maxLen = Math.max(espnNorm.length, dbNorm.length);
-    const similarity = 1 - (lev / maxLen);
-
-    if (similarity > bestScore) {
-      bestScore = similarity;
-      bestMatch = { id: g.id, name: g.name, confidence: parseFloat(similarity.toFixed(2)) };
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = { id: g.id, name: g.name, confidence: parseFloat(score.toFixed(2)) };
     }
   }
 

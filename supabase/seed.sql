@@ -175,7 +175,8 @@ INSERT INTO golfers (name, salary, owgr, tier) VALUES
   ('Matt Wallace', 13, 106, 'Bargain'),
   ('Danny Willett', 13, 107, 'Bargain'),
   ('Victor Perez', 13, 108, 'Bargain'),
-  ('Nicolai Hojgaard', 13, 109, 'Bargain')
+  ('Nicolai Hojgaard', 13, 109, 'Bargain'),
+  ('Matt McCarty', 13, 110, 'Bargain')
 ON CONFLICT (name) DO UPDATE SET salary = EXCLUDED.salary, owgr = EXCLUDED.owgr, tier = EXCLUDED.tier;
 
 -- ============================================
