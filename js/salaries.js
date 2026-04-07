@@ -69,7 +69,7 @@ function renderSalaries(golfers) {
   tbody.innerHTML = golfers.map(g => `
     <tr class="${g.is_liv ? 'liv-row' : ''}">
       <td class="rank-cell">${g.is_liv ? 'LIV' : (g.owgr || '-')}</td>
-      <td><strong><a href="https://www.pgatour.com/players/search?query=${encodeURIComponent(g.name)}" target="_blank" class="golfer-link">${g.name}</a></strong></td>
+      <td><strong><a href="https://www.espn.com/golf/player/_/name/${g.name.toLowerCase().replace(/\s+/g, '-')}/${g.name.toLowerCase().replace(/\s+/g, '-')}" target="_blank" class="golfer-link">${g.name}</a></strong></td>
       <td><strong>$${g.salary}</strong></td>
       <td>${g.tier}</td>
       <td class="currency">${formatCurrency(g.totalEarnings)}</td>
