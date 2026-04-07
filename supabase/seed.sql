@@ -5,20 +5,20 @@
 -- PLAYERS (14 members with passwords)
 -- ============================================
 INSERT INTO players (name, password, is_commissioner) VALUES
-  ('Scott Nelson', 'nelson1', FALSE),
-  ('Scott Tomko', 'tomko2', FALSE),
-  ('Steve Walker', 'walker3', FALSE),
-  ('Matt Federer', 'federer4', FALSE),
-  ('Shawn Gidley', 'cvcgolf2026', TRUE),
-  ('Joe Cas', 'cas6', FALSE),
-  ('David Sotka', 'sotka7', FALSE),
-  ('Jamie Yane', 'yane8', FALSE),
-  ('Keith Cromer', 'cromer9', FALSE),
-  ('Jack Ehrbar', 'ehrbar10', FALSE),
-  ('Dave Sutton', 'sutton11', FALSE),
-  ('Dan Osicki', 'dosicki12', FALSE),
-  ('Josh Osicki', 'josicki13', FALSE),
-  ('Matt Janssen', 'janssen14', FALSE)
+  ('Scott Nelson', 'nelson2026', FALSE),
+  ('Scott Tomko', 'tomko2026', FALSE),
+  ('Steve Walker', 'walker2026', FALSE),
+  ('Matt Federer', 'federer2026', FALSE),
+  ('Shawn Gidley', 'gidley2026', TRUE),
+  ('Joe Cas', 'cas2026', FALSE),
+  ('David Sotka', 'sotka2026', FALSE),
+  ('Jamie Yane', 'yane2026', FALSE),
+  ('Keith Cromer', 'cromer2026', FALSE),
+  ('Jack Ehrbar', 'ehrbar2026', FALSE),
+  ('Dave Sutton', 'sutton2026', FALSE),
+  ('Dan Osicki', 'dosicki2026', FALSE),
+  ('Josh Osicki', 'josicki2026', FALSE),
+  ('Matt Janssen', 'janssen2026', FALSE)
 ON CONFLICT (name) DO NOTHING;
 
 -- ============================================
