@@ -206,10 +206,7 @@ function renderGolferPool() {
     return;
   }
 
-  // LIV note at top of list
-  const livNote = '<div class="liv-note">LIV golfers (shown with <span class="g-usage usage-liv">LIV 0/2</span>) may only be used 2 times total.</div>';
-
-  list.innerHTML = livNote + filtered.map(g => {
+  list.innerHTML = filtered.map(g => {
     const isSelected = selectedIds.has(g.id);
     const usage = getUsageInfo(g.id);
     const isLiv = g.is_liv || false;
