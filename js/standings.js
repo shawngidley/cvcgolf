@@ -32,7 +32,7 @@ async function loadStandings() {
       <td class="rank-cell">${i + 1}</td>
       <td><strong>${s.players?.name || 'Unknown'}</strong></td>
       <td class="currency">${formatCurrency(s.total_earnings)}</td>
-      <td>${s.weekly_wins || 0}</td>
+      <td style="text-align:center">${s.weekly_wins || 0}</td>
       <td class="currency">${formatCurrency(s.best_week)}</td>
       <td class="currency">${formatCurrency(s.worst_week)}</td>
       <td class="currency">${formatCurrency(s.avg_weekly)}</td>
