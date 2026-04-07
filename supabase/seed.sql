@@ -1,5 +1,5 @@
 -- CVC Fantasy Golf 2026 - Seed Data
--- 14 Players, 27 Tournaments, 100+ Golfers, Weeks 1-8 Historical
+-- 14 Players, 27 Tournaments (Feb-Aug), 100+ Golfers, Weeks 1-8 Historical
 
 -- ============================================
 -- PLAYERS (14 members with passwords)
@@ -22,36 +22,36 @@ INSERT INTO players (name, password, is_commissioner) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- ============================================
--- TOURNAMENTS (27 weeks, 2026 PGA Tour season)
+-- TOURNAMENTS (27 weeks, 2026 CVC Fantasy Golf season)
 -- ============================================
-INSERT INTO tournaments (week_number, name, short_name, course, location, start_date, end_date, purse_millions, is_major, is_signature, is_complete, sort_order) VALUES
-  (1, 'The Sentry', 'Sentry', 'Kapalua Plantation Course', 'Maui, HI', '2026-01-01', '2026-01-04', 20.00, FALSE, TRUE, TRUE, 1),
-  (2, 'Sony Open in Hawaii', 'Sony Open', 'Waialae Country Club', 'Honolulu, HI', '2026-01-08', '2026-01-11', 8.40, FALSE, FALSE, TRUE, 2),
-  (3, 'The American Express', 'AmEx', 'PGA West (Stadium)', 'La Quinta, CA', '2026-01-15', '2026-01-18', 8.40, FALSE, FALSE, TRUE, 3),
-  (4, 'Farmers Insurance Open', 'Farmers', 'Torrey Pines (South)', 'San Diego, CA', '2026-01-22', '2026-01-25', 9.60, FALSE, FALSE, TRUE, 4),
-  (5, 'AT&T Pebble Beach Pro-Am', 'Pebble Beach', 'Pebble Beach Golf Links', 'Pebble Beach, CA', '2026-01-29', '2026-02-01', 20.00, FALSE, TRUE, TRUE, 5),
-  (6, 'WM Phoenix Open', 'Phoenix', 'TPC Scottsdale (Stadium)', 'Scottsdale, AZ', '2026-02-05', '2026-02-08', 20.00, FALSE, TRUE, TRUE, 6),
-  (7, 'Genesis Invitational', 'Genesis', 'Riviera Country Club', 'Pacific Palisades, CA', '2026-02-12', '2026-02-15', 20.00, FALSE, TRUE, TRUE, 7),
-  (8, 'The Honda Classic', 'Honda', 'PGA National (Champion)', 'Palm Beach Gardens, FL', '2026-02-19', '2026-02-22', 8.40, FALSE, FALSE, TRUE, 8),
-  (9, 'Arnold Palmer Invitational', 'API', 'Bay Hill Club & Lodge', 'Orlando, FL', '2026-02-26', '2026-03-01', 20.00, FALSE, TRUE, TRUE, 9),
-  (10, 'Puerto Rico Open', 'Puerto Rico', 'Grand Reserve GC', 'Rio Grande, PR', '2026-03-05', '2026-03-08', 4.00, FALSE, FALSE, TRUE, 10),
-  (11, 'THE PLAYERS Championship', 'TPC', 'TPC Sawgrass (Stadium)', 'Ponte Vedra Beach, FL', '2026-03-12', '2026-03-15', 25.00, FALSE, TRUE, TRUE, 11),
-  (12, 'Valspar Championship', 'Valspar', 'Innisbrook (Copperhead)', 'Palm Harbor, FL', '2026-03-19', '2026-03-22', 8.40, FALSE, FALSE, TRUE, 12),
-  (13, 'Houston Open', 'Houston', 'Memorial Park Golf Course', 'Houston, TX', '2026-03-25', '2026-03-28', 9.40, FALSE, FALSE, TRUE, 13),
-  (14, 'Valero Texas Open', 'Texas Open', 'TPC San Antonio (Oaks)', 'San Antonio, TX', '2026-04-02', '2026-04-05', 8.80, FALSE, FALSE, TRUE, 14),
-  (15, 'The Masters', 'Masters', 'Augusta National Golf Club', 'Augusta, GA', '2026-04-09', '2026-04-12', 20.00, TRUE, FALSE, FALSE, 15),
-  (16, 'RBC Heritage', 'Heritage', 'Harbour Town Golf Links', 'Hilton Head, SC', '2026-04-16', '2026-04-19', 20.00, FALSE, TRUE, FALSE, 16),
-  (17, 'Zurich Classic', 'Zurich', 'TPC Louisiana', 'Avondale, LA', '2026-04-23', '2026-04-26', 8.60, FALSE, FALSE, FALSE, 17),
-  (18, 'Wells Fargo Championship', 'Wells Fargo', 'Quail Hollow Club', 'Charlotte, NC', '2026-04-30', '2026-05-03', 20.00, FALSE, TRUE, FALSE, 18),
-  (19, 'PGA Championship', 'PGA Champ', 'Bethpage Black Course', 'Farmingdale, NY', '2026-05-14', '2026-05-17', 18.50, TRUE, FALSE, FALSE, 19),
-  (20, 'Charles Schwab Challenge', 'Colonial', 'Colonial Country Club', 'Fort Worth, TX', '2026-05-21', '2026-05-24', 9.20, FALSE, FALSE, FALSE, 20),
-  (21, 'the Memorial Tournament', 'Memorial', 'Muirfield Village GC', 'Dublin, OH', '2026-05-28', '2026-05-31', 20.00, FALSE, TRUE, FALSE, 21),
-  (22, 'U.S. Open', 'US Open', 'Shinnecock Hills Golf Club', 'Southampton, NY', '2026-06-18', '2026-06-21', 21.50, TRUE, FALSE, FALSE, 22),
-  (23, 'Travelers Championship', 'Travelers', 'TPC River Highlands', 'Cromwell, CT', '2026-06-25', '2026-06-28', 20.00, FALSE, TRUE, FALSE, 23),
-  (24, 'Rocket Mortgage Classic', 'Rocket', 'Detroit Golf Club', 'Detroit, MI', '2026-07-02', '2026-07-05', 8.40, FALSE, FALSE, FALSE, 24),
-  (25, 'Genesis Scottish Open', 'Scottish', 'The Renaissance Club', 'North Berwick, Scotland', '2026-07-09', '2026-07-12', 9.00, FALSE, FALSE, FALSE, 25),
-  (26, 'The Open Championship', 'The Open', 'Royal Portrush Golf Club', 'Portrush, N. Ireland', '2026-07-16', '2026-07-19', 17.00, TRUE, FALSE, FALSE, 26),
-  (27, 'FedEx St. Jude Championship', 'St. Jude', 'TPC Southwind', 'Memphis, TN', '2026-08-06', '2026-08-09', 20.00, FALSE, TRUE, FALSE, 27)
+INSERT INTO tournaments (week_number, name, short_name, course, location, start_date, end_date, purse_millions, is_major, is_signature, is_complete, is_current, sort_order) VALUES
+  (1, 'WM Phoenix Open', 'Phoenix', 'TPC Scottsdale (Stadium)', 'Scottsdale, AZ', '2026-02-05', '2026-02-08', 20.00, FALSE, FALSE, TRUE, FALSE, 1),
+  (2, 'Pebble Beach Pro-Am', 'Pebble Beach', 'Pebble Beach Golf Links', 'Pebble Beach, CA', '2026-02-12', '2026-02-15', 20.00, FALSE, TRUE, TRUE, FALSE, 2),
+  (3, 'Genesis Invitational', 'Genesis', 'Riviera Country Club', 'Pacific Palisades, CA', '2026-02-19', '2026-02-22', 20.00, FALSE, TRUE, TRUE, FALSE, 3),
+  (4, 'Arnold Palmer Invitational', 'API', 'Bay Hill Club & Lodge', 'Orlando, FL', '2026-03-05', '2026-03-08', 20.00, FALSE, TRUE, TRUE, FALSE, 4),
+  (5, 'The Players Championship', 'TPC', 'TPC Sawgrass (Stadium)', 'Ponte Vedra Beach, FL', '2026-03-12', '2026-03-15', 25.00, FALSE, FALSE, TRUE, FALSE, 5),
+  (6, 'Valspar Championship', 'Valspar', 'Innisbrook (Copperhead)', 'Palm Harbor, FL', '2026-03-19', '2026-03-22', 8.40, FALSE, FALSE, TRUE, FALSE, 6),
+  (7, 'Texas Children''s Houston Open', 'Houston', 'Memorial Park Golf Course', 'Houston, TX', '2026-03-26', '2026-03-29', 9.40, FALSE, FALSE, TRUE, FALSE, 7),
+  (8, 'Valero Texas Open', 'Texas Open', 'TPC San Antonio (Oaks)', 'San Antonio, TX', '2026-04-02', '2026-04-05', 8.80, FALSE, FALSE, TRUE, FALSE, 8),
+  (9, 'THE MASTERS', 'Masters', 'Augusta National Golf Club', 'Augusta, GA', '2026-04-09', '2026-04-12', 20.00, TRUE, FALSE, FALSE, TRUE, 9),
+  (10, 'RBC Heritage', 'Heritage', 'Harbour Town Golf Links', 'Hilton Head, SC', '2026-04-16', '2026-04-19', 20.00, FALSE, TRUE, FALSE, FALSE, 10),
+  (11, 'Cadillac Championship', 'Cadillac', 'TPC Doral (Blue Monster)', 'Miami, FL', '2026-04-30', '2026-05-03', 20.00, FALSE, TRUE, FALSE, FALSE, 11),
+  (12, 'Truist Championship', 'Truist', 'TPC Potomac', 'Potomac, MD', '2026-05-07', '2026-05-10', 20.00, FALSE, TRUE, FALSE, FALSE, 12),
+  (13, 'PGA CHAMPIONSHIP', 'PGA Champ', 'Aronimink Golf Club', 'Newtown Square, PA', '2026-05-14', '2026-05-17', 18.50, TRUE, FALSE, FALSE, FALSE, 13),
+  (14, 'CJ Cup Byron Nelson', 'Byron Nelson', 'TPC Craig Ranch', 'McKinney, TX', '2026-05-21', '2026-05-24', 9.50, FALSE, FALSE, FALSE, FALSE, 14),
+  (15, 'Charles Schwab Challenge', 'Colonial', 'Colonial Country Club', 'Fort Worth, TX', '2026-05-28', '2026-05-31', 9.20, FALSE, FALSE, FALSE, FALSE, 15),
+  (16, 'The Memorial', 'Memorial', 'Muirfield Village GC', 'Dublin, OH', '2026-06-04', '2026-06-07', 20.00, FALSE, TRUE, FALSE, FALSE, 16),
+  (17, 'Canadian Open', 'Canadian', 'Hamilton Golf & CC', 'Hamilton, ON', '2026-06-11', '2026-06-14', 9.40, FALSE, FALSE, FALSE, FALSE, 17),
+  (18, 'US OPEN', 'US Open', 'Shinnecock Hills Golf Club', 'Southampton, NY', '2026-06-18', '2026-06-21', 21.50, TRUE, FALSE, FALSE, FALSE, 18),
+  (19, 'Travelers Championship', 'Travelers', 'TPC River Highlands', 'Cromwell, CT', '2026-06-25', '2026-06-28', 20.00, FALSE, TRUE, FALSE, FALSE, 19),
+  (20, 'Scottish Open', 'Scottish', 'The Renaissance Club', 'North Berwick, Scotland', '2026-07-09', '2026-07-12', 9.00, FALSE, FALSE, FALSE, FALSE, 20),
+  (21, 'THE OPEN CHAMPIONSHIP', 'The Open', 'Royal Portrush Golf Club', 'Portrush, N. Ireland', '2026-07-16', '2026-07-19', 17.00, TRUE, FALSE, FALSE, FALSE, 21),
+  (22, '3M Open', '3M', 'TPC Twin Cities', 'Blaine, MN', '2026-07-23', '2026-07-26', 8.40, FALSE, FALSE, FALSE, FALSE, 22),
+  (23, 'Rocket Mortgage Classic', 'Rocket', 'Detroit Golf Club', 'Detroit, MI', '2026-07-30', '2026-08-02', 8.40, FALSE, FALSE, FALSE, FALSE, 23),
+  (24, 'Wyndham Championship', 'Wyndham', 'Sedgefield Country Club', 'Greensboro, NC', '2026-08-06', '2026-08-09', 8.40, FALSE, FALSE, FALSE, FALSE, 24),
+  (25, 'FedEx St. Jude Championship', 'St. Jude', 'TPC Southwind', 'Memphis, TN', '2026-08-13', '2026-08-16', 20.00, FALSE, FALSE, FALSE, FALSE, 25),
+  (26, 'BMW Championship', 'BMW', 'Caves Valley Golf Club', 'Owings Mills, MD', '2026-08-20', '2026-08-23', 20.00, FALSE, FALSE, FALSE, FALSE, 26),
+  (27, 'Tour Championship', 'Tour Champ', 'East Lake Golf Club', 'Atlanta, GA', '2026-08-27', '2026-08-30', 25.00, FALSE, FALSE, FALSE, FALSE, 27)
 ON CONFLICT (week_number) DO NOTHING;
 
 -- ============================================
@@ -187,163 +187,155 @@ ON CONFLICT (player_id) DO NOTHING;
 
 -- ============================================
 -- WEEKLY SCORES - Real earnings data (Weeks 1-8)
--- Tournament ID mapping:
---   Week 1 (WM Phoenix Open) = tournament 6
---   Week 2 (Pebble Beach Pro-Am) = tournament 5
---   Week 3 (Genesis Invitational) = tournament 7
---   Week 4 (Arnold Palmer Invitational) = tournament 9
---   Week 5 (The Players Championship) = tournament 11
---   Week 6 (Valspar Championship) = tournament 12
---   Week 7 (Houston Open) = tournament 13
---   Week 8 (Valero Texas Open) = tournament 14
+-- Tournament IDs match week numbers (week 1 = id 1, etc.)
 -- Player IDs: 1=Scott Nelson, 2=Scott Tomko, 3=Steve Walker,
 --   4=Matt Federer, 5=Shawn Gidley, 6=Joe Cas, 7=David Sotka,
 --   8=Jamie Yane, 9=Keith Cromer, 10=Jack Ehrbar, 11=Dave Sutton,
 --   12=Dan Osicki, 13=Josh Osicki, 14=Matt Janssen
 -- ============================================
 
--- Week 1: WM Phoenix Open (tournament_id = 6)
+-- Week 1: WM Phoenix Open (tournament_id = 1)
 INSERT INTO weekly_scores (player_id, tournament_id, total_earnings) VALUES
-  (1, 6, 2039200.00),
-  (2, 6, 724709.00),
-  (3, 6, 2201760.00),
-  (4, 6, 1674080.00),
-  (5, 6, 1391200.00),
-  (6, 6, 1065029.00),
-  (7, 6, 1771109.00),
-  (8, 6, 407749.00),
-  (9, 6, 1520160.00),
-  (10, 6, 685120.00),
-  (11, 6, 1224160.00),
-  (12, 6, 470698.00),
-  (13, 6, 881280.00),
-  (14, 6, 122720.00)
+  (1, 1, 2039200.00),
+  (2, 1, 724709.00),
+  (3, 1, 2201760.00),
+  (4, 1, 1674080.00),
+  (5, 1, 1391200.00),
+  (6, 1, 1065029.00),
+  (7, 1, 1771109.00),
+  (8, 1, 407749.00),
+  (9, 1, 1520160.00),
+  (10, 1, 685120.00),
+  (11, 1, 1224160.00),
+  (12, 1, 470698.00),
+  (13, 1, 881280.00),
+  (14, 1, 122720.00)
 ON CONFLICT (player_id, tournament_id) DO UPDATE SET total_earnings = EXCLUDED.total_earnings;
 
--- Week 2: Pebble Beach Pro-Am (tournament_id = 5)
+-- Week 2: Pebble Beach Pro-Am (tournament_id = 2)
 INSERT INTO weekly_scores (player_id, tournament_id, total_earnings) VALUES
-  (1, 5, 1395375.00),
-  (2, 5, 1297125.00),
-  (3, 5, 1296325.00),
-  (4, 5, 2395875.00),
-  (5, 5, 656000.00),
-  (6, 5, 1289875.00),
-  (7, 5, 643250.00),
-  (8, 5, 1389250.00),
-  (9, 5, 1214625.00),
-  (10, 5, 1490875.00),
-  (11, 5, 1246500.00),
-  (12, 5, 835875.00),
-  (13, 5, 1241358.00),
-  (14, 5, 1469125.00)
+  (1, 2, 1395375.00),
+  (2, 2, 1297125.00),
+  (3, 2, 1296325.00),
+  (4, 2, 2395875.00),
+  (5, 2, 656000.00),
+  (6, 2, 1289875.00),
+  (7, 2, 643250.00),
+  (8, 2, 1389250.00),
+  (9, 2, 1214625.00),
+  (10, 2, 1490875.00),
+  (11, 2, 1246500.00),
+  (12, 2, 835875.00),
+  (13, 2, 1241358.00),
+  (14, 2, 1469125.00)
 ON CONFLICT (player_id, tournament_id) DO UPDATE SET total_earnings = EXCLUDED.total_earnings;
 
--- Week 3: Genesis Invitational (tournament_id = 7)
+-- Week 3: Genesis Invitational (tournament_id = 3)
 INSERT INTO weekly_scores (player_id, tournament_id, total_earnings) VALUES
-  (1, 7, 1577750.00),
-  (2, 7, 5591950.00),
-  (3, 7, 1274450.00),
-  (4, 7, 2826950.00),
-  (5, 7, 1780650.00),
-  (6, 7, 822000.00),
-  (7, 7, 2144650.00),
-  (8, 7, 2106750.00),
-  (9, 7, 1826900.00),
-  (10, 7, 1246950.00),
-  (11, 7, 2631950.00),
-  (12, 7, 1291200.00),
-  (13, 7, 778750.00),
-  (14, 7, 2180900.00)
+  (1, 3, 1577750.00),
+  (2, 3, 5591950.00),
+  (3, 3, 1274450.00),
+  (4, 3, 2826950.00),
+  (5, 3, 1780650.00),
+  (6, 3, 822000.00),
+  (7, 3, 2144650.00),
+  (8, 3, 2106750.00),
+  (9, 3, 1826900.00),
+  (10, 3, 1246950.00),
+  (11, 3, 2631950.00),
+  (12, 3, 1291200.00),
+  (13, 3, 778750.00),
+  (14, 3, 2180900.00)
 ON CONFLICT (player_id, tournament_id) DO UPDATE SET total_earnings = EXCLUDED.total_earnings;
 
--- Week 4: Arnold Palmer Invitational (tournament_id = 9)
+-- Week 4: Arnold Palmer Invitational (tournament_id = 4)
 INSERT INTO weekly_scores (player_id, tournament_id, total_earnings) VALUES
-  (1, 9, 1120000.00),
-  (2, 9, 1362000.00),
-  (3, 9, 885000.00),
-  (4, 9, 1075000.00),
-  (5, 9, 1960000.00),
-  (6, 9, 1277000.00),
-  (7, 9, 2258000.00),
-  (8, 9, 2648200.00),
-  (9, 9, 291000.00),
-  (10, 9, 1347200.00),
-  (11, 9, 1369200.00),
-  (12, 9, 1153000.00),
-  (13, 9, 1041000.00),
-  (14, 9, 620200.00)
+  (1, 4, 1120000.00),
+  (2, 4, 1362000.00),
+  (3, 4, 885000.00),
+  (4, 4, 1075000.00),
+  (5, 4, 1960000.00),
+  (6, 4, 1277000.00),
+  (7, 4, 2258000.00),
+  (8, 4, 2648200.00),
+  (9, 4, 291000.00),
+  (10, 4, 1347200.00),
+  (11, 4, 1369200.00),
+  (12, 4, 1153000.00),
+  (13, 4, 1041000.00),
+  (14, 4, 620200.00)
 ON CONFLICT (player_id, tournament_id) DO UPDATE SET total_earnings = EXCLUDED.total_earnings;
 
--- Week 5: The Players Championship (tournament_id = 11)
+-- Week 5: The Players Championship (tournament_id = 5)
 INSERT INTO weekly_scores (player_id, tournament_id, total_earnings) VALUES
-  (1, 11, 7208000.00),
-  (2, 11, 1835000.00),
-  (3, 11, 2397610.00),
-  (4, 11, 1970750.00),
-  (5, 11, 1770083.00),
-  (6, 11, 1382500.00),
-  (7, 11, 2193527.00),
-  (8, 11, 920583.00),
-  (9, 11, 332333.00),
-  (10, 11, 2708000.00),
-  (11, 11, 2065277.00),
-  (12, 11, 1254110.00),
-  (13, 11, 396125.00),
-  (14, 11, 910000.00)
+  (1, 5, 7208000.00),
+  (2, 5, 1835000.00),
+  (3, 5, 2397610.00),
+  (4, 5, 1970750.00),
+  (5, 5, 1770083.00),
+  (6, 5, 1382500.00),
+  (7, 5, 2193527.00),
+  (8, 5, 920583.00),
+  (9, 5, 332333.00),
+  (10, 5, 2708000.00),
+  (11, 5, 2065277.00),
+  (12, 5, 1254110.00),
+  (13, 5, 396125.00),
+  (14, 5, 910000.00)
 ON CONFLICT (player_id, tournament_id) DO UPDATE SET total_earnings = EXCLUDED.total_earnings;
 
--- Week 6: Valspar Championship (tournament_id = 12)
+-- Week 6: Valspar Championship (tournament_id = 6)
 INSERT INTO weekly_scores (player_id, tournament_id, total_earnings) VALUES
-  (1, 12, 482482.00),
-  (2, 12, 2020958.00),
-  (3, 12, 2297370.00),
-  (4, 12, 102284.00),
-  (5, 12, 1979614.00),
-  (6, 12, 2127079.00),
-  (7, 12, 445991.00),
-  (8, 12, 212667.00),
-  (9, 12, 2452298.00),
-  (10, 12, 603785.00),
-  (11, 12, 445991.00),
-  (12, 12, 731169.00),
-  (13, 12, 2011100.00),
-  (14, 12, 281827.00)
+  (1, 6, 482482.00),
+  (2, 6, 2020958.00),
+  (3, 6, 2297370.00),
+  (4, 6, 102284.00),
+  (5, 6, 1979614.00),
+  (6, 6, 2127079.00),
+  (7, 6, 445991.00),
+  (8, 6, 212667.00),
+  (9, 6, 2452298.00),
+  (10, 6, 603785.00),
+  (11, 6, 445991.00),
+  (12, 6, 731169.00),
+  (13, 6, 2011100.00),
+  (14, 6, 281827.00)
 ON CONFLICT (player_id, tournament_id) DO UPDATE SET total_earnings = EXCLUDED.total_earnings;
 
--- Week 7: Houston Open (tournament_id = 13)
+-- Week 7: Texas Children's Houston Open (tournament_id = 7)
 INSERT INTO weekly_scores (player_id, tournament_id, total_earnings) VALUES
-  (1, 13, 477751.00),
-  (2, 13, 998887.00),
-  (3, 13, 1386224.00),
-  (4, 13, 1346400.00),
-  (5, 13, 743589.00),
-  (6, 13, 2082712.00),
-  (7, 13, 665604.00),
-  (8, 13, 1483591.00),
-  (9, 13, 1063237.00),
-  (10, 13, 1201689.00),
-  (11, 13, 119250.00),
-  (12, 13, 948172.00),
-  (13, 13, 1166962.00),
-  (14, 13, 647955.00)
+  (1, 7, 477751.00),
+  (2, 7, 998887.00),
+  (3, 7, 1386224.00),
+  (4, 7, 1346400.00),
+  (5, 7, 743589.00),
+  (6, 7, 2082712.00),
+  (7, 7, 665604.00),
+  (8, 7, 1483591.00),
+  (9, 7, 1063237.00),
+  (10, 7, 1201689.00),
+  (11, 7, 119250.00),
+  (12, 7, 948172.00),
+  (13, 7, 1166962.00),
+  (14, 7, 647955.00)
 ON CONFLICT (player_id, tournament_id) DO UPDATE SET total_earnings = EXCLUDED.total_earnings;
 
--- Week 8: Valero Texas Open (tournament_id = 14)
+-- Week 8: Valero Texas Open (tournament_id = 8)
 INSERT INTO weekly_scores (player_id, tournament_id, total_earnings) VALUES
-  (1, 14, 180614.00),
-  (2, 14, 616175.00),
-  (3, 14, 1548808.00),
-  (4, 14, 900783.00),
-  (5, 14, 894256.00),
-  (6, 14, 858447.00),
-  (7, 14, 450114.00),
-  (8, 14, 1096097.00),
-  (9, 14, 1516958.00),
-  (10, 14, 757765.00),
-  (11, 14, 616175.00),
-  (12, 14, 1512058.00),
-  (13, 14, 237650.00),
-  (14, 14, 733089.00)
+  (1, 8, 180614.00),
+  (2, 8, 616175.00),
+  (3, 8, 1548808.00),
+  (4, 8, 900783.00),
+  (5, 8, 894256.00),
+  (6, 8, 858447.00),
+  (7, 8, 450114.00),
+  (8, 8, 1096097.00),
+  (9, 8, 1516958.00),
+  (10, 8, 757765.00),
+  (11, 8, 616175.00),
+  (12, 8, 1512058.00),
+  (13, 8, 237650.00),
+  (14, 8, 733089.00)
 ON CONFLICT (player_id, tournament_id) DO UPDATE SET total_earnings = EXCLUDED.total_earnings;
 
 -- ============================================
