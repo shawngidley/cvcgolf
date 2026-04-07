@@ -37,12 +37,42 @@ exports.handler = async (event) => {
     // Validate salary cap
     const { data: golfers } = await supabase
       .from('golfers')
-      .select('id, salary')
+      .select('id, name, salary, is_liv')
       .in('id', golfer_ids);
 
     const totalSalary = golfers.reduce((sum, g) => sum + g.salary, 0);
     if (totalSalary > 100) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: `Over $100 salary cap (total: $${totalSalary})` }) };
+    }
+
+    // Validate LIV golfer usage (max 2 uses total)
+    const livGolfers = golfers.filter(g => g.is_liv);
+    if (livGolfers.length > 0) {
+      const { data: usage } = await supabase
+        .from('golfer_usage')
+        .select('golfer_id, times_used')
+        .eq('player_id', player_id)
+        .in('golfer_id', livGolfers.map(g => g.id));
+
+      const usageMap = {};
+      if (usage) usage.forEach(u => { usageMap[u.golfer_id] = u.times_used; });
+
+      // Check if current tournament already has a lineup (re-submission doesn't add usage)
+      const { data: existingLineup } = await supabase
+        .from('lineups')
+        .select('golfer_id')
+        .eq('player_id', player_id)
+        .eq('tournament_id', tournament_id);
+      const existingIds = new Set((existingLineup || []).map(l => l.golfer_id));
+
+      for (const g of livGolfers) {
+        const currentUses = usageMap[g.id] || 0;
+        const alreadyInLineup = existingIds.has(g.id);
+        const effectiveUses = alreadyInLineup ? currentUses - 1 : currentUses;
+        if (effectiveUses >= 2) {
+          return { statusCode: 400, headers, body: JSON.stringify({ error: `LIV golfer ${g.name} has reached the 2-use limit` }) };
+        }
+      }
     }
 
     // Delete existing and insert new

@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS golfers (
   owgr INT,
   tier TEXT,
   is_active BOOLEAN DEFAULT TRUE,
+  is_liv BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

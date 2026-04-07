@@ -3,6 +3,7 @@
 const SALARY_CAP = 100;
 const MAX_PICKS = 5;
 const MAX_USES = 5;
+const MAX_LIV_USES = 2;
 const MAX_MAJOR_USES = 2;
 let selectedGolfers = [];
 let allGolfers = [];
@@ -170,9 +171,11 @@ function getUsageInfo(golferId) {
   return usage;
 }
 
-function getUsageClass(timesUsed) {
-  if (timesUsed >= MAX_USES) return 'usage-red';
-  if (timesUsed >= 3) return 'usage-yellow';
+function getUsageClass(timesUsed, isLiv) {
+  const max = isLiv ? MAX_LIV_USES : MAX_USES;
+  if (timesUsed >= max) return 'usage-red';
+  if (isLiv && timesUsed >= 1) return 'usage-yellow';
+  if (!isLiv && timesUsed >= 3) return 'usage-yellow';
   return 'usage-green';
 }
 
@@ -191,8 +194,10 @@ function renderGolferPool() {
   filtered = [...filtered].sort((a, b) => {
     const aUsage = getUsageInfo(a.id);
     const bUsage = getUsageInfo(b.id);
-    const aMaxed = aUsage.times_used >= MAX_USES || (isMajorWeek && aUsage.major_uses >= MAX_MAJOR_USES);
-    const bMaxed = bUsage.times_used >= MAX_USES || (isMajorWeek && bUsage.major_uses >= MAX_MAJOR_USES);
+    const aMax = a.is_liv ? MAX_LIV_USES : MAX_USES;
+    const bMax = b.is_liv ? MAX_LIV_USES : MAX_USES;
+    const aMaxed = aUsage.times_used >= aMax || (isMajorWeek && aUsage.major_uses >= MAX_MAJOR_USES);
+    const bMaxed = bUsage.times_used >= bMax || (isMajorWeek && bUsage.major_uses >= MAX_MAJOR_USES);
     if (aMaxed !== bMaxed) return aMaxed ? 1 : -1;
     return b.salary - a.salary || a.owgr - b.owgr;
   });
@@ -203,24 +208,30 @@ function renderGolferPool() {
     return;
   }
 
-  list.innerHTML = filtered.map(g => {
+  // LIV note at top of list
+  const livNote = '<div class="liv-note">LIV golfers (marked <span class="liv-badge">LIV</span>) may only be used 2 times total.</div>';
+
+  list.innerHTML = livNote + filtered.map(g => {
     const isSelected = selectedIds.has(g.id);
     const usage = getUsageInfo(g.id);
-    const maxedOut = usage.times_used >= MAX_USES;
+    const isLiv = g.is_liv || false;
+    const maxUses = isLiv ? MAX_LIV_USES : MAX_USES;
+    const maxedOut = usage.times_used >= maxUses;
     const majorMaxed = isMajorWeek && usage.major_uses >= MAX_MAJOR_USES;
     const tooExpensive = g.salary > salaryRemaining && !isSelected;
     const full = selectedGolfers.length >= MAX_PICKS && !isSelected;
     const disabled = tooExpensive || full || isLocked || maxedOut || majorMaxed;
 
-    const usageClass = getUsageClass(usage.times_used);
-    const usageBadge = `<span class="g-usage ${usageClass}">${usage.times_used}/${MAX_USES}</span>`;
+    const usageClass = getUsageClass(usage.times_used, isLiv);
+    const usageBadge = `<span class="g-usage ${usageClass}">${usage.times_used}/${maxUses}</span>`;
+    const livBadge = isLiv ? '<span class="liv-badge">LIV</span>' : '';
     const majorBadge = (isMajorWeek && usage.major_uses >= MAX_MAJOR_USES)
       ? '<span class="g-usage usage-major-maxed">Major 2/2</span>'
       : (isMajorWeek ? `<span class="g-usage usage-major">Major ${usage.major_uses}/2</span>` : '');
 
     return `<div class="golfer-row ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''} ${maxedOut ? 'maxed-out' : ''} ${majorMaxed && !maxedOut ? 'major-maxed' : ''}"
       data-id="${g.id}" data-name="${g.name}" data-salary="${g.salary}" data-tier="${g.tier}">
-      <span class="g-name">${g.name}</span>
+      <span class="g-name">${g.name}${livBadge}</span>
       ${majorBadge}
       ${usageBadge}
       <span class="g-salary">$${g.salary}</span>

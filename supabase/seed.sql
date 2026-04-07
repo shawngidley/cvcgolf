@@ -179,6 +179,39 @@ INSERT INTO golfers (name, salary, owgr, tier) VALUES
 ON CONFLICT (name) DO UPDATE SET salary = EXCLUDED.salary, owgr = EXCLUDED.owgr, tier = EXCLUDED.tier;
 
 -- ============================================
+-- LIV GOLFERS (additional LIV players not in main pool)
+-- ============================================
+INSERT INTO golfers (name, salary, owgr, tier, is_liv) VALUES
+  ('Jon Rahm', 27, 110, 'Elite', TRUE),
+  ('Bryson DeChambeau', 23, 111, 'Star', TRUE),
+  ('Brooks Koepka', 21, 112, 'Premium', TRUE),
+  ('Joaquin Niemann', 21, 113, 'Premium', TRUE),
+  ('Cameron Smith', 21, 114, 'Premium', TRUE),
+  ('Dustin Johnson', 19, 115, 'Mid-Upper', TRUE),
+  ('Patrick Reed', 15, 116, 'Value', TRUE),
+  ('Talor Gooch', 15, 117, 'Value', TRUE),
+  ('Sergio Garcia', 15, 118, 'Value', TRUE),
+  ('Abraham Ancer', 14, 119, 'Budget', TRUE),
+  ('Louis Oosthuizen', 15, 120, 'Value', TRUE),
+  ('Bubba Watson', 13, 121, 'Bargain', TRUE),
+  ('Phil Mickelson', 14, 122, 'Budget', TRUE),
+  ('Harold Varner III', 14, 123, 'Budget', TRUE),
+  ('Kevin Na', 13, 124, 'Bargain', TRUE),
+  ('Pat Perez', 13, 125, 'Bargain', TRUE),
+  ('Charl Schwartzel', 13, 126, 'Bargain', TRUE),
+  ('Graeme McDowell', 13, 127, 'Bargain', TRUE)
+ON CONFLICT (name) DO UPDATE SET salary = EXCLUDED.salary, owgr = EXCLUDED.owgr, tier = EXCLUDED.tier, is_liv = EXCLUDED.is_liv;
+
+-- Mark existing golfers as LIV
+UPDATE golfers SET is_liv = TRUE WHERE name IN (
+  'Jon Rahm', 'Bryson DeChambeau', 'Brooks Koepka', 'Joaquin Niemann',
+  'Cameron Smith', 'Dustin Johnson', 'Patrick Reed', 'Tyrrell Hatton',
+  'Talor Gooch', 'Jason Day', 'Sergio Garcia', 'Abraham Ancer',
+  'Louis Oosthuizen', 'Bubba Watson', 'Phil Mickelson', 'Harold Varner III',
+  'Kevin Na', 'Pat Perez', 'Charl Schwartzel', 'Graeme McDowell'
+);
+
+-- ============================================
 -- Initialize standings for all players
 -- ============================================
 INSERT INTO standings (player_id, total_earnings, weeks_played)

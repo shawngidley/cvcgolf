@@ -531,6 +531,32 @@ body {
 .golfer-row.maxed-out { opacity: 0.35; text-decoration: line-through; }
 .golfer-row.major-maxed { opacity: 0.45; }
 
+/* LIV golfer badge */
+.liv-badge {
+  display: inline-block;
+  background: var(--red);
+  color: var(--white);
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 5px;
+  letter-spacing: 0.05em;
+  font-family: -apple-system, sans-serif;
+  vertical-align: middle;
+}
+
+.liv-note {
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+  background: #fde8e8;
+  border: 1px solid #f5c6cb;
+  border-radius: var(--radius);
+  font-size: 0.78rem;
+  color: #721c24;
+  font-family: -apple-system, sans-serif;
+}
+
 /* ===== HISTORY CONTROLS ===== */
 .history-controls, .picks-controls {
   display: flex;
