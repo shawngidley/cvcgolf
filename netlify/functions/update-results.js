@@ -33,6 +33,17 @@ exports.handler = async (event) => {
         earnings: r.earnings || 0,
         made_cut: (r.earnings || 0) > 0
       }, { onConflict: 'tournament_id,golfer_id' });
+
+      // Also upsert into golfer_earnings (source of truth for frontend)
+      const scoreStr = r.score_to_par === 0 ? 'E' : r.score_to_par > 0 ? `+${r.score_to_par}` : `${r.score_to_par}`;
+      await supabase.from('golfer_earnings').upsert({
+        golfer_id: r.golfer_id,
+        tournament_id,
+        earnings: r.earnings || 0,
+        finish_position: r.position || null,
+        score: r.score_to_par != null ? scoreStr : null,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'golfer_id,tournament_id' });
     }
 
     // Recalculate weekly scores from golfer_earnings
