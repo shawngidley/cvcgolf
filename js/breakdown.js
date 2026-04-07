@@ -51,7 +51,7 @@ async function loadBreakdown() {
 
   // Fetch all data in parallel
   const [playersRes, lineupsRes, resultsRes] = await Promise.all([
-    supabaseClient.from('players').select('id, name').order('name'),
+    supabaseClient.from('players').select('id, name').order('name').neq('is_guest', true),
     supabaseClient.from('lineups').select('player_id, golfer_id, golfers(id, name)').eq('tournament_id', tournamentId),
     supabaseClient.from('results').select('golfer_id, earnings').eq('tournament_id', tournamentId)
   ]);

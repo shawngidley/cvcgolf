@@ -47,7 +47,7 @@ exports.handler = async (event) => {
     }
 
     // Recalculate weekly scores from golfer_earnings
-    const { data: players } = await supabase.from('players').select('id');
+    const { data: players } = await supabase.from('players').select('id').neq('is_guest', true);
 
     for (const player of players) {
       const { data: lineup } = await supabase

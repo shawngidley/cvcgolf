@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadWeeklyGrid() {
-  const { data: players } = await supabaseClient.from('players').select('id, name').order('name');
+  const { data: players } = await supabaseClient.from('players').select('id, name').order('name').neq('is_guest', true);
   const { data: tournaments } = await supabaseClient
     .from('tournaments')
     .select('id, week_number, short_name')
@@ -76,7 +76,7 @@ async function loadWeeklyGrid() {
 }
 
 async function loadEarningsChart() {
-  const { data: players } = await supabaseClient.from('players').select('id, name').order('name');
+  const { data: players } = await supabaseClient.from('players').select('id, name').order('name').neq('is_guest', true);
   const { data: tournaments } = await supabaseClient
     .from('tournaments')
     .select('id, week_number, short_name')

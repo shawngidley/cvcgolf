@@ -26,7 +26,7 @@ async function loadDropdowns() {
     loadWeekData();
   }
 
-  const { data: players } = await supabaseClient.from('players').select('id, name').order('name');
+  const { data: players } = await supabaseClient.from('players').select('id, name').order('name').neq('is_guest', true);
   const playerFilter = document.getElementById('playerFilter');
   if (players) {
     players.forEach(p => {
@@ -62,7 +62,7 @@ async function loadWeekData() {
   `;
 
   // Get all players, lineups, and golfer_earnings for this tournament
-  const { data: players } = await supabaseClient.from('players').select('id, name').order('name');
+  const { data: players } = await supabaseClient.from('players').select('id, name').order('name').neq('is_guest', true);
   const { data: allLineups } = await supabaseClient
     .from('lineups')
     .select('player_id, golfer_id, slot, golfers(name, salary)')

@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadPlayerDropdown() {
-  const { data: players } = await supabaseClient.from('players').select('id, name').order('name');
+  const { data: players } = await supabaseClient.from('players').select('id, name').order('name').neq('is_guest', true);
   const select = document.getElementById('usagePlayerSelect');
   if (players) {
     players.forEach(p => {

@@ -166,7 +166,7 @@ async function saveResults() {
 }
 
 async function recalcWeek(tournamentId) {
-  const { data: players } = await supabaseClient.from('players').select('id');
+  const { data: players } = await supabaseClient.from('players').select('id').neq('is_guest', true);
 
   for (const player of players) {
     const { data: lineup } = await supabaseClient
@@ -211,7 +211,7 @@ async function recalcWeek(tournamentId) {
 }
 
 async function recalcStandings() {
-  const { data: players } = await supabaseClient.from('players').select('id');
+  const { data: players } = await supabaseClient.from('players').select('id').neq('is_guest', true);
 
   for (const player of players) {
     const { data: scores } = await supabaseClient
@@ -285,7 +285,7 @@ async function recalcEverything() {
   }
 
   // Rebuild golfer usage from golfer_earnings
-  const { data: players } = await supabaseClient.from('players').select('id');
+  const { data: players } = await supabaseClient.from('players').select('id').neq('is_guest', true);
   for (const player of players) {
     await supabaseClient.from('golfer_usage').delete().eq('player_id', player.id);
 
@@ -330,7 +330,7 @@ async function viewLineups() {
   const tournamentId = document.getElementById('viewLineupsWeek').value;
   if (!tournamentId) return;
 
-  const { data: players } = await supabaseClient.from('players').select('id, name').order('name');
+  const { data: players } = await supabaseClient.from('players').select('id, name').order('name').neq('is_guest', true);
   const tbody = document.getElementById('adminLineupsBody');
 
   // Fetch all lineups for this tournament in one query
