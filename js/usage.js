@@ -31,7 +31,7 @@ async function loadUsage() {
 
   const { data: usage } = await supabaseClient
     .from('golfer_usage')
-    .select('*, golfers(name, salary, tier)')
+    .select('*, golfers(name, salary)')
     .eq('player_id', playerId)
     .order('times_used', { ascending: false });
 

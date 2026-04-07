@@ -518,7 +518,6 @@ body {
 .golfer-row.disabled { opacity: 0.35; pointer-events: none; }
 .golfer-row .g-name { flex: 1; font-weight: 500; }
 .golfer-row .g-salary { font-weight: 700; color: var(--augusta); min-width: 35px; text-align: right; }
-.golfer-row .g-tier { font-size: 0.7rem; color: var(--gray-500); min-width: 70px; text-align: right; }
 
 /* Golfer usage badges */
 .golfer-row .g-usage {
@@ -629,28 +628,19 @@ body {
   flex-wrap: wrap;
 }
 
-.salary-tier-card {
+.salary-card {
   flex: 1;
-  min-width: 80px;
+  min-width: 70px;
   padding: 0.65rem 0.5rem;
   border-radius: var(--radius);
   text-align: center;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--gray-200);
+  background: var(--white);
 }
 
-.salary-tier-card .tier-salary { display: block; font-size: 1.1rem; font-weight: 700; font-family: var(--font-body); }
-.salary-tier-card .tier-label { display: block; font-size: 0.65rem; color: var(--gray-600); font-family: var(--font-body); text-transform: uppercase; }
-.salary-tier-card .tier-count { display: block; font-size: 0.75rem; color: var(--gray-500); font-family: var(--font-body); margin-top: 0.1rem; }
-.salary-tier-card .tier-names { display: block; font-size: 0.7rem; color: var(--gray-600); font-family: var(--font-body); margin-top: 0.35rem; line-height: 1.4; white-space: normal; }
-
-.salary-tier-card.elite { background: linear-gradient(135deg, #f7f0d8, #f5ecc0); border-color: var(--gold); }
-.salary-tier-card.elite .tier-salary { color: var(--gold-dark); }
-.salary-tier-card.superstar { background: linear-gradient(135deg, #f0f0f0, #e8e8e8); border-color: var(--silver); }
-.salary-tier-card.star { background: #e8f0f8; border-color: var(--blue); }
-.salary-tier-card.star .tier-salary { color: var(--blue); }
-.salary-tier-card.premium { background: var(--augusta-pale); border-color: var(--augusta-light); }
-.salary-tier-card.premium .tier-salary { color: var(--augusta); }
+.salary-card-amount { display: block; font-size: 1.1rem; font-weight: 700; color: var(--augusta); font-family: var(--font-body); }
+.salary-card-count { display: block; font-size: 0.75rem; color: var(--gray-500); font-family: var(--font-body); margin-top: 0.1rem; }
 
 /* ===== RULES ===== */
 .rules-content { max-width: 800px; }
@@ -658,21 +648,6 @@ body {
 .rule-card h2 { color: var(--augusta-dark); padding-bottom: 0.4rem; border-bottom: 2px solid var(--augusta-pale); }
 .rule-card ul { padding-left: 1.5rem; font-family: var(--font-body); }
 .rule-card li { margin-bottom: 0.4rem; color: var(--gray-700); font-size: 0.9rem; }
-
-.tier-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.75rem; margin-top: 0.75rem; }
-
-.tier-box { padding: 0.75rem; border-radius: var(--radius); text-align: center; font-family: var(--font-body); }
-.tier-box h3 { font-size: 0.85rem; margin-bottom: 0.15rem; }
-.tier-box p { font-size: 0.8rem; color: var(--gray-600); }
-.tier-elite { background: var(--gold-light); border: 1px solid var(--gold); }
-.tier-superstar { background: #f0f0f0; border: 1px solid var(--silver); }
-.tier-star { background: #e8f0f8; border: 1px solid var(--blue); }
-.tier-premium { background: var(--augusta-pale); border: 1px solid var(--augusta-light); }
-.tier-midupper { background: #e8f5ed; border: 1px solid #5cb85c; }
-.tier-mid { background: #f0f0f0; border: 1px solid var(--gray-300); }
-.tier-value { background: #fdf0e0; border: 1px solid #e0a050; }
-.tier-budget { background: #f5f5f5; border: 1px solid var(--gray-300); }
-.tier-bargain { background: #f8f8f8; border: 1px solid var(--gray-200); }
 
 .prizes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.75rem; margin-top: 0.75rem; }
 
@@ -820,8 +795,8 @@ body {
   .schedule-grid { grid-template-columns: 1fr; }
 
   .salary-overview { gap: 0.35rem; }
-  .salary-tier-card { min-width: 60px; padding: 0.4rem 0.25rem; }
-  .salary-tier-card .tier-salary { font-size: 0.9rem; }
+  .salary-card { min-width: 55px; padding: 0.4rem 0.25rem; }
+  .salary-card-amount { font-size: 0.9rem; }
 
   .lineup-status { flex-direction: column; gap: 0.5rem; }
 

@@ -104,7 +104,7 @@ async function loadWeekData() {
 
     const { data: lineup } = await supabaseClient
       .from('lineups')
-      .select('slot, golfers(name, salary, tier)')
+      .select('slot, golfers(name, salary)')
       .eq('player_id', playerFilter)
       .eq('tournament_id', tournamentId)
       .order('slot');

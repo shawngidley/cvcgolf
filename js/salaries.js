@@ -31,30 +31,27 @@ async function loadSalaries() {
     totalEarnings: earnings[g.id] || 0
   }));
 
-  // Build tier cards dynamically from actual database salaries
+  // Build salary cards dynamically from actual database salaries
   const salaryGroups = {};
   allGolfersData.forEach(g => {
-    if (!salaryGroups[g.salary]) salaryGroups[g.salary] = { tier: g.tier, count: 0 };
-    salaryGroups[g.salary].count++;
+    if (!salaryGroups[g.salary]) salaryGroups[g.salary] = 0;
+    salaryGroups[g.salary]++;
   });
 
   const sortedSalaries = Object.keys(salaryGroups).map(Number).sort((a, b) => b - a);
 
   const container = document.getElementById('salaryOverview');
   container.innerHTML = sortedSalaries.map(s => {
-    const group = salaryGroups[s];
-    const cls = (group.tier || '').toLowerCase().replace(/[^a-z]/g, '');
-    return `<div class="salary-tier-card ${cls}">
-      <span class="tier-salary">$${s}</span>
-      <span class="tier-label">${group.tier || ''}</span>
-      <span class="tier-count">${group.count} golfers</span>
+    return `<div class="salary-card">
+      <span class="salary-card-amount">$${s}</span>
+      <span class="salary-card-count">${salaryGroups[s]} golfers</span>
     </div>`;
   }).join('');
 
-  // Update tier filter dropdown to match
-  const filterEl = document.getElementById('salaryTierFilter');
-  filterEl.innerHTML = '<option value="">All Tiers</option>' +
-    sortedSalaries.map(s => `<option value="${s}">$${s} - ${salaryGroups[s].tier}</option>`).join('');
+  // Update salary filter dropdown
+  const filterEl = document.getElementById('salaryFilter');
+  filterEl.innerHTML = '<option value="">All Salaries</option>' +
+    sortedSalaries.map(s => `<option value="${s}">$${s}</option>`).join('');
 
   renderSalaries(allGolfersData);
 }
@@ -62,7 +59,7 @@ async function loadSalaries() {
 function renderSalaries(golfers) {
   const tbody = document.getElementById('salaryBody');
   if (golfers.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" class="loading">No golfers found</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="loading">No golfers found</td></tr>';
     return;
   }
 
@@ -71,7 +68,6 @@ function renderSalaries(golfers) {
       <td class="rank-cell">${g.is_liv ? 'LIV' : (g.owgr || '-')}</td>
       <td><strong><a href="https://www.spotrac.com/pga/rankings/earnings/_/year/2026" target="_blank" class="golfer-link">${g.name}</a></strong></td>
       <td><strong>$${g.salary}</strong></td>
-      <td>${g.tier}</td>
       <td class="currency">${formatCurrency(g.totalEarnings)}</td>
       <td>${g.timesPicked}</td>
     </tr>
@@ -80,15 +76,15 @@ function renderSalaries(golfers) {
 
 function setupFilters() {
   document.getElementById('salarySearch')?.addEventListener('input', applyFilters);
-  document.getElementById('salaryTierFilter')?.addEventListener('change', applyFilters);
+  document.getElementById('salaryFilter')?.addEventListener('change', applyFilters);
 }
 
 function applyFilters() {
   const search = (document.getElementById('salarySearch')?.value || '').toLowerCase();
-  const tier = document.getElementById('salaryTierFilter')?.value || '';
+  const salary = document.getElementById('salaryFilter')?.value || '';
 
   let filtered = allGolfersData;
   if (search) filtered = filtered.filter(g => g.name.toLowerCase().includes(search));
-  if (tier) filtered = filtered.filter(g => g.salary === parseInt(tier));
+  if (salary) filtered = filtered.filter(g => g.salary === parseInt(salary));
   renderSalaries(filtered);
 }

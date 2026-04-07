@@ -61,14 +61,11 @@ async function loadGolfers() {
 
   allGolfers = data || [];
 
-  // Build tier filter dynamically from actual salaries
-  const tierFilter = document.getElementById('tierFilter');
+  // Build salary filter dynamically
+  const salaryFilter = document.getElementById('salaryFilter');
   const salarySet = [...new Set(allGolfers.map(g => g.salary))].sort((a, b) => b - a);
-  tierFilter.innerHTML = '<option value="">All Tiers</option>' +
-    salarySet.map(s => {
-      const tier = allGolfers.find(g => g.salary === s)?.tier || '';
-      return `<option value="${s}">$${s} - ${tier}</option>`;
-    }).join('');
+  salaryFilter.innerHTML = '<option value="">All Salaries</option>' +
+    salarySet.map(s => `<option value="${s}">$${s}</option>`).join('');
 
   renderGolferPool();
 }
@@ -113,7 +110,7 @@ async function loadExistingLineup() {
 
   const { data: lineup } = await supabaseClient
     .from('lineups')
-    .select('*, golfers(id, name, salary, tier)')
+    .select('*, golfers(id, name, salary)')
     .eq('player_id', player.id)
     .eq('tournament_id', currentTournament.id)
     .order('slot');
@@ -126,7 +123,6 @@ async function loadExistingLineup() {
           id: l.golfers.id,
           name: l.golfers.name,
           salary: l.golfers.salary,
-          tier: l.golfers.tier,
           slot: l.slot
         });
       }
@@ -137,7 +133,7 @@ async function loadExistingLineup() {
 
 function setupControls() {
   document.getElementById('golferSearch').addEventListener('input', renderGolferPool);
-  document.getElementById('tierFilter').addEventListener('change', renderGolferPool);
+  document.getElementById('salaryFilter').addEventListener('change', renderGolferPool);
   document.getElementById('submitLineup').addEventListener('click', submitLineup);
 }
 
@@ -194,14 +190,14 @@ function getUsageClass(timesUsed) {
 
 function renderGolferPool() {
   const search = (document.getElementById('golferSearch')?.value || '').toLowerCase();
-  const tierFilter = document.getElementById('tierFilter')?.value || '';
+  const salaryFilterVal = document.getElementById('salaryFilter')?.value || '';
   const salaryRemaining = SALARY_CAP - getSalaryUsed();
   const selectedIds = new Set(selectedGolfers.map(g => g.id));
   const isMajorWeek = currentTournament?.is_major || false;
 
   let filtered = allGolfers;
   if (search) filtered = filtered.filter(g => g.name.toLowerCase().includes(search));
-  if (tierFilter) filtered = filtered.filter(g => g.salary === parseInt(tierFilter));
+  if (salaryFilterVal) filtered = filtered.filter(g => g.salary === parseInt(salaryFilterVal));
 
   // Sort: available first, maxed out at bottom
   filtered = [...filtered].sort((a, b) => {
@@ -244,7 +240,7 @@ function renderGolferPool() {
       : (isMajorWeek ? `<span class="g-usage usage-major">Major ${usage.major_uses}/2</span>` : '');
 
     return `<div class="golfer-row ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''} ${maxedOut ? 'maxed-out' : ''} ${majorMaxed && !maxedOut ? 'major-maxed' : ''}"
-      data-id="${g.id}" data-name="${g.name}" data-salary="${g.salary}" data-tier="${g.tier}">
+      data-id="${g.id}" data-name="${g.name}" data-salary="${g.salary}">
       <span class="g-name">${g.name}</span>
       ${livBadge}
       ${majorBadge}
@@ -260,8 +256,7 @@ function renderGolferPool() {
         addGolfer({
           id: parseInt(row.dataset.id),
           name: row.dataset.name,
-          salary: parseInt(row.dataset.salary),
-          tier: row.dataset.tier
+          salary: parseInt(row.dataset.salary)
         });
       });
     });
