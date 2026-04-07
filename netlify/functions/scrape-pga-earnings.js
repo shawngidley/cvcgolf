@@ -199,10 +199,18 @@ async function fetchGolferEarnings(eventId, competitorId) {
 // Hardcoded name corrections: ESPN name -> DB name (or null to skip entirely)
 const NAME_CORRECTIONS = {
   'Matt McCarty': 'Matt McCarty',
+  'Denny McCarthy': 'Denny McCarthy',
   'Nico Echavarria': 'Nico Echavarria',
   'K.H. Lee': null,       // ignore - not in our league
   'Ryan Palmer': null,     // ignore - not in our league
   'Gordon Sargent': null,  // ignore - not in our league
+};
+
+// Also block DB names from fuzzy-matching to the wrong ESPN golfer
+// DB name -> only allowed ESPN name (prevents Denny McCarthy from matching Matt McCarty)
+const DB_NAME_LOCKS = {
+  'denny mccarthy': 'denny mccarthy',
+  'matt mccarty': 'matt mccarty',
 };
 
 // Build normalized lookup from NAME_CORRECTIONS
@@ -226,18 +234,22 @@ function findEspnMatch(dbName, espnGolfers) {
   const dbFirst = dbParts[0];
   const dbLast = dbParts[dbParts.length - 1];
 
-  // Check NAME_CORRECTIONS first — direct ESPN-to-DB mapping
+  // If this DB golfer is locked, ONLY allow exact match to its designated ESPN name
+  if (dbNorm in DB_NAME_LOCKS) {
+    const requiredEspn = DB_NAME_LOCKS[dbNorm];
+    const exactEspn = espnGolfers.find(eg => normalize(eg.name) === requiredEspn);
+    return exactEspn ? { ...exactEspn, confidence: 1.0 } : null;
+  }
+
+  // Check NAME_CORRECTIONS — direct ESPN-to-DB mapping
   for (const eg of espnGolfers) {
     const espnNorm = normalize(eg.name);
     if (espnNorm in NAME_CORRECTIONS_NORM) {
       const correctedDb = NAME_CORRECTIONS_NORM[espnNorm];
-      // null means skip this ESPN golfer entirely
       if (correctedDb === null) continue;
-      // If the correction points to our DB golfer, it's a match
       if (correctedDb === dbNorm) {
         return { ...eg, confidence: 1.0 };
       }
-      // Otherwise this ESPN golfer is reserved for a different DB golfer — skip
       continue;
     }
   }
