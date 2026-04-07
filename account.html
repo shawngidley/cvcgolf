@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Account - CVC Fantasy Golf 2026</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="standings.html" class="nav-logo">
+        <div class="nav-badge">CVC</div>
+        <span>Fantasy Golf</span>
+      </a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="standings.html">Standings</a></li>
+        <li><a href="lineup.html">Lineup</a></li>
+        <li><a href="history.html">History</a></li>
+        <li><a href="usage.html">Usage</a></li>
+        <li><a href="schedule.html">Schedule</a></li>
+        <li><a href="salaries.html">Salaries</a></li>
+        <li><a href="rules.html">Rules</a></li>
+        <li><a href="account.html" class="active">Account</a></li>
+        <li><a href="admin.html" class="nav-admin" id="adminLink" style="display:none;">Admin</a></li>
+        <li><a href="#" class="nav-logout" id="logoutLink">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="container">
+    <header class="page-header">
+      <h1>Account Settings</h1>
+      <p class="subtitle" id="playerName"></p>
+    </header>
+
+    <div class="card">
+      <h2>Change Password</h2>
+      <div class="account-form">
+        <div class="form-group">
+          <label for="currentPassword">Current Password</label>
+          <input type="password" id="currentPassword" placeholder="Enter current password">
+        </div>
+        <div class="form-group">
+          <label for="newPassword">New Password</label>
+          <input type="password" id="newPassword" placeholder="Enter new password">
+        </div>
+        <div class="form-group">
+          <label for="confirmPassword">Confirm New Password</label>
+          <input type="password" id="confirmPassword" placeholder="Confirm new password">
+        </div>
+        <button class="btn btn-primary" id="savePassword">Save Password</button>
+        <p class="account-msg" id="passwordMsg"></p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Text Reminders</h2>
+      <div class="alert alert-warning" style="margin-bottom:1rem;">
+        Text reminders coming soon &mdash; save your preferences now and we'll activate them shortly.
+      </div>
+      <div class="account-form">
+        <div class="form-group">
+          <label for="phoneNumber">Phone Number</label>
+          <input type="tel" id="phoneNumber" placeholder="(555) 123-4567">
+        </div>
+        <div class="form-group toggle-group">
+          <label for="remindersEnabled">Opt-in to Reminders</label>
+          <label class="toggle-switch">
+            <input type="checkbox" id="remindersEnabled">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="reminderDay">Reminder Day</label>
+            <select id="reminderDay">
+              <option value="Monday">Monday</option>
+              <option value="Tuesday">Tuesday</option>
+              <option value="Wednesday" selected>Wednesday</option>
+              <option value="Thursday">Thursday</option>
+              <option value="Friday">Friday</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="reminderTime">Reminder Time</label>
+            <select id="reminderTime">
+              <option value="6am">6:00 AM</option>
+              <option value="7am">7:00 AM</option>
+              <option value="8am">8:00 AM</option>
+              <option value="9am" selected>9:00 AM</option>
+              <option value="10am">10:00 AM</option>
+              <option value="11am">11:00 AM</option>
+              <option value="12pm">12:00 PM</option>
+              <option value="3pm">3:00 PM</option>
+              <option value="6pm">6:00 PM</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="timezone">Timezone</label>
+            <select id="timezone">
+              <option value="ET" selected>Eastern (ET)</option>
+              <option value="CT">Central (CT)</option>
+              <option value="MT">Mountain (MT)</option>
+              <option value="PT">Pacific (PT)</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="savePreferences">Save Preferences</button>
+        <p class="account-msg" id="prefsMsg"></p>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>&copy; 2026 CVC Fantasy Golf League</p>
+  </footer>
+
+  <script src="js/supabase-client.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/account.js"></script>
+</body>
+</html>

@@ -717,6 +717,52 @@ body {
 
 .results-entry-grid input:focus { outline: none; border-color: var(--augusta); }
 
+/* ===== ACCOUNT PAGE ===== */
+.account-form { max-width: 480px; }
+.account-form .form-group { margin-bottom: 1rem; }
+.account-form .form-group label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--gray-600);
+  margin-bottom: 0.25rem;
+  font-family: -apple-system, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.account-form input, .account-form select {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  font-family: -apple-system, sans-serif;
+  background: var(--white);
+}
+.account-form input:focus, .account-form select:focus {
+  outline: none;
+  border-color: var(--augusta);
+  box-shadow: 0 0 0 3px rgba(26,92,46,0.15);
+}
+.account-msg { font-size: 0.85rem; margin-top: 0.75rem; font-family: -apple-system, sans-serif; }
+.account-msg.success { color: var(--augusta); }
+.account-msg.error { color: var(--red); }
+.form-row { display: flex; gap: 1rem; }
+.form-row .form-group { flex: 1; }
+.toggle-group { display: flex; align-items: center; justify-content: space-between; }
+.toggle-switch { position: relative; display: inline-block; width: 48px; height: 26px; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--gray-300); border-radius: 26px; transition: 0.3s;
+}
+.toggle-slider::before {
+  content: ''; position: absolute; height: 20px; width: 20px; left: 3px; bottom: 3px;
+  background: var(--white); border-radius: 50%; transition: 0.3s;
+}
+.toggle-switch input:checked + .toggle-slider { background: var(--augusta); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(22px); }
+
 /* ===== FOOTER ===== */
 .footer {
   text-align: center;
@@ -777,4 +823,6 @@ body {
   .pool-controls { flex-direction: column; }
 
   .results-entry-grid { grid-template-columns: 1fr 80px 60px 80px; font-size: 0.8rem; }
+
+  .form-row { flex-direction: column; gap: 0; }
 }
