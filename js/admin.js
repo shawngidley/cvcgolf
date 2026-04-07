@@ -563,6 +563,8 @@ async function saveEarnings() {
         golfer_id: u.golfer_id,
         tournament_id: parseInt(tournamentId),
         earnings: u.earnings,
+        finish_position: u.espnResult?.position || null,
+        score: u.espnResult?.score || null,
         updated_at: new Date().toISOString()
       }, { onConflict: 'golfer_id,tournament_id' });
     }

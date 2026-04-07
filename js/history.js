@@ -69,21 +69,25 @@ async function loadWeekData() {
     .eq('tournament_id', tid);
   const { data: golferEarnings } = await supabaseClient
     .from('golfer_earnings')
-    .select('golfer_id, earnings')
+    .select('golfer_id, earnings, finish_position, score')
     .eq('tournament_id', tid);
 
   // Build earnings lookup for this tournament
   const earningsMap = {};
   if (golferEarnings) {
     golferEarnings.forEach(ge => {
-      earningsMap[ge.golfer_id] = parseFloat(ge.earnings || 0);
+      earningsMap[ge.golfer_id] = {
+        earnings: parseFloat(ge.earnings || 0),
+        position: ge.finish_position || '-',
+        score: ge.score || '-'
+      };
     });
   }
 
   // Calculate weekly standings from golfer_earnings + lineups
   const weekStandings = (players || []).map(p => {
     const playerLineup = (allLineups || []).filter(l => l.player_id === p.id);
-    const totalEarnings = playerLineup.reduce((sum, l) => sum + (earningsMap[l.golfer_id] || 0), 0);
+    const totalEarnings = playerLineup.reduce((sum, l) => sum + (earningsMap[l.golfer_id]?.earnings || 0), 0);
     const totalSalary = playerLineup.reduce((sum, l) => sum + (l.golfers?.salary || 0), 0);
     return { player_id: p.id, name: p.name, total_earnings: totalEarnings, total_salary: totalSalary };
   }).sort((a, b) => b.total_earnings - a.total_earnings);
@@ -119,15 +123,15 @@ async function loadWeekData() {
     if (lineup.length > 0) {
       document.getElementById('lineupDetailBody').innerHTML = lineup.map(l => {
         const g = l.golfers;
-        const e = earningsMap[l.golfer_id] || 0;
+        const ge = earningsMap[l.golfer_id];
         return `
           <tr>
             <td class="rank-cell">${l.slot}</td>
             <td><strong>${g?.name || '-'}</strong></td>
             <td>$${g?.salary || '-'}</td>
-            <td>-</td>
-            <td>-</td>
-            <td class="currency">${formatCurrency(e)}</td>
+            <td>${ge?.position || '-'}</td>
+            <td>${ge?.score || '-'}</td>
+            <td class="currency">${formatCurrency(ge?.earnings || 0)}</td>
           </tr>`;
       }).join('');
     } else {
