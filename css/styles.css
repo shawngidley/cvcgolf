@@ -43,7 +43,8 @@
 
 body {
   font-family: 'Georgia', 'Times New Roman', serif;
-  background: var(--augusta-bg);
+  background: url('../amen-corner.avif') no-repeat center center fixed;
+  background-size: cover;
   color: var(--gray-800);
   line-height: 1.6;
   min-height: 100vh;
