@@ -31,12 +31,30 @@ async function loadSalaries() {
     totalEarnings: earnings[g.id] || 0
   }));
 
-  // Update tier counts
-  const salaries = [27, 25, 23, 21, 19, 17, 15, 14, 13];
-  salaries.forEach(s => {
-    const el = document.getElementById(`count${s}`);
-    if (el) el.textContent = allGolfersData.filter(g => g.salary === s).length + ' golfers';
-  });
+  // Update tier cards with golfer names
+  const tierConfig = [
+    { salary: 27, cls: 'elite' },
+    { salary: 25, cls: 'superstar' },
+    { salary: 23, cls: 'star' },
+    { salary: 21, cls: 'premium' },
+    { salary: 19, cls: 'midupper' },
+    { salary: 17, cls: 'mid' },
+    { salary: 15, cls: 'value' },
+    { salary: 14, cls: 'budget' },
+    { salary: 13, cls: 'bargain' }
+  ];
+
+  const container = document.getElementById('salaryOverview');
+  container.innerHTML = tierConfig.map(t => {
+    const golfers = allGolfersData.filter(g => g.salary === t.salary);
+    const names = golfers.map(g => g.name.split(' ').pop()).join(', ');
+    return `<div class="salary-tier-card ${t.cls}">
+      <span class="tier-salary">$${t.salary}</span>
+      <span class="tier-label">${golfers[0]?.tier || ''}</span>
+      <span class="tier-count">${golfers.length} golfers</span>
+      <span class="tier-names">${names}</span>
+    </div>`;
+  }).join('');
 
   renderSalaries(allGolfersData);
 }

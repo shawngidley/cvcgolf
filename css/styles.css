@@ -632,6 +632,7 @@ body {
 .salary-tier-card .tier-salary { display: block; font-size: 1.1rem; font-weight: 700; font-family: -apple-system, sans-serif; }
 .salary-tier-card .tier-label { display: block; font-size: 0.65rem; color: var(--gray-600); font-family: -apple-system, sans-serif; text-transform: uppercase; }
 .salary-tier-card .tier-count { display: block; font-size: 0.75rem; color: var(--gray-500); font-family: -apple-system, sans-serif; margin-top: 0.1rem; }
+.salary-tier-card .tier-names { display: block; font-size: 0.7rem; color: var(--gray-600); font-family: -apple-system, sans-serif; margin-top: 0.35rem; line-height: 1.4; white-space: normal; }
 
 .salary-tier-card.elite { background: linear-gradient(135deg, #f7f0d8, #f5ecc0); border-color: var(--gold); }
 .salary-tier-card.elite .tier-salary { color: var(--gold-dark); }
