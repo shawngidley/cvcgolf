@@ -739,6 +739,7 @@ body {
 .phone-input-group input {
   border-radius: 0 var(--radius) var(--radius) 0 !important;
 }
+.reminder-note { font-size: 0.8rem; color: var(--gray-500); font-family: var(--font-body); margin-top: 0.5rem; font-style: italic; }
 .account-msg { font-size: 0.85rem; margin-top: 0.75rem; font-family: var(--font-body); }
 .account-msg.success { color: var(--augusta); }
 .account-msg.error { color: var(--red); }

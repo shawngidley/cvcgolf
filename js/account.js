@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('savePassword').addEventListener('click', savePassword);
   document.getElementById('savePreferences').addEventListener('click', savePreferences);
   document.getElementById('phoneNumber').addEventListener('input', formatPhone);
+  document.getElementById('reminder1Day').addEventListener('change', enforceThursdayLock);
+  document.getElementById('reminder2Day').addEventListener('change', enforceThursdayLock);
 });
 
 async function savePassword() {
@@ -88,6 +90,7 @@ async function loadPreferences() {
     document.getElementById('reminder2Day').value = prefs.reminder2_day || 'Wednesday';
     document.getElementById('reminder2Time').value = prefs.reminder2_time || '9am';
   }
+  enforceThursdayLock();
 }
 
 async function savePreferences() {
@@ -128,6 +131,27 @@ async function savePreferences() {
     msg.textContent = 'Preferences saved!';
     msg.className = 'account-msg success';
   }
+}
+
+function enforceThursdayLock() {
+  const normalTimes = '<option value="9am">9:00 AM</option><option value="12pm">12:00 PM</option><option value="3pm">3:00 PM</option><option value="6pm">6:00 PM</option><option value="9pm">9:00 PM</option>';
+  const thursdayTimes = '<option value="6am" selected>6:00 AM ET</option>';
+
+  [1, 2].forEach(n => {
+    const dayEl = document.getElementById(`reminder${n}Day`);
+    const timeEl = document.getElementById(`reminder${n}Time`);
+    const prev = timeEl.value;
+    if (dayEl.value === 'Thursday') {
+      timeEl.innerHTML = thursdayTimes;
+      timeEl.disabled = true;
+    } else {
+      if (timeEl.disabled || timeEl.options.length <= 1) {
+        timeEl.innerHTML = normalTimes;
+        timeEl.value = prev === '6am' ? '9am' : prev;
+      }
+      timeEl.disabled = false;
+    }
+  });
 }
 
 function formatPhone(e) {

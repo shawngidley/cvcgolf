@@ -102,8 +102,10 @@
           <div class="form-group">
             <label for="reminder1Time">Time</label>
             <select id="reminder1Time">
-              <option value="6am">6:00 AM</option>
               <option value="9am">9:00 AM</option>
+              <option value="12pm">12:00 PM</option>
+              <option value="3pm">3:00 PM</option>
+              <option value="6pm">6:00 PM</option>
               <option value="9pm" selected>9:00 PM</option>
             </select>
           </div>
@@ -122,12 +124,15 @@
           <div class="form-group">
             <label for="reminder2Time">Time</label>
             <select id="reminder2Time">
-              <option value="6am">6:00 AM</option>
               <option value="9am" selected>9:00 AM</option>
+              <option value="12pm">12:00 PM</option>
+              <option value="3pm">3:00 PM</option>
+              <option value="6pm">6:00 PM</option>
               <option value="9pm">9:00 PM</option>
             </select>
           </div>
         </div>
+        <p class="reminder-note">Note: Thursday reminders are locked to 6:00 AM ET regardless of timezone setting.</p>
         <button class="btn btn-primary" id="savePreferences">Save Preferences</button>
         <p class="account-msg" id="prefsMsg"></p>
       </div>
