@@ -67,7 +67,10 @@
       <div class="account-form">
         <div class="form-group">
           <label for="phoneNumber">Phone Number</label>
-          <input type="tel" id="phoneNumber" placeholder="(555) 123-4567">
+          <div class="phone-input-group">
+            <span class="phone-prefix">+1</span>
+            <input type="tel" id="phoneNumber" placeholder="(555) 123-4567">
+          </div>
         </div>
         <div class="form-group toggle-group">
           <label for="remindersEnabled">Opt-in to Reminders</label>
@@ -76,38 +79,52 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
+        <div class="form-group">
+          <label for="timezone">Timezone</label>
+          <select id="timezone" style="max-width:200px;">
+            <option value="ET" selected>Eastern (ET)</option>
+            <option value="CT">Central (CT)</option>
+            <option value="MT">Mountain (MT)</option>
+            <option value="PT">Pacific (PT)</option>
+          </select>
+        </div>
+        <h3 style="margin-top:1rem;">Reminder 1</h3>
         <div class="form-row">
           <div class="form-group">
-            <label for="reminderDay">Reminder Day</label>
-            <select id="reminderDay">
-              <option value="Monday">Monday</option>
+            <label for="reminder1Day">Day</label>
+            <select id="reminder1Day">
+              <option value="">Off</option>
+              <option value="Tuesday" selected>Tuesday</option>
+              <option value="Wednesday">Wednesday</option>
+              <option value="Thursday">Thursday</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="reminder1Time">Time</label>
+            <select id="reminder1Time">
+              <option value="6am">6:00 AM</option>
+              <option value="9am">9:00 AM</option>
+              <option value="9pm" selected>9:00 PM</option>
+            </select>
+          </div>
+        </div>
+        <h3>Reminder 2</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="reminder2Day">Day</label>
+            <select id="reminder2Day">
+              <option value="">Off</option>
               <option value="Tuesday">Tuesday</option>
               <option value="Wednesday" selected>Wednesday</option>
               <option value="Thursday">Thursday</option>
-              <option value="Friday">Friday</option>
             </select>
           </div>
           <div class="form-group">
-            <label for="reminderTime">Reminder Time</label>
-            <select id="reminderTime">
+            <label for="reminder2Time">Time</label>
+            <select id="reminder2Time">
               <option value="6am">6:00 AM</option>
-              <option value="7am">7:00 AM</option>
-              <option value="8am">8:00 AM</option>
               <option value="9am" selected>9:00 AM</option>
-              <option value="10am">10:00 AM</option>
-              <option value="11am">11:00 AM</option>
-              <option value="12pm">12:00 PM</option>
-              <option value="3pm">3:00 PM</option>
-              <option value="6pm">6:00 PM</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="timezone">Timezone</label>
-            <select id="timezone">
-              <option value="ET" selected>Eastern (ET)</option>
-              <option value="CT">Central (CT)</option>
-              <option value="MT">Mountain (MT)</option>
-              <option value="PT">Pacific (PT)</option>
+              <option value="9pm">9:00 PM</option>
             </select>
           </div>
         </div>

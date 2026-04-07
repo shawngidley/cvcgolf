@@ -40,7 +40,6 @@ async function savePassword() {
     return;
   }
 
-  // Verify current password
   const { data: check } = await supabaseClient
     .from('players')
     .select('id')
@@ -54,7 +53,6 @@ async function savePassword() {
     return;
   }
 
-  // Update password
   const { error } = await supabaseClient
     .from('players')
     .update({ password: newPw })
@@ -84,9 +82,11 @@ async function loadPreferences() {
   if (prefs) {
     document.getElementById('phoneNumber').value = prefs.phone_number || '';
     document.getElementById('remindersEnabled').checked = prefs.reminders_enabled || false;
-    document.getElementById('reminderDay').value = prefs.reminder_day || 'Wednesday';
-    document.getElementById('reminderTime').value = prefs.reminder_time || '9am';
     document.getElementById('timezone').value = prefs.timezone || 'ET';
+    document.getElementById('reminder1Day').value = prefs.reminder1_day || 'Tuesday';
+    document.getElementById('reminder1Time').value = prefs.reminder1_time || '9pm';
+    document.getElementById('reminder2Day').value = prefs.reminder2_day || 'Wednesday';
+    document.getElementById('reminder2Time').value = prefs.reminder2_time || '9am';
   }
 }
 
@@ -94,15 +94,28 @@ async function savePreferences() {
   const player = getCurrentPlayer();
   const msg = document.getElementById('prefsMsg');
 
+  // Build +1 formatted phone for Twilio
+  const rawPhone = document.getElementById('phoneNumber').value.replace(/\D/g, '');
+  const twilioPhone = rawPhone.length === 10 ? '+1' + rawPhone : '';
+
   const prefs = {
     player_id: player.id,
     phone_number: document.getElementById('phoneNumber').value,
+    phone_e164: twilioPhone,
     reminders_enabled: document.getElementById('remindersEnabled').checked,
-    reminder_day: document.getElementById('reminderDay').value,
-    reminder_time: document.getElementById('reminderTime').value,
     timezone: document.getElementById('timezone').value,
+    reminder1_day: document.getElementById('reminder1Day').value,
+    reminder1_time: document.getElementById('reminder1Time').value,
+    reminder2_day: document.getElementById('reminder2Day').value,
+    reminder2_time: document.getElementById('reminder2Time').value,
     updated_at: new Date().toISOString()
   };
+
+  if (prefs.reminders_enabled && !twilioPhone) {
+    msg.textContent = 'Please enter a valid 10-digit phone number.';
+    msg.className = 'account-msg error';
+    return;
+  }
 
   const { error } = await supabaseClient
     .from('player_preferences')
