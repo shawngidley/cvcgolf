@@ -26,11 +26,13 @@ exports.handler = async (event) => {
     // Check tournament not locked
     const { data: tournament } = await supabase
       .from('tournaments')
-      .select('picks_locked, is_complete')
+      .select('picks_locked, is_complete, start_date')
       .eq('id', tournament_id)
       .single();
 
-    if (tournament?.picks_locked || tournament?.is_complete) {
+    const now = new Date();
+    const startDate = new Date(tournament?.start_date + 'T00:00:00');
+    if (tournament?.picks_locked || tournament?.is_complete || now >= startDate) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Picks are locked for this tournament' }) };
     }
 

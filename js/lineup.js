@@ -40,7 +40,12 @@ async function loadCurrentTournament() {
   const info = document.getElementById('tournamentInfo');
   info.innerHTML = `<strong>Week ${currentTournament.week_number}: ${currentTournament.name}</strong> &mdash; ${currentTournament.course} &mdash; ${formatDateRange(currentTournament.start_date, currentTournament.end_date)}`;
 
-  isLocked = currentTournament.picks_locked || currentTournament.is_complete;
+  // Auto-lock if tournament start time has passed
+  const now = new Date();
+  const startDate = new Date(currentTournament.start_date + 'T00:00:00');
+  const autoLocked = now >= startDate;
+
+  isLocked = currentTournament.picks_locked || currentTournament.is_complete || autoLocked;
   if (isLocked) {
     document.getElementById('lockedMessage').style.display = 'block';
   }
