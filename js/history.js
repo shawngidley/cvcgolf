@@ -63,17 +63,31 @@ async function loadWeekData() {
     .eq('tournament_id', tournamentId)
     .order('total_earnings', { ascending: false });
 
+  // Compute actual salary from lineups + golfers for each player
+  const { data: allLineups } = await supabaseClient
+    .from('lineups')
+    .select('player_id, golfers(salary)')
+    .eq('tournament_id', tournamentId);
+
+  const salaryMap = {};
+  if (allLineups) {
+    allLineups.forEach(l => {
+      salaryMap[l.player_id] = (salaryMap[l.player_id] || 0) + (l.golfers?.salary || 0);
+    });
+  }
+
   const standingsCard = document.getElementById('weeklyStandingsCard');
   standingsCard.style.display = 'block';
 
   document.getElementById('weekStandingsBody').innerHTML = (scores || []).map((s, i) => {
     const highlight = playerFilter && s.player_id === parseInt(playerFilter) ? 'highlight' : '';
+    const salary = salaryMap[s.player_id] || 0;
     return `
       <tr class="${i === 0 ? 'winner-row' : ''} ${highlight}">
         <td class="rank-cell">${i + 1}</td>
         <td><strong>${s.players?.name || 'Unknown'}</strong></td>
-        <td>$${s.total_salary || 0}</td>
-        <td>${s.best_golfer || '-'}</td>
+        <td>$${salary}</td>
+        <td>-</td>
         <td class="currency">${formatCurrency(s.total_earnings)}</td>
       </tr>`;
   }).join('') || '<tr><td colspan="5" class="loading">No scores</td></tr>';
