@@ -115,6 +115,13 @@ function renderWeeklyGrid() {
     return weeklySortDir === 'asc' ? va - vb : vb - va;
   });
 
+  // Detect duplicate last names to add first initial
+  const lastNameCount = {};
+  sorted.forEach(p => {
+    const last = p.name.split(' ').pop();
+    lastNameCount[last] = (lastNameCount[last] || 0) + 1;
+  });
+
   const currentPlayer = getCurrentPlayer();
   document.getElementById('weeklyBody').innerHTML = sorted.map(p => {
     const cells = tournaments.map(t => {
@@ -122,8 +129,10 @@ function renderWeeklyGrid() {
       const isWinner = weekWinners[t.id] === p.id;
       return `<td class="currency${isWinner ? ' winner-row' : ''}">${e > 0 ? formatCurrency(e) : '-'}</td>`;
     }).join('');
+    const last = p.name.split(' ').pop();
+    const displayName = lastNameCount[last] > 1 ? `${p.name.charAt(0)}. ${last}` : last;
     const meClass = currentPlayer && p.id === currentPlayer.id ? 'my-row' : '';
-    return `<tr class="${meClass}"><td class="weekly-name-col"><strong>${p.name.split(' ').pop()}</strong></td>${cells}</tr>`;
+    return `<tr class="${meClass}"><td class="weekly-name-col"><strong>${displayName}</strong></td>${cells}</tr>`;
   }).join('');
 }
 
