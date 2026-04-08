@@ -156,7 +156,8 @@ function renderHistoryHeaders() {
     const arrow = i === historySortCol ? (historySortDir === 'asc' ? ' \u2191' : ' \u2193') : ' \u2195';
     const activeClass = i === historySortCol ? ' sortable-active' : '';
     const currClass = i === 2 ? ' currency' : '';
-    return `<th class="sortable-th${activeClass}${currClass}" data-col="${i}">${h}${arrow}</th>`;
+    const centerStyle = i === 3 ? ' style="text-align:center"' : '';
+    return `<th class="sortable-th${activeClass}${currClass}" data-col="${i}"${centerStyle}>${h}${arrow}</th>`;
   }).join('');
 
   table.querySelectorAll('.sortable-th').forEach(th => {
@@ -203,7 +204,7 @@ function renderHistoryTable(playerFilter) {
         <td class="rank-cell">${i + 1}</td>
         <td><strong>${s.name}</strong></td>
         <td class="currency">${formatCurrency(s.total_earnings)}</td>
-        <td>$${s.total_salary}</td>
+        <td style="text-align:center">$${s.total_salary}</td>
         <td>${bestPickText}</td>
         <td>${s.bestPick.earnings > 0 ? s.bestPick.position : '-'}</td>
       </tr>`;
