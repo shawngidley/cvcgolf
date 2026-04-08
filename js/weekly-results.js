@@ -79,7 +79,7 @@ function renderWeeklyGrid() {
 
   // Build header
   const thead = document.querySelector('#weeklyTable thead tr');
-  thead.innerHTML = headerTh('Player', 'name', '') + tournaments.map(t =>
+  thead.innerHTML = headerTh('Player', 'name', 'weekly-name-col') + tournaments.map(t =>
     headerTh(`W${t.week_number}`, `week-${t.id}`, 'currency', t.short_name)
   ).join('');
 
@@ -123,7 +123,7 @@ function renderWeeklyGrid() {
       return `<td class="currency${isWinner ? ' winner-row' : ''}">${e > 0 ? formatCurrency(e) : '-'}</td>`;
     }).join('');
     const meClass = currentPlayer && p.id === currentPlayer.id ? 'my-row' : '';
-    return `<tr class="${meClass}"><td><strong>${p.name.split(' ').pop()}</strong></td>${cells}</tr>`;
+    return `<tr class="${meClass}"><td class="weekly-name-col"><strong>${p.name.split(' ').pop()}</strong></td>${cells}</tr>`;
   }).join('');
 }
 

@@ -804,6 +804,18 @@ body {
 .toggle-switch input:checked + .toggle-slider { background: var(--augusta); }
 .toggle-switch input:checked + .toggle-slider::before { transform: translateX(22px); }
 
+/* ===== WEEKLY RESULTS PAGE ===== */
+#weeklyTable .weekly-name-col { text-align: left !important; white-space: nowrap; position: sticky; left: 0; background: var(--white); z-index: 2; }
+#weeklyTable thead .weekly-name-col { background: var(--augusta) !important; color: var(--white) !important; }
+#weeklyTable .my-row .weekly-name-col { background: #e8f5e9; }
+#weeklyTable .winner-row .weekly-name-col { background: ivory; }
+
+/* ===== USAGE PAGE ===== */
+@media (max-width: 768px) {
+  #usageTable .usage-golfer-col { position: sticky; left: 0; background: var(--white); z-index: 2; white-space: nowrap; }
+  #usageTable thead .usage-golfer-col { background: var(--augusta) !important; color: var(--white) !important; }
+}
+
 /* ===== BREAKDOWN PAGE ===== */
 .breakdown-table { border-collapse: collapse; }
 .breakdown-table th, .breakdown-table td { text-align: center; padding: 0.35rem 0.4rem; font-size: 0.8rem; }

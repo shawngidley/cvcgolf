@@ -15,6 +15,12 @@ async function loadSchedule() {
 
   allTournaments = data || [];
   renderSchedule(allTournaments);
+
+  // On mobile, scroll to the next upcoming event
+  if (window.innerWidth <= 768) {
+    const upcoming = document.getElementById('nextUpcoming');
+    if (upcoming) upcoming.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 }
 
 function renderSchedule(tournaments) {
@@ -24,16 +30,19 @@ function renderSchedule(tournaments) {
     return;
   }
 
+  let foundUpcoming = false;
   grid.innerHTML = tournaments.map(t => {
     let classes = 'tournament-card';
     let badges = '';
+    let idAttr = '';
     if (t.is_major) { classes += ' major'; badges += '<span class="t-badge badge-major">Major</span> '; }
     if (t.is_signature) { classes += ' signature'; badges += '<span class="t-badge badge-signature">Signature</span> '; }
     if (t.is_current) { classes += ' current'; badges += '<span class="t-badge badge-current">Live</span> '; }
     if (t.is_complete) { classes += ' complete'; badges += '<span class="t-badge badge-complete">Complete</span> '; }
+    if (!t.is_complete && !foundUpcoming) { idAttr = ' id="nextUpcoming"'; foundUpcoming = true; }
 
     return `
-      <div class="${classes}">
+      <div class="${classes}"${idAttr}>
         <div class="t-week">Week ${t.week_number}</div>
         <div class="t-name">${t.name}</div>
         <div class="t-course">${t.course || ''} &mdash; ${t.location || ''}</div>

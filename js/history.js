@@ -1,6 +1,6 @@
 // CVC Fantasy Golf 2026 - History Page
 
-let historySortCol = 5; // Total Earnings column index
+let historySortCol = 2; // Weekly Earnings column index
 let historySortDir = 'desc';
 let historyRowData = [];
 
@@ -107,7 +107,7 @@ async function loadWeekData() {
   });
 
   // Reset to default sort
-  historySortCol = 5;
+  historySortCol = 2;
   historySortDir = 'desc';
 
   renderHistoryHeaders();
@@ -150,12 +150,12 @@ function renderHistoryHeaders() {
   const standingsCard = document.getElementById('weeklyStandingsCard');
   standingsCard.style.display = 'block';
 
-  const headers = ['Rank', 'Player', 'Lineup (Salary)', 'Best Pick', 'Finish', 'Weekly Earnings'];
+  const headers = ['Rank', 'Player', 'Weekly Earnings', 'Lineup (Salary)', 'Best Pick', 'Finish'];
   const table = standingsCard.querySelector('thead tr');
   table.innerHTML = headers.map((h, i) => {
     const arrow = i === historySortCol ? (historySortDir === 'asc' ? ' \u2191' : ' \u2193') : ' \u2195';
     const activeClass = i === historySortCol ? ' sortable-active' : '';
-    const currClass = i === 5 ? ' currency' : '';
+    const currClass = i === 2 ? ' currency' : '';
     return `<th class="sortable-th${activeClass}${currClass}" data-col="${i}">${h}${arrow}</th>`;
   }).join('');
 
@@ -166,7 +166,7 @@ function renderHistoryHeaders() {
         historySortDir = historySortDir === 'asc' ? 'desc' : 'asc';
       } else {
         historySortCol = col;
-        historySortDir = (col === 1 || col === 3 || col === 4) ? 'asc' : 'desc';
+        historySortDir = (col === 1 || col === 4 || col === 5) ? 'asc' : 'desc';
       }
       renderHistoryHeaders();
       renderHistoryTable(document.getElementById('playerFilter').value);
@@ -179,11 +179,11 @@ function renderHistoryTable(playerFilter) {
     let va, vb;
     switch (historySortCol) {
       case 0: // Rank - sort by earnings (rank is derived)
-      case 5: va = a.total_earnings; vb = b.total_earnings; break;
+      case 2: va = a.total_earnings; vb = b.total_earnings; break;
       case 1: va = a.name.toLowerCase(); vb = b.name.toLowerCase(); break;
-      case 2: va = a.total_salary; vb = b.total_salary; break;
-      case 3: va = a.bestPick.name.toLowerCase(); vb = b.bestPick.name.toLowerCase(); break;
-      case 4: va = a.bestPick.position; vb = b.bestPick.position; break;
+      case 3: va = a.total_salary; vb = b.total_salary; break;
+      case 4: va = a.bestPick.name.toLowerCase(); vb = b.bestPick.name.toLowerCase(); break;
+      case 5: va = a.bestPick.position; vb = b.bestPick.position; break;
       default: va = a.total_earnings; vb = b.total_earnings;
     }
     if (typeof va === 'string') {
@@ -202,10 +202,10 @@ function renderHistoryTable(playerFilter) {
       <tr class="${highlight} ${isMe}">
         <td class="rank-cell">${i + 1}</td>
         <td><strong>${s.name}</strong></td>
+        <td class="currency">${formatCurrency(s.total_earnings)}</td>
         <td>$${s.total_salary}</td>
         <td>${bestPickText}</td>
         <td>${s.bestPick.earnings > 0 ? s.bestPick.position : '-'}</td>
-        <td class="currency">${formatCurrency(s.total_earnings)}</td>
       </tr>`;
   }).join('') || '<tr><td colspan="6" class="loading">No scores</td></tr>';
 }

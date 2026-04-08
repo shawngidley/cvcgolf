@@ -111,7 +111,8 @@ function renderUsageHeaders() {
     const arrow = i === usageSortCol ? (usageSortDir === 'asc' ? ' \u2191' : ' \u2193') : ' \u2195';
     const activeClass = i === usageSortCol ? ' sortable-active' : '';
     const currClass = (i === 3 || i === 4) ? ' currency' : '';
-    return `<th class="sortable-th${activeClass}${currClass}" data-col="${i}">${h}${arrow}</th>`;
+    const stickyClass = i === 0 ? ' usage-golfer-col' : '';
+    return `<th class="sortable-th${activeClass}${currClass}${stickyClass}" data-col="${i}">${h}${arrow}</th>`;
   }).join('');
 
   table.querySelectorAll('.sortable-th').forEach(th => {
@@ -153,7 +154,7 @@ function renderUsageTable() {
     const barWidth = (u.times_used / maxUsed) * 100;
     return `
       <tr>
-        <td><strong>${u.name}</strong></td>
+        <td class="usage-golfer-col"><strong>${u.name}</strong></td>
         <td>$${u.salary}</td>
         <td>${u.times_used}/${u.maxUses}</td>
         <td class="currency">${formatCurrency(u.total_earnings)}</td>
