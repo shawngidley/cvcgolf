@@ -1,5 +1,9 @@
 // CVC Fantasy Golf 2026 - History Page
 
+let historySortCol = 5; // Total Earnings column index
+let historySortDir = 'desc';
+let historyRowData = [];
+
 document.addEventListener('DOMContentLoaded', async () => {
   await loadDropdowns();
   document.getElementById('weekSelect').addEventListener('change', loadWeekData);
@@ -85,7 +89,7 @@ async function loadWeekData() {
   }
 
   // Calculate weekly standings from golfer_earnings + lineups
-  const weekStandings = (players || []).map(p => {
+  historyRowData = (players || []).map(p => {
     const playerLineup = (allLineups || []).filter(l => l.player_id === p.id);
     const totalEarnings = playerLineup.reduce((sum, l) => sum + (earningsMap[l.golfer_id]?.earnings || 0), 0);
     const totalSalary = playerLineup.reduce((sum, l) => sum + (l.golfers?.salary || 0), 0);
@@ -100,26 +104,14 @@ async function loadWeekData() {
     }
 
     return { player_id: p.id, name: p.name, total_earnings: totalEarnings, total_salary: totalSalary, bestPick };
-  }).sort((a, b) => b.total_earnings - a.total_earnings);
+  });
 
-  const standingsCard = document.getElementById('weeklyStandingsCard');
-  standingsCard.style.display = 'block';
+  // Reset to default sort
+  historySortCol = 5;
+  historySortDir = 'desc';
 
-  const me = getCurrentPlayer();
-  document.getElementById('weekStandingsBody').innerHTML = weekStandings.map((s, i) => {
-    const highlight = playerFilter && s.player_id === parseInt(playerFilter) ? 'highlight' : '';
-    const isMe = me && s.player_id === me.id ? 'my-row' : '';
-    const bestPickText = s.bestPick.earnings > 0 ? `${s.bestPick.name} (${formatCurrency(s.bestPick.earnings)})` : '-';
-    return `
-      <tr class="${highlight} ${isMe}">
-        <td class="rank-cell">${i + 1}</td>
-        <td><strong>${s.name}</strong></td>
-        <td>$${s.total_salary}</td>
-        <td>${bestPickText}</td>
-        <td>${s.bestPick.earnings > 0 ? s.bestPick.position : '-'}</td>
-        <td class="currency">${formatCurrency(s.total_earnings)}</td>
-      </tr>`;
-  }).join('') || '<tr><td colspan="6" class="loading">No scores</td></tr>';
+  renderHistoryHeaders();
+  renderHistoryTable(playerFilter);
 
   // Lineup detail for selected player
   const detailCard = document.getElementById('lineupDetailCard');
@@ -152,4 +144,68 @@ async function loadWeekData() {
   } else {
     detailCard.style.display = 'none';
   }
+}
+
+function renderHistoryHeaders() {
+  const standingsCard = document.getElementById('weeklyStandingsCard');
+  standingsCard.style.display = 'block';
+
+  const headers = ['Rank', 'Player', 'Lineup (Salary)', 'Best Pick', 'Finish', 'Weekly Earnings'];
+  const table = standingsCard.querySelector('thead tr');
+  table.innerHTML = headers.map((h, i) => {
+    const arrow = i === historySortCol ? (historySortDir === 'asc' ? ' \u2191' : ' \u2193') : ' \u2195';
+    const activeClass = i === historySortCol ? ' sortable-active' : '';
+    const currClass = i === 5 ? ' currency' : '';
+    return `<th class="sortable-th${activeClass}${currClass}" data-col="${i}">${h}${arrow}</th>`;
+  }).join('');
+
+  table.querySelectorAll('.sortable-th').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = parseInt(th.dataset.col);
+      if (col === historySortCol) {
+        historySortDir = historySortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        historySortCol = col;
+        historySortDir = (col === 1 || col === 3 || col === 4) ? 'asc' : 'desc';
+      }
+      renderHistoryHeaders();
+      renderHistoryTable(document.getElementById('playerFilter').value);
+    });
+  });
+}
+
+function renderHistoryTable(playerFilter) {
+  const sorted = [...historyRowData].sort((a, b) => {
+    let va, vb;
+    switch (historySortCol) {
+      case 0: // Rank - sort by earnings (rank is derived)
+      case 5: va = a.total_earnings; vb = b.total_earnings; break;
+      case 1: va = a.name.toLowerCase(); vb = b.name.toLowerCase(); break;
+      case 2: va = a.total_salary; vb = b.total_salary; break;
+      case 3: va = a.bestPick.name.toLowerCase(); vb = b.bestPick.name.toLowerCase(); break;
+      case 4: va = a.bestPick.position; vb = b.bestPick.position; break;
+      default: va = a.total_earnings; vb = b.total_earnings;
+    }
+    if (typeof va === 'string') {
+      const cmp = va.localeCompare(vb);
+      return historySortDir === 'asc' ? cmp : -cmp;
+    }
+    return historySortDir === 'asc' ? va - vb : vb - va;
+  });
+
+  const me = getCurrentPlayer();
+  document.getElementById('weekStandingsBody').innerHTML = sorted.map((s, i) => {
+    const highlight = playerFilter && s.player_id === parseInt(playerFilter) ? 'highlight' : '';
+    const isMe = me && s.player_id === me.id ? 'my-row' : '';
+    const bestPickText = s.bestPick.earnings > 0 ? `${s.bestPick.name} (${formatCurrency(s.bestPick.earnings)})` : '-';
+    return `
+      <tr class="${highlight} ${isMe}">
+        <td class="rank-cell">${i + 1}</td>
+        <td><strong>${s.name}</strong></td>
+        <td>$${s.total_salary}</td>
+        <td>${bestPickText}</td>
+        <td>${s.bestPick.earnings > 0 ? s.bestPick.position : '-'}</td>
+        <td class="currency">${formatCurrency(s.total_earnings)}</td>
+      </tr>`;
+  }).join('') || '<tr><td colspan="6" class="loading">No scores</td></tr>';
 }

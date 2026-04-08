@@ -1,6 +1,8 @@
 // CVC Fantasy Golf 2026 - Salaries Page
 
 let allGolfersData = [];
+let salarySortCol = 2; // Salary column
+let salarySortDir = 'desc';
 
 document.addEventListener('DOMContentLoaded', async () => {
   await loadSalaries();
@@ -44,7 +46,33 @@ async function loadSalaries() {
   filterEl.innerHTML = '<option value="">All Salaries</option>' +
     sortedSalaries.map(s => `<option value="${s}">$${s}</option>`).join('');
 
+  renderSalaryHeaders();
   renderSalaries(allGolfersData);
+}
+
+function renderSalaryHeaders() {
+  const headers = ['OWGR', 'Golfer', 'Salary', 'Season Earnings', 'Times Picked (League)'];
+  const table = document.querySelector('#salaryTable thead tr');
+  table.innerHTML = headers.map((h, i) => {
+    const arrow = i === salarySortCol ? (salarySortDir === 'asc' ? ' \u2191' : ' \u2193') : ' \u2195';
+    const activeClass = i === salarySortCol ? ' sortable-active' : '';
+    const currClass = i === 3 ? ' currency' : '';
+    return `<th class="sortable-th${activeClass}${currClass}" data-col="${i}">${h}${arrow}</th>`;
+  }).join('');
+
+  table.querySelectorAll('.sortable-th').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = parseInt(th.dataset.col);
+      if (col === salarySortCol) {
+        salarySortDir = salarySortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        salarySortCol = col;
+        salarySortDir = (col === 1) ? 'asc' : 'desc';
+      }
+      renderSalaryHeaders();
+      applyFilters();
+    });
+  });
 }
 
 function renderSalaries(golfers) {
@@ -54,7 +82,25 @@ function renderSalaries(golfers) {
     return;
   }
 
-  tbody.innerHTML = golfers.map(g => `
+  // Sort the data
+  const sorted = [...golfers].sort((a, b) => {
+    let va, vb;
+    switch (salarySortCol) {
+      case 0: va = a.owgr || 9999; vb = b.owgr || 9999; break;
+      case 1: va = a.name.toLowerCase(); vb = b.name.toLowerCase(); break;
+      case 2: va = a.salary; vb = b.salary; break;
+      case 3: va = a.totalEarnings; vb = b.totalEarnings; break;
+      case 4: va = a.timesPicked; vb = b.timesPicked; break;
+      default: va = a.salary; vb = b.salary;
+    }
+    if (typeof va === 'string') {
+      const cmp = va.localeCompare(vb);
+      return salarySortDir === 'asc' ? cmp : -cmp;
+    }
+    return salarySortDir === 'asc' ? va - vb : vb - va;
+  });
+
+  tbody.innerHTML = sorted.map(g => `
     <tr class="${g.is_liv ? 'liv-row' : ''}">
       <td class="rank-cell">${g.is_liv ? 'LIV' : (g.owgr || '-')}</td>
       <td><strong><a href="https://www.spotrac.com/pga/rankings/earnings/_/year/2026" target="_blank" class="golfer-link">${g.name}</a></strong></td>

@@ -1,5 +1,9 @@
 // CVC Fantasy Golf 2026 - Usage Tracker
 
+let usageSortCol = 2; // Times Used column
+let usageSortDir = 'desc';
+let usageRowData = [];
+
 document.addEventListener('DOMContentLoaded', async () => {
   await loadPlayerDropdown();
   document.getElementById('usagePlayerSelect').addEventListener('change', loadUsage);
@@ -74,35 +78,86 @@ async function loadUsage() {
     usageByGolfer[l.golfer_id].total_earnings += earningsMap[`${l.golfer_id}-${l.tournament_id}`] || 0;
   });
 
-  const usage = Object.values(usageByGolfer).sort((a, b) => b.times_used - a.times_used);
+  usageRowData = Object.values(usageByGolfer);
+
+  // Compute avg for each
+  usageRowData.forEach(u => {
+    u.avg = u.times_used > 0 ? u.total_earnings / u.times_used : 0;
+    u.maxUses = u.is_liv ? 2 : 5;
+  });
 
   summary.style.display = 'flex';
-  document.getElementById('uniqueGolfers').textContent = usage.length;
+  document.getElementById('uniqueGolfers').textContent = usageRowData.length;
 
-  const mostUsed = usage[0];
+  const mostUsed = [...usageRowData].sort((a, b) => b.times_used - a.times_used)[0];
   document.getElementById('mostUsedName').textContent = `${mostUsed.name} (${mostUsed.times_used}x)`;
 
-  // Best ROI = highest earnings per use
-  const bestROI = [...usage].sort((a, b) => {
-    const roiA = a.times_used > 0 ? a.total_earnings / a.times_used : 0;
-    const roiB = b.times_used > 0 ? b.total_earnings / b.times_used : 0;
-    return roiB - roiA;
-  })[0];
+  const bestROI = [...usageRowData].sort((a, b) => b.avg - a.avg)[0];
   document.getElementById('bestROI').textContent = bestROI?.name || '-';
 
-  const maxUsed = Math.max(...usage.map(u => u.times_used));
+  // Reset to default sort
+  usageSortCol = 2;
+  usageSortDir = 'desc';
 
-  tbody.innerHTML = usage.map(u => {
-    const avg = u.times_used > 0 ? u.total_earnings / u.times_used : 0;
-    const maxUses = u.is_liv ? 2 : 5;
+  renderUsageHeaders();
+  renderUsageTable();
+}
+
+function renderUsageHeaders() {
+  const headers = ['Golfer', 'Salary', 'Times Used', 'Total Earned', 'Avg/Use', 'Usage Bar'];
+  const table = document.querySelector('#usageTable thead tr');
+  table.innerHTML = headers.map((h, i) => {
+    if (i === 5) return `<th>${h}</th>`; // Usage Bar not sortable
+    const arrow = i === usageSortCol ? (usageSortDir === 'asc' ? ' \u2191' : ' \u2193') : ' \u2195';
+    const activeClass = i === usageSortCol ? ' sortable-active' : '';
+    const currClass = (i === 3 || i === 4) ? ' currency' : '';
+    return `<th class="sortable-th${activeClass}${currClass}" data-col="${i}">${h}${arrow}</th>`;
+  }).join('');
+
+  table.querySelectorAll('.sortable-th').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = parseInt(th.dataset.col);
+      if (col === usageSortCol) {
+        usageSortDir = usageSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        usageSortCol = col;
+        usageSortDir = col === 0 ? 'asc' : 'desc';
+      }
+      renderUsageHeaders();
+      renderUsageTable();
+    });
+  });
+}
+
+function renderUsageTable() {
+  const sorted = [...usageRowData].sort((a, b) => {
+    let va, vb;
+    switch (usageSortCol) {
+      case 0: va = a.name.toLowerCase(); vb = b.name.toLowerCase(); break;
+      case 1: va = a.salary; vb = b.salary; break;
+      case 2: va = a.times_used; vb = b.times_used; break;
+      case 3: va = a.total_earnings; vb = b.total_earnings; break;
+      case 4: va = a.avg; vb = b.avg; break;
+      default: va = a.times_used; vb = b.times_used;
+    }
+    if (typeof va === 'string') {
+      const cmp = va.localeCompare(vb);
+      return usageSortDir === 'asc' ? cmp : -cmp;
+    }
+    return usageSortDir === 'asc' ? va - vb : vb - va;
+  });
+
+  const maxUsed = Math.max(...sorted.map(u => u.times_used));
+  const tbody = document.getElementById('usageBody');
+  tbody.innerHTML = sorted.map(u => {
     const barWidth = (u.times_used / maxUsed) * 100;
     return `
       <tr>
         <td><strong>${u.name}</strong></td>
         <td>$${u.salary}</td>
-        <td>${u.times_used}/${maxUses}</td>
+        <td>${u.times_used}/${u.maxUses}</td>
         <td class="currency">${formatCurrency(u.total_earnings)}</td>
-        <td class="currency">${formatCurrency(avg)}</td>
+        <td class="currency">${formatCurrency(u.avg)}</td>
         <td><div class="usage-bar" style="width: ${barWidth}%"></div></td>
       </tr>`;
   }).join('');

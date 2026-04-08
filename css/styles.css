@@ -347,6 +347,11 @@ body {
 
 .data-table th.currency, .data-table td.currency { text-align: right; }
 
+/* Sortable table headers */
+.sortable-th { cursor: pointer; user-select: none; }
+.sortable-th:hover { background: var(--augusta-pale); color: var(--augusta); }
+.sortable-th.sortable-active { background: #d4edda; color: var(--augusta-dark); }
+
 .data-table td {
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--gray-200);

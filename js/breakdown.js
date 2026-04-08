@@ -5,6 +5,11 @@ const PLAYER_ABBREVS = [
   'D.Osicki', 'J.Osicki', 'Sotka', 'Sutton', 'Tomko', 'Walker', 'Yane'
 ];
 
+let breakdownSortCol = 'count'; // 'name', 'count', 'earnings'
+let breakdownSortDir = 'desc';
+let breakdownGolferList = [];
+let breakdownPlayerOrder = [];
+
 document.addEventListener('DOMContentLoaded', async () => {
   await loadTournaments();
   document.getElementById('tournamentSelect').addEventListener('change', loadBreakdown);
@@ -70,10 +75,9 @@ async function loadBreakdown() {
   const earningsMap = {};
   results.forEach(r => { earningsMap[r.golfer_id] = parseFloat(r.earnings || 0); });
 
-  // Build player map: id -> { name, abbrev }
   // Sort players alphabetically to match PLAYER_ABBREVS order
   players.sort((a, b) => a.name.localeCompare(b.name));
-  const playerOrder = players.map(p => p.id);
+  breakdownPlayerOrder = players.map(p => p.id);
 
   // Build picks map: golfer_id -> Set of player_ids
   const golferPicks = {};
@@ -86,29 +90,74 @@ async function loadBreakdown() {
     golferNames[gid] = gname;
   });
 
-  // Build sorted golfer list: by times picked desc, then alphabetically
-  const golferList = Object.keys(golferPicks).map(gid => ({
+  // Build golfer list
+  breakdownGolferList = Object.keys(golferPicks).map(gid => ({
     id: gid,
     name: golferNames[gid],
     count: golferPicks[gid].size,
     picks: golferPicks[gid],
     earnings: earningsMap[gid] || 0
   }));
-  golferList.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 
+  // Reset to default sort
+  breakdownSortCol = 'count';
+  breakdownSortDir = 'desc';
+
+  renderBreakdownTable();
+  container.style.display = 'block';
+  noData.style.display = 'none';
+}
+
+function renderBreakdownTable() {
   // Render header
   const thead = document.getElementById('breakdownHead');
-  thead.innerHTML = '<th class="breakdown-golfer-col">Golfer</th>' +
-    playerOrder.map((_, i) => `<th class="breakdown-player-th"><div class="rotated-header">${PLAYER_ABBREVS[i]}</div></th>`).join('') +
-    '<th class="breakdown-total-th">Total</th>' +
-    '<th class="breakdown-earnings-th">Earnings</th>';
+
+  function headerTh(label, colKey, extraClass) {
+    const arrow = colKey === breakdownSortCol ? (breakdownSortDir === 'asc' ? ' \u2191' : ' \u2193') : ' \u2195';
+    const activeClass = colKey === breakdownSortCol ? ' sortable-active' : '';
+    return `<th class="sortable-th ${extraClass}${activeClass}" data-sort-col="${colKey}">${label}${arrow}</th>`;
+  }
+
+  thead.innerHTML = headerTh('Golfer', 'name', 'breakdown-golfer-col') +
+    breakdownPlayerOrder.map((_, i) => `<th class="breakdown-player-th"><div class="rotated-header">${PLAYER_ABBREVS[i]}</div></th>`).join('') +
+    headerTh('Total', 'count', 'breakdown-total-th') +
+    headerTh('Earnings', 'earnings', 'breakdown-earnings-th');
+
+  thead.querySelectorAll('.sortable-th').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.sortCol;
+      if (col === breakdownSortCol) {
+        breakdownSortDir = breakdownSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        breakdownSortCol = col;
+        breakdownSortDir = col === 'name' ? 'asc' : 'desc';
+      }
+      renderBreakdownTable();
+    });
+  });
+
+  // Sort data
+  const sorted = [...breakdownGolferList].sort((a, b) => {
+    let va, vb;
+    switch (breakdownSortCol) {
+      case 'name': va = a.name.toLowerCase(); vb = b.name.toLowerCase(); break;
+      case 'count': va = a.count; vb = b.count; break;
+      case 'earnings': va = a.earnings; vb = b.earnings; break;
+      default: va = a.count; vb = b.count;
+    }
+    if (typeof va === 'string') {
+      const cmp = va.localeCompare(vb);
+      return breakdownSortDir === 'asc' ? cmp : -cmp;
+    }
+    return breakdownSortDir === 'asc' ? va - vb : vb - va;
+  });
 
   // Render rows
   const tbody = document.getElementById('breakdownBody');
-  tbody.innerHTML = golferList.map((g, idx) => {
+  tbody.innerHTML = sorted.map((g, idx) => {
     const highlightClass = g.count >= 5 ? ' breakdown-hot' : '';
     const rowClass = idx % 2 === 0 ? 'breakdown-even' : 'breakdown-odd';
-    const cells = playerOrder.map(pid => {
+    const cells = breakdownPlayerOrder.map(pid => {
       const picked = g.picks.has(pid);
       return `<td class="breakdown-cell">${picked ? '<span class="breakdown-x">x</span>' : ''}</td>`;
     }).join('');
@@ -119,7 +168,4 @@ async function loadBreakdown() {
       <td class="breakdown-earnings-cell">${formatCurrency(g.earnings)}</td>
     </tr>`;
   }).join('');
-
-  container.style.display = 'block';
-  noData.style.display = 'none';
 }
