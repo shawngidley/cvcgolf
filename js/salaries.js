@@ -106,7 +106,7 @@ function renderSalaries(golfers) {
       <td><strong><a href="https://www.spotrac.com/pga/rankings/earnings/_/year/2026" target="_blank" class="golfer-link">${g.name}</a></strong></td>
       <td><strong>$${g.salary}</strong></td>
       <td class="currency">${formatCurrency(g.totalEarnings)}</td>
-      <td>${g.timesPicked}</td>
+      <td style="text-align:right">${g.timesPicked}</td>
     </tr>
   `).join('');
 }
