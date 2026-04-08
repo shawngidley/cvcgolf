@@ -39,6 +39,9 @@ async function loadAdminDropdowns() {
       viewLineups();
     }
   }
+
+  // Show tee time for initially selected tournament
+  updateTeeTimeDisplay();
 }
 
 function setupAdminEvents() {
@@ -55,6 +58,9 @@ function setupAdminEvents() {
   document.getElementById('pullEarningsBtn').addEventListener('click', pullEarnings);
   document.getElementById('saveEarningsBtn').addEventListener('click', saveEarnings);
   document.getElementById('showAllEarningsBtn').addEventListener('click', toggleAllEarnings);
+  document.getElementById('saveTeeTimeBtn').addEventListener('click', saveTeeTime);
+  document.getElementById('lockNowBtn').addEventListener('click', lockNow);
+  document.getElementById('adminWeekSelect').addEventListener('change', updateTeeTimeDisplay);
 }
 
 async function togglePicks(locked) {
@@ -613,6 +619,64 @@ function parseScoreToPar(scoreStr) {
   if (!scoreStr || scoreStr === 'E') return 0;
   const n = parseInt(scoreStr);
   return isNaN(n) ? 0 : n;
+}
+
+async function updateTeeTimeDisplay() {
+  const id = document.getElementById('adminWeekSelect').value;
+  const infoEl = document.getElementById('teeTimeInfo');
+  const inputEl = document.getElementById('teeTimeInput');
+
+  if (!id) {
+    infoEl.textContent = 'Select a tournament to view tee time.';
+    inputEl.value = '';
+    return;
+  }
+
+  const { data: t } = await supabaseClient.from('tournaments').select('first_tee_time, picks_locked, short_name').eq('id', id).single();
+
+  if (t && t.first_tee_time) {
+    const lockDate = new Date(t.first_tee_time);
+    const etStr = lockDate.toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+    const status = t.picks_locked ? ' (Manually Locked)' : (new Date() >= lockDate ? ' (Auto-Locked)' : ' (Open)');
+    infoEl.innerHTML = `<strong>${t.short_name}</strong> &mdash; First tee: ${etStr} ET${status}`;
+
+    // Set the datetime-local input value (convert to local for the input)
+    const local = new Date(lockDate.getTime() - lockDate.getTimezoneOffset() * 60000);
+    inputEl.value = local.toISOString().slice(0, 16);
+  } else {
+    infoEl.innerHTML = t ? `<strong>${t.short_name}</strong> &mdash; No tee time set` : 'Tournament not found.';
+    inputEl.value = '';
+  }
+}
+
+async function saveTeeTime() {
+  const id = document.getElementById('adminWeekSelect').value;
+  if (!id) return;
+
+  const inputVal = document.getElementById('teeTimeInput').value;
+  if (!inputVal) {
+    showMsg('teeTimeMsg', 'Enter a date and time.', 'error');
+    return;
+  }
+
+  const teeTime = new Date(inputVal).toISOString();
+  const { error } = await supabaseClient.from('tournaments').update({ first_tee_time: teeTime }).eq('id', id);
+
+  if (error) {
+    showMsg('teeTimeMsg', 'Error: ' + error.message, 'error');
+  } else {
+    showMsg('teeTimeMsg', 'Tee time updated!', 'success');
+    updateTeeTimeDisplay();
+  }
+}
+
+async function lockNow() {
+  const id = document.getElementById('adminWeekSelect').value;
+  if (!id) return;
+
+  await supabaseClient.from('tournaments').update({ picks_locked: true }).eq('id', id);
+  showMsg('teeTimeMsg', 'Picks locked immediately!', 'success');
+  updateTeeTimeDisplay();
 }
 
 function showMsg(id, text, type) {

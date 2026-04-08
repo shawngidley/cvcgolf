@@ -65,6 +65,22 @@
           </div>
         </div>
         <p class="admin-msg" id="tournamentMsg"></p>
+
+        <div id="teeTimeSection" style="margin-top:1.25rem; padding-top:1.25rem; border-top:1px solid var(--gray-200);">
+          <h3 style="font-size:1rem; margin-bottom:0.75rem;">First Tee Time (Auto-Lock)</h3>
+          <div id="teeTimeInfo" style="font-size:0.9rem; color:var(--gray-600); margin-bottom:0.75rem;"></div>
+          <div class="admin-controls">
+            <div class="form-group" style="margin-bottom:0;">
+              <label for="teeTimeInput" style="font-size:0.85rem;">Override Lock Time:</label>
+              <input type="datetime-local" id="teeTimeInput" style="padding:0.4rem 0.6rem; border:1px solid var(--gray-300); border-radius:var(--radius); font-size:0.85rem;">
+            </div>
+            <div class="admin-actions">
+              <button class="btn btn-secondary" id="saveTeeTimeBtn">Save Tee Time</button>
+              <button class="btn btn-warning" id="lockNowBtn">Lock Now</button>
+            </div>
+          </div>
+          <p class="admin-msg" id="teeTimeMsg"></p>
+        </div>
       </div>
 
       <!-- Enter Results -->

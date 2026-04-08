@@ -40,15 +40,89 @@ async function loadCurrentTournament() {
   const info = document.getElementById('tournamentInfo');
   info.innerHTML = `<strong>Week ${currentTournament.week_number}: ${currentTournament.name}</strong> &mdash; ${currentTournament.course} &mdash; ${formatDateRange(currentTournament.start_date, currentTournament.end_date)}`;
 
-  // Auto-lock if tournament start time has passed
+  // Determine lock time: use first_tee_time if available, else midnight on start_date
+  let lockDate;
+  if (currentTournament.first_tee_time) {
+    lockDate = new Date(currentTournament.first_tee_time);
+  } else {
+    lockDate = new Date(currentTournament.start_date + 'T00:00:00');
+  }
+
   const now = new Date();
-  const startDate = new Date(currentTournament.start_date + 'T00:00:00');
-  const autoLocked = now >= startDate;
+  const autoLocked = now >= lockDate;
 
   isLocked = currentTournament.picks_locked || currentTournament.is_complete || autoLocked;
   if (isLocked) {
+    document.getElementById('lockedMessage').innerHTML = '\uD83D\uDD12 Lineup locked \u2014 tournament has started';
     document.getElementById('lockedMessage').style.display = 'block';
+  } else {
+    startCountdown(lockDate);
   }
+}
+
+function formatLockDeadline(date) {
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+  // Convert UTC to ET (display purposes)
+  const etOptions = { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true };
+  const timeStr = date.toLocaleTimeString('en-US', etOptions);
+
+  const etDateOptions = { timeZone: 'America/New_York', weekday: 'long', month: 'long', day: 'numeric' };
+  const dateStr = date.toLocaleDateString('en-US', etDateOptions);
+
+  return `${dateStr} at ${timeStr} ET`;
+}
+
+function startCountdown(lockDate) {
+  const container = document.getElementById('countdownContainer');
+  const timerEl = document.getElementById('countdownTimer');
+  const deadlineEl = document.getElementById('lockDeadline');
+  container.style.display = '';
+
+  // Show the deadline date
+  deadlineEl.textContent = `Deadline: ${formatLockDeadline(lockDate)}`;
+
+  function update() {
+    const now = new Date();
+    const diff = lockDate - now;
+
+    if (diff <= 0) {
+      timerEl.innerHTML = '\uD83D\uDD12 Lineup locked \u2014 tournament has started';
+      timerEl.className = 'countdown-timer countdown-expired';
+      isLocked = true;
+      document.getElementById('lockedMessage').innerHTML = '\uD83D\uDD12 Lineup locked \u2014 tournament has started';
+      document.getElementById('lockedMessage').style.display = 'block';
+      updateUI();
+      return;
+    }
+
+    const days = Math.floor(diff / 86400000);
+    const hours = Math.floor((diff % 86400000) / 3600000);
+    const minutes = Math.floor((diff % 3600000) / 60000);
+    const seconds = Math.floor((diff % 60000) / 1000);
+
+    let parts = [];
+    if (days > 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
+    parts.push(`${hours} hour${hours !== 1 ? 's' : ''}`);
+    parts.push(`${minutes} minute${minutes !== 1 ? 's' : ''}`);
+    parts.push(`${seconds} second${seconds !== 1 ? 's' : ''}`);
+
+    timerEl.innerHTML = `\u23F1 Lineup locks in ${parts.join(' ')}`;
+
+    // Color coding: green > 24h, yellow < 24h, red < 2h
+    if (diff < 7200000) {
+      timerEl.className = 'countdown-timer countdown-red';
+    } else if (diff < 86400000) {
+      timerEl.className = 'countdown-timer countdown-yellow';
+    } else {
+      timerEl.className = 'countdown-timer countdown-green';
+    }
+
+    setTimeout(update, 1000);
+  }
+
+  update();
 }
 
 async function loadGolfers() {

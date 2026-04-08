@@ -1,0 +1,30 @@
+-- Add first tee time column and populate for all 2026 tournaments
+ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS first_tee_time TIMESTAMP WITH TIME ZONE;
+
+UPDATE tournaments SET first_tee_time = '2026-02-05 12:00:00+00' WHERE week_number = 1;
+UPDATE tournaments SET first_tee_time = '2026-02-12 12:00:00+00' WHERE week_number = 2;
+UPDATE tournaments SET first_tee_time = '2026-02-19 12:00:00+00' WHERE week_number = 3;
+UPDATE tournaments SET first_tee_time = '2026-03-05 12:00:00+00' WHERE week_number = 4;
+UPDATE tournaments SET first_tee_time = '2026-03-12 12:00:00+00' WHERE week_number = 5;
+UPDATE tournaments SET first_tee_time = '2026-03-19 12:00:00+00' WHERE week_number = 6;
+UPDATE tournaments SET first_tee_time = '2026-03-26 12:00:00+00' WHERE week_number = 7;
+UPDATE tournaments SET first_tee_time = '2026-04-02 12:00:00+00' WHERE week_number = 8;
+UPDATE tournaments SET first_tee_time = '2026-04-09 11:25:00+00' WHERE week_number = 9;
+UPDATE tournaments SET first_tee_time = '2026-04-16 11:00:00+00' WHERE week_number = 10;
+UPDATE tournaments SET first_tee_time = '2026-04-30 11:00:00+00' WHERE week_number = 11;
+UPDATE tournaments SET first_tee_time = '2026-05-07 11:00:00+00' WHERE week_number = 12;
+UPDATE tournaments SET first_tee_time = '2026-05-14 11:00:00+00' WHERE week_number = 13;
+UPDATE tournaments SET first_tee_time = '2026-05-21 12:00:00+00' WHERE week_number = 14;
+UPDATE tournaments SET first_tee_time = '2026-05-28 12:00:00+00' WHERE week_number = 15;
+UPDATE tournaments SET first_tee_time = '2026-06-04 11:00:00+00' WHERE week_number = 16;
+UPDATE tournaments SET first_tee_time = '2026-06-11 11:00:00+00' WHERE week_number = 17;
+UPDATE tournaments SET first_tee_time = '2026-06-18 11:00:00+00' WHERE week_number = 18;
+UPDATE tournaments SET first_tee_time = '2026-06-25 11:00:00+00' WHERE week_number = 19;
+UPDATE tournaments SET first_tee_time = '2026-07-08 04:00:00+00' WHERE week_number = 20;
+UPDATE tournaments SET first_tee_time = '2026-07-15 04:00:00+00' WHERE week_number = 21;
+UPDATE tournaments SET first_tee_time = '2026-07-23 12:00:00+00' WHERE week_number = 22;
+UPDATE tournaments SET first_tee_time = '2026-07-30 11:00:00+00' WHERE week_number = 23;
+UPDATE tournaments SET first_tee_time = '2026-08-06 11:00:00+00' WHERE week_number = 24;
+UPDATE tournaments SET first_tee_time = '2026-08-13 12:00:00+00' WHERE week_number = 25;
+UPDATE tournaments SET first_tee_time = '2026-08-20 11:00:00+00' WHERE week_number = 26;
+UPDATE tournaments SET first_tee_time = '2026-08-27 11:00:00+00' WHERE week_number = 27;
