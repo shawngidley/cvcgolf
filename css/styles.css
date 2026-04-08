@@ -808,7 +808,7 @@ body {
 .breakdown-table { border-collapse: collapse; }
 .breakdown-table th, .breakdown-table td { text-align: center; padding: 0.35rem 0.4rem; font-size: 0.8rem; }
 .breakdown-golfer-col { text-align: left !important; white-space: nowrap; position: sticky; left: 0; background: var(--white); z-index: 2; min-width: 140px; }
-thead .breakdown-golfer-col { background: var(--augusta-dark) !important; }
+thead .breakdown-golfer-col { background: var(--augusta) !important; color: var(--white) !important; font-weight: 700; }
 .breakdown-player-th { vertical-align: bottom; padding-bottom: 0.5rem !important; }
 .rotated-header {
   writing-mode: vertical-rl;
