@@ -812,7 +812,7 @@ thead .breakdown-golfer-col { background: var(--augusta-dark) !important; }
 .breakdown-player-th { vertical-align: bottom; padding-bottom: 0.5rem !important; }
 .rotated-header {
   writing-mode: vertical-rl;
-  transform: rotate(225deg);
+  transform: rotate(180deg);
   white-space: nowrap;
   font-size: 0.7rem;
   font-weight: 600;
@@ -820,7 +820,7 @@ thead .breakdown-golfer-col { background: var(--augusta-dark) !important; }
   height: 70px;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 .breakdown-total-th, .breakdown-total-cell {
   background: var(--augusta-dark) !important;
