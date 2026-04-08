@@ -1,0 +1,21 @@
+{
+  "name": "CVC Fantasy Golf",
+  "short_name": "CVC Golf",
+  "description": "CVC Fantasy Golf League 2026",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a4a1a",
+  "theme_color": "#1a4a1a",
+  "icons": [
+    {
+      "src": "/CVC_Golf_Logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/CVC_Golf_Logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

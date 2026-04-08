@@ -1,5 +1,9 @@
 // CVC Fantasy Golf 2026 - Weekly Results Page
 
+let weeklySortCol = 'total';
+let weeklySortDir = 'desc';
+let weeklyData = null;
+
 document.addEventListener('DOMContentLoaded', async () => {
   await loadWeeklyGrid();
   await loadEarningsChart();
@@ -31,12 +35,6 @@ async function loadWeeklyGrid() {
     return playerLineup.reduce((sum, l) => sum + (earningsMap[`${l.golfer_id}-${l.tournament_id}`] || 0), 0);
   }
 
-  // Build header
-  const thead = document.querySelector('#weeklyTable thead tr');
-  thead.innerHTML = '<th>Player</th>' + tournaments.map(t =>
-    `<th class="currency" title="${t.short_name}">W${t.week_number}</th>`
-  ).join('');
-
   // Build scoreMap
   const scoreMap = {};
   players.forEach(p => {
@@ -57,14 +55,68 @@ async function loadWeeklyGrid() {
     if (maxEarnings > 0) weekWinners[t.id] = winnerId;
   });
 
-  // Sort players by total earnings
+  // Build player totals
   const playerTotals = players.map(p => ({
     ...p,
     total: tournaments.reduce((sum, t) => sum + (scoreMap[`${p.id}-${t.id}`] || 0), 0)
-  })).sort((a, b) => b.total - a.total);
+  }));
+
+  weeklyData = { tournaments, scoreMap, weekWinners, playerTotals };
+  weeklySortCol = 'total';
+  weeklySortDir = 'desc';
+  renderWeeklyGrid();
+}
+
+function renderWeeklyGrid() {
+  const { tournaments, scoreMap, weekWinners, playerTotals } = weeklyData;
+
+  function headerTh(label, colKey, extraClass, title) {
+    const arrow = colKey === weeklySortCol ? (weeklySortDir === 'asc' ? ' ↑' : ' ↓') : ' ↕';
+    const activeClass = colKey === weeklySortCol ? ' sortable-active' : '';
+    const titleAttr = title ? ` title="${title}"` : '';
+    return `<th class="sortable-th ${extraClass}${activeClass}" data-sort-col="${colKey}"${titleAttr}>${label}${arrow}</th>`;
+  }
+
+  // Build header
+  const thead = document.querySelector('#weeklyTable thead tr');
+  thead.innerHTML = headerTh('Player', 'name', '') + tournaments.map(t =>
+    headerTh(`W${t.week_number}`, `week-${t.id}`, 'currency', t.short_name)
+  ).join('');
+
+  thead.querySelectorAll('.sortable-th').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.sortCol;
+      if (col === weeklySortCol) {
+        weeklySortDir = weeklySortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        weeklySortCol = col;
+        weeklySortDir = col === 'name' ? 'asc' : 'desc';
+      }
+      renderWeeklyGrid();
+    });
+  });
+
+  // Sort players
+  const sorted = [...playerTotals].sort((a, b) => {
+    let va, vb;
+    if (weeklySortCol === 'name') {
+      va = a.name.toLowerCase(); vb = b.name.toLowerCase();
+    } else if (weeklySortCol === 'total') {
+      va = a.total; vb = b.total;
+    } else {
+      const tid = parseInt(weeklySortCol.replace('week-', ''));
+      va = scoreMap[`${a.id}-${tid}`] || 0;
+      vb = scoreMap[`${b.id}-${tid}`] || 0;
+    }
+    if (typeof va === 'string') {
+      const cmp = va.localeCompare(vb);
+      return weeklySortDir === 'asc' ? cmp : -cmp;
+    }
+    return weeklySortDir === 'asc' ? va - vb : vb - va;
+  });
 
   const currentPlayer = getCurrentPlayer();
-  document.getElementById('weeklyBody').innerHTML = playerTotals.map(p => {
+  document.getElementById('weeklyBody').innerHTML = sorted.map(p => {
     const cells = tournaments.map(t => {
       const e = scoreMap[`${p.id}-${t.id}`] || 0;
       const isWinner = weekWinners[t.id] === p.id;
