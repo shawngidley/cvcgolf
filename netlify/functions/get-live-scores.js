@@ -102,13 +102,12 @@ exports.handler = async (event) => {
       lineupMap[l.player_id].push({ golfer_id: l.golfer_id, name: l.golfers?.name || 'Unknown', slot: l.slot });
     });
 
-    // Fetch ESPN leaderboard
-    const dateStr = tournament.start_date.replace(/-/g, '');
-    const scoreboardUrl = `https://site.api.espn.com/apis/site/v2/sports/golf/pga/leaderboard`;
+    // Fetch ESPN scoreboard to find current event
+    const scoreboardUrl = 'https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard';
     const scoreboardRes = await fetch(scoreboardUrl);
 
     if (!scoreboardRes.ok) {
-      return { statusCode: 502, headers: HEADERS, body: JSON.stringify({ success: false, error: 'Failed to fetch ESPN leaderboard' }) };
+      return { statusCode: 502, headers: HEADERS, body: JSON.stringify({ success: false, error: 'Failed to fetch ESPN scoreboard' }) };
     }
 
     const data = await scoreboardRes.json();
@@ -118,28 +117,80 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ success: false, error: 'No ESPN event found' }) };
     }
 
-    const competition = espnEvent.competitions?.[0];
-    const competitors = competition?.competitors || [];
+    const eventId = espnEvent.id;
     const eventStatus = espnEvent.status?.type?.name || '';
     const isComplete = espnEvent.status?.type?.completed === true;
     const isInProgress = eventStatus === 'STATUS_IN_PROGRESS';
-    const roundDisplay = competition?.status?.type?.shortDetail || '';
 
-    // Build ESPN golfer map with position, score, etc.
+    const competition = espnEvent.competitions?.[0];
+    const competitors = competition?.competitors || [];
+    const roundDisplay = competition?.status?.type?.shortDetail || espnEvent.status?.type?.shortDetail || '';
+
+    // Get unique golfer IDs we need to look up (only our picked golfers)
+    const allPickedNames = new Set();
+    Object.values(lineupMap).forEach(lineup => lineup.forEach(l => allPickedNames.add(l.name)));
+
+    const normalize = (s) => s.toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
+
+    // Match our golfers to ESPN competitors (basic info from scoreboard)
+    function findEspnCompetitor(dbName) {
+      const dbNorm = normalize(dbName);
+      const dbParts = dbNorm.split(' ');
+      const dbLast = dbParts[dbParts.length - 1];
+
+      let match = competitors.find(c => normalize(c.athlete?.displayName || '') === dbNorm);
+      if (match) return match;
+
+      match = competitors.find(c => {
+        const parts = normalize(c.athlete?.displayName || '').split(' ');
+        return parts[parts.length - 1] === dbLast && parts[0]?.[0] === dbParts[0]?.[0];
+      });
+      return match || null;
+    }
+
+    // Fetch detailed status for each picked golfer's ESPN competitor
+    const pickedCompetitorIds = new Set();
+    const competitorMatchMap = {}; // dbName -> ESPN competitor
+    allPickedNames.forEach(name => {
+      const c = findEspnCompetitor(name);
+      if (c) {
+        competitorMatchMap[name] = c;
+        pickedCompetitorIds.add(c.id);
+      }
+    });
+
+    // Batch fetch status for all picked competitors from core API
+    const statusMap = {};
+    const statusFetches = [...pickedCompetitorIds].map(async (cId) => {
+      try {
+        const url = `https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/events/${eventId}/competitions/${eventId}/competitors/${cId}/status`;
+        const res = await fetch(url);
+        if (res.ok) {
+          statusMap[cId] = await res.json();
+        }
+      } catch (e) { /* ignore individual failures */ }
+    });
+    await Promise.all(statusFetches);
+
+    // Build ESPN golfer data combining scoreboard + status
     const espnGolfers = competitors.map(c => {
-      const status = c.status?.type?.name || '';
-      const isCut = status === 'STATUS_CUT';
-      const isWD = status === 'STATUS_WITHDRAWN' || status === 'STATUS_DISQUALIFIED';
-      const position = isCut ? 'CUT' : isWD ? 'WD' : (c.status?.position?.displayName || '-');
-      const scoreToPar = c.score?.displayValue || c.statistics?.[0]?.displayValue || '-';
-      const today = c.linescores?.length > 0 ? c.linescores[c.linescores.length - 1]?.displayValue || '-' : '-';
-      const thru = c.status?.thru || (c.status?.type?.shortDetail || '-');
+      const st = statusMap[c.id];
+      const statusName = st?.type?.name || '';
+      const isCut = statusName === 'STATUS_CUT';
+      const isWD = statusName === 'STATUS_WITHDRAWN' || statusName === 'STATUS_DISQUALIFIED';
+      const position = isCut ? 'CUT' : isWD ? 'WD' : (st?.position?.displayName || '-');
+      const scoreToPar = c.score || '-';
+      const thru = st?.thru != null ? `${st.thru}` : (st?.type?.shortDetail || '-');
+
+      // Today's score from linescores (last round)
+      const linescores = c.linescores || [];
+      const today = linescores.length > 0 ? (linescores[linescores.length - 1]?.displayValue || '-') : '-';
 
       return {
         espnId: c.id,
         name: c.athlete?.displayName || '',
         position,
-        positionNum: parseInt(position.replace('T', '')) || 999,
+        positionNum: parseInt(String(position).replace('T', '')) || 999,
         scoreToPar,
         today,
         thru,
@@ -167,24 +218,11 @@ exports.handler = async (event) => {
       }
     });
 
-    // Match our golfers to ESPN golfers
-    const normalize = (s) => s.toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
-
+    // Match our golfers to ESPN golfers using pre-built map
     function matchGolfer(dbName) {
-      const dbNorm = normalize(dbName);
-      const dbParts = dbNorm.split(' ');
-      const dbLast = dbParts[dbParts.length - 1];
-
-      // Exact match first
-      let match = espnGolfers.find(g => normalize(g.name) === dbNorm);
-      if (match) return match;
-
-      // Last name + first initial match
-      match = espnGolfers.find(g => {
-        const parts = normalize(g.name).split(' ');
-        return parts[parts.length - 1] === dbLast && parts[0][0] === dbParts[0][0];
-      });
-      return match || null;
+      const c = competitorMatchMap[dbName];
+      if (!c) return null;
+      return espnGolfers.find(g => g.espnId === c.id) || null;
     }
 
     // Build owner standings
