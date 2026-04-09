@@ -172,17 +172,66 @@ exports.handler = async (event) => {
     });
     await Promise.all(statusFetches);
 
-    // Build ESPN golfer data combining scoreboard + status
+    // Calculate positions and ties from the FULL competitor field using scores
+    // Sort all competitors by score (ESPN order field reflects leaderboard position)
+    const sortedCompetitors = [...competitors].sort((a, b) => (a.order || 999) - (b.order || 999));
+
+    // Determine positions and tie counts from full field using scores
+    // Group competitors by score to find ties
+    const scoreGroups = {};
+    const cutWdIds = new Set();
+    sortedCompetitors.forEach(c => {
+      const st = statusMap[c.id];
+      const statusName = st?.type?.name || '';
+      if (statusName === 'STATUS_CUT' || statusName === 'STATUS_WITHDRAWN' || statusName === 'STATUS_DISQUALIFIED') {
+        cutWdIds.add(c.id);
+        return;
+      }
+      const score = c.score || 'X';
+      if (!scoreGroups[score]) scoreGroups[score] = [];
+      scoreGroups[score].push(c.id);
+    });
+
+    // Assign positions based on sorted order
+    const positionMap = {}; // competitor id -> { position, positionNum, tiedCount }
+    let currentPos = 1;
+    const scoreOrder = Object.keys(scoreGroups).sort((a, b) => {
+      // Sort by order of first competitor in each group
+      const aFirst = sortedCompetitors.find(c => scoreGroups[a].includes(c.id));
+      const bFirst = sortedCompetitors.find(c => scoreGroups[b].includes(c.id));
+      return (aFirst?.order || 999) - (bFirst?.order || 999);
+    });
+
+    scoreOrder.forEach(score => {
+      const ids = scoreGroups[score];
+      const tiedCount = ids.length;
+      const isTied = tiedCount > 1;
+      ids.forEach(id => {
+        positionMap[id] = {
+          position: isTied ? `T${currentPos}` : `${currentPos}`,
+          positionNum: currentPos,
+          tiedCount
+        };
+      });
+      currentPos += tiedCount;
+    });
+
+    // Build ESPN golfer data combining scoreboard + status + calculated positions
     const espnGolfers = competitors.map(c => {
       const st = statusMap[c.id];
       const statusName = st?.type?.name || '';
       const isCut = statusName === 'STATUS_CUT';
       const isWD = statusName === 'STATUS_WITHDRAWN' || statusName === 'STATUS_DISQUALIFIED';
-      const position = isCut ? 'CUT' : isWD ? 'WD' : (st?.position?.displayName || '-');
+
+      const posInfo = positionMap[c.id];
+      // Use status API position if available (more accurate), otherwise use calculated
+      const position = isCut ? 'CUT' : isWD ? 'WD' : (st?.position?.displayName || posInfo?.position || '-');
+      const positionNum = isCut || isWD ? 999 : (posInfo?.positionNum || 999);
+      const tiedCount = posInfo?.tiedCount || 1;
+
       const scoreToPar = c.score || '-';
       const thru = st?.thru != null ? `${st.thru}` : (st?.type?.shortDetail || '-');
 
-      // Today's score from linescores (last round)
       const linescores = c.linescores || [];
       const today = linescores.length > 0 ? (linescores[linescores.length - 1]?.displayValue || '-') : '-';
 
@@ -190,7 +239,8 @@ exports.handler = async (event) => {
         espnId: c.id,
         name: c.athlete?.displayName || '',
         position,
-        positionNum: parseInt(String(position).replace('T', '')) || 999,
+        positionNum,
+        tiedCount,
         scoreToPar,
         today,
         thru,
@@ -199,22 +249,13 @@ exports.handler = async (event) => {
       };
     });
 
-    // Group by position to calculate tied earnings
-    const positionGroups = {};
-    espnGolfers.filter(g => !g.isCut && !g.isWD).forEach(g => {
-      const pos = g.positionNum;
-      if (!positionGroups[pos]) positionGroups[pos] = [];
-      positionGroups[pos].push(g.espnId);
-    });
-
-    // Calculate earnings for each ESPN golfer
+    // Calculate earnings for each ESPN golfer using full-field tie counts
     const earningsMap = {};
     espnGolfers.forEach(g => {
       if (g.isCut || g.isWD || g.positionNum > 50) {
         earningsMap[g.espnId] = 0;
       } else {
-        const tiedCount = positionGroups[g.positionNum]?.length || 1;
-        earningsMap[g.espnId] = calculateTiedEarnings(g.positionNum, tiedCount, purse);
+        earningsMap[g.espnId] = calculateTiedEarnings(g.positionNum, g.tiedCount, purse);
       }
     });
 
