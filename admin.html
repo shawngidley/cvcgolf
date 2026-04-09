@@ -202,6 +202,58 @@
         </div>
         </div>
       </div>
+      <!-- Admin Set Lineup -->
+      <div class="card">
+        <h2 style="cursor:pointer; user-select:none;" onclick="const c=document.getElementById('adminSetLineupContent'); c.style.display=c.style.display==='none'?'block':'none'; this.querySelector('span').textContent=c.style.display==='none'?'▶':'▼';">Admin Set Lineup <span style="font-size:0.8rem;">▶</span></h2>
+        <div id="adminSetLineupContent" style="display:none;">
+          <div class="admin-controls">
+            <div class="select-group">
+              <label for="adminSetLineupPlayer">Player:</label>
+              <select id="adminSetLineupPlayer">
+                <option value="">Select player...</option>
+              </select>
+            </div>
+            <div class="select-group">
+              <label for="adminSetLineupWeek">Week:</label>
+              <select id="adminSetLineupWeek">
+                <option value="">Select week...</option>
+              </select>
+            </div>
+            <button class="btn btn-secondary" id="loadAdminLineup">Load Lineup</button>
+          </div>
+          <div id="adminLineupEditor" style="display:none; margin-top:1rem;">
+            <p id="adminLineupStatus" style="font-weight:600; margin-bottom:0.75rem;"></p>
+            <div class="form-group">
+              <label>Slot 1</label>
+              <select class="admin-golfer-select" data-slot="1"><option value="">-- Empty --</option></select>
+            </div>
+            <div class="form-group">
+              <label>Slot 2</label>
+              <select class="admin-golfer-select" data-slot="2"><option value="">-- Empty --</option></select>
+            </div>
+            <div class="form-group">
+              <label>Slot 3</label>
+              <select class="admin-golfer-select" data-slot="3"><option value="">-- Empty --</option></select>
+            </div>
+            <div class="form-group">
+              <label>Slot 4</label>
+              <select class="admin-golfer-select" data-slot="4"><option value="">-- Empty --</option></select>
+            </div>
+            <div class="form-group">
+              <label>Slot 5</label>
+              <select class="admin-golfer-select" data-slot="5"><option value="">-- Empty --</option></select>
+            </div>
+            <p id="adminLineupSalary" style="font-weight:600; margin:0.75rem 0 0.25rem;">Salary: $0 / $100</p>
+            <p id="adminLineupCapWarn" style="color:var(--red); font-weight:700; display:none;">OVER $100 SALARY CAP!</p>
+            <p id="adminLineupDupeWarn" style="color:var(--red); font-weight:700; display:none;">Duplicate golfer selected!</p>
+            <div style="margin-top:0.75rem; display:flex; gap:0.5rem;">
+              <button class="btn btn-primary" id="saveAdminLineup">Save Lineup</button>
+              <button class="btn btn-secondary" id="clearAdminLineup">Clear All Slots</button>
+            </div>
+            <p class="admin-msg" id="adminLineupMsg"></p>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 

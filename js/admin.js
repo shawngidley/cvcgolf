@@ -18,7 +18,7 @@ async function loadAdminDropdowns() {
     .select('*')
     .order('sort_order');
 
-  const selects = ['adminWeekSelect', 'resultsWeekSelect', 'viewLineupsWeek', 'earningsWeekSelect'];
+  const selects = ['adminWeekSelect', 'resultsWeekSelect', 'viewLineupsWeek', 'earningsWeekSelect', 'adminSetLineupWeek'];
   selects.forEach(id => {
     const el = document.getElementById(id);
     if (el && tournaments) {
@@ -38,6 +38,18 @@ async function loadAdminDropdowns() {
       document.getElementById('viewLineupsWeek').value = currentWeek.id;
       viewLineups();
     }
+  }
+
+  // Populate admin set lineup player dropdown
+  const { data: allPlayers } = await supabaseClient.from('players').select('id, name').neq('is_guest', true).order('name');
+  const playerSelect = document.getElementById('adminSetLineupPlayer');
+  if (playerSelect && allPlayers) {
+    allPlayers.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.name;
+      playerSelect.appendChild(opt);
+    });
   }
 
   // Show tee time for initially selected tournament
@@ -61,6 +73,12 @@ function setupAdminEvents() {
   document.getElementById('saveTeeTimeBtn').addEventListener('click', saveTeeTime);
   document.getElementById('lockNowBtn').addEventListener('click', lockNow);
   document.getElementById('adminWeekSelect').addEventListener('change', updateTeeTimeDisplay);
+  document.getElementById('loadAdminLineup').addEventListener('click', loadAdminLineup);
+  document.getElementById('saveAdminLineup').addEventListener('click', saveAdminLineup);
+  document.getElementById('clearAdminLineup').addEventListener('click', clearAdminLineupSlots);
+  document.querySelectorAll('.admin-golfer-select').forEach(sel => {
+    sel.addEventListener('change', updateAdminLineupSalary);
+  });
 }
 
 async function togglePicks(locked) {
@@ -677,6 +695,131 @@ async function lockNow() {
   await supabaseClient.from('tournaments').update({ picks_locked: true }).eq('id', id);
   showMsg('teeTimeMsg', 'Picks locked immediately!', 'success');
   updateTeeTimeDisplay();
+}
+
+// ===== ADMIN SET LINEUP =====
+
+let adminGolfersCache = null;
+
+async function loadAdminLineup() {
+  const playerId = document.getElementById('adminSetLineupPlayer').value;
+  const tournamentId = document.getElementById('adminSetLineupWeek').value;
+  if (!playerId || !tournamentId) {
+    showMsg('adminLineupMsg', 'Select a player and week first.', 'error');
+    return;
+  }
+
+  // Fetch golfers if not cached
+  if (!adminGolfersCache) {
+    const { data: golfers } = await supabaseClient.from('golfers').select('id, name, salary').eq('is_active', true).order('name');
+    adminGolfersCache = golfers || [];
+  }
+
+  // Populate all 5 dropdowns
+  const options = '<option value="">-- Empty --</option>' +
+    adminGolfersCache.map(g => `<option value="${g.id}">${g.name} ($${g.salary})</option>`).join('');
+  document.querySelectorAll('.admin-golfer-select').forEach(sel => {
+    sel.innerHTML = options;
+  });
+
+  // Load existing lineup
+  const { data: lineup } = await supabaseClient
+    .from('lineups')
+    .select('slot, golfer_id')
+    .eq('player_id', playerId)
+    .eq('tournament_id', tournamentId)
+    .order('slot');
+
+  if (lineup && lineup.length > 0) {
+    lineup.forEach(l => {
+      const sel = document.querySelector(`.admin-golfer-select[data-slot="${l.slot}"]`);
+      if (sel) sel.value = l.golfer_id;
+    });
+  }
+
+  const playerName = document.getElementById('adminSetLineupPlayer').selectedOptions[0].textContent;
+  const weekName = document.getElementById('adminSetLineupWeek').selectedOptions[0].textContent;
+  document.getElementById('adminLineupStatus').textContent = `${playerName} — ${weekName} (${lineup?.length || 0} of 5 slots filled)`;
+  document.getElementById('adminLineupEditor').style.display = 'block';
+  updateAdminLineupSalary();
+  showMsg('adminLineupMsg', '', '');
+}
+
+function updateAdminLineupSalary() {
+  const selects = document.querySelectorAll('.admin-golfer-select');
+  let total = 0;
+  const ids = [];
+  selects.forEach(sel => {
+    const id = sel.value;
+    if (id) {
+      ids.push(id);
+      const golfer = adminGolfersCache?.find(g => g.id === parseInt(id));
+      if (golfer) total += golfer.salary;
+    }
+  });
+
+  document.getElementById('adminLineupSalary').textContent = `Salary: $${total} / $100`;
+  document.getElementById('adminLineupSalary').style.color = total > 100 ? 'var(--red)' : '';
+  document.getElementById('adminLineupCapWarn').style.display = total > 100 ? 'block' : 'none';
+
+  const hasDupes = ids.length !== new Set(ids).size;
+  document.getElementById('adminLineupDupeWarn').style.display = hasDupes ? 'block' : 'none';
+}
+
+function clearAdminLineupSlots() {
+  document.querySelectorAll('.admin-golfer-select').forEach(sel => { sel.value = ''; });
+  updateAdminLineupSalary();
+}
+
+async function saveAdminLineup() {
+  const playerId = parseInt(document.getElementById('adminSetLineupPlayer').value);
+  const tournamentId = parseInt(document.getElementById('adminSetLineupWeek').value);
+  if (!playerId || !tournamentId) {
+    showMsg('adminLineupMsg', 'Select a player and week first.', 'error');
+    return;
+  }
+
+  // Collect selections
+  const picks = [];
+  document.querySelectorAll('.admin-golfer-select').forEach(sel => {
+    if (sel.value) {
+      picks.push({ golfer_id: parseInt(sel.value), slot: parseInt(sel.dataset.slot) });
+    }
+  });
+
+  // Check for duplicates
+  const golferIds = picks.map(p => p.golfer_id);
+  if (golferIds.length !== new Set(golferIds).size) {
+    showMsg('adminLineupMsg', 'Cannot save — duplicate golfer selected.', 'error');
+    return;
+  }
+
+  // Warn if over cap
+  let total = 0;
+  picks.forEach(p => {
+    const g = adminGolfersCache?.find(g => g.id === p.golfer_id);
+    if (g) total += g.salary;
+  });
+  if (total > 100 && !confirm(`Total salary is $${total}, which exceeds the $100 cap. Save anyway?`)) return;
+
+  // Delete existing lineup
+  await supabaseClient.from('lineups').delete().eq('player_id', playerId).eq('tournament_id', tournamentId);
+
+  if (picks.length > 0) {
+    const rows = picks.map(p => ({ player_id: playerId, tournament_id: tournamentId, golfer_id: p.golfer_id, slot: p.slot }));
+    const { error } = await supabaseClient.from('lineups').insert(rows);
+    if (error) {
+      showMsg('adminLineupMsg', 'Error: ' + error.message, 'error');
+      return;
+    }
+  }
+
+  showMsg('adminLineupMsg', `Lineup saved! (${picks.length} of 5 slots)`, 'success');
+
+  // Refresh View All Lineups if showing same week
+  if (document.getElementById('viewLineupsWeek').value === String(tournamentId)) {
+    viewLineups();
+  }
 }
 
 function showMsg(id, text, type) {
