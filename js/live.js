@@ -54,6 +54,13 @@ function renderLiveScores() {
   document.getElementById('liveRound').textContent = d.round_display || '';
   document.getElementById('liveUpdated').textContent = `Updated ${new Date(d.updated_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
 
+  // Detect duplicate last names for first initial
+  const lastNameCount = {};
+  d.standings.forEach(o => {
+    const last = o.name.split(' ').pop();
+    lastNameCount[last] = (lastNameCount[last] || 0) + 1;
+  });
+
   // Desktop table
   const currentPlayer = getCurrentPlayer();
   const tbody = document.getElementById('liveBody');
@@ -61,6 +68,7 @@ function renderLiveScores() {
     const isMe = currentPlayer && o.player_id === currentPlayer.id;
     const rankClass = i === 0 ? 'rank-gold' : i === 1 ? 'rank-silver' : i === 2 ? 'rank-bronze' : '';
     const lastName = o.name.split(' ').pop();
+    const displayName = lastNameCount[lastName] > 1 ? `${o.name.charAt(0)}. ${lastName}` : lastName;
 
     const golferCells = [1, 2, 3, 4, 5].map(slot => {
       const g = o.golfers.find(g => g.slot === slot);
@@ -77,9 +85,9 @@ function renderLiveScores() {
 
     return `<tr class="${isMe ? 'live-my-row' : ''} ${rankClass}">
       <td class="live-rank">${o.rank}</td>
-      <td class="live-owner"><strong>${lastName}</strong></td>
+      <td class="live-owner"><strong>${displayName}</strong></td>
       ${golferCells}
-      <td class="live-total">${formatCurrency(o.liveTotal)}</td>
+      <td class="live-total-cell">${formatCurrency(o.liveTotal)}</td>
     </tr>`;
   }).join('') || '<tr><td colspan="8" class="loading">No lineups submitted</td></tr>';
 
@@ -89,6 +97,7 @@ function renderLiveScores() {
     const isMe = currentPlayer && o.player_id === currentPlayer.id;
     const rankClass = i === 0 ? 'rank-gold' : i === 1 ? 'rank-silver' : i === 2 ? 'rank-bronze' : '';
     const lastName = o.name.split(' ').pop();
+    const displayName = lastNameCount[lastName] > 1 ? `${o.name.charAt(0)}. ${lastName}` : lastName;
 
     const golferRows = o.golfers.map(g => {
       const scoreClass = getScoreClass(g.scoreToPar);
@@ -105,7 +114,7 @@ function renderLiveScores() {
     return `<div class="live-mobile-card ${isMe ? 'live-my-row' : ''} ${rankClass}" onclick="this.classList.toggle('expanded')">
       <div class="live-mobile-header">
         <span class="live-mobile-rank">${o.rank}</span>
-        <span class="live-mobile-name"><strong>${lastName}</strong></span>
+        <span class="live-mobile-name"><strong>${displayName}</strong></span>
         <span class="live-mobile-total">${formatCurrency(o.liveTotal)}</span>
       </div>
       <div class="live-mobile-detail">${golferRows}</div>
