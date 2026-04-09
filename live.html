@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Weekly Results - CVC Fantasy Golf 2026</title>
+  <title>Live Scoring - CVC Fantasy Golf 2026</title>
   <link rel="icon" type="image/png" href="/CVC_Golf_Logo.png">
   <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" href="/CVC_Golf_Logo.png">
@@ -13,7 +13,6 @@
   <meta name="theme-color" content="#1a4a1a">
   <link rel="stylesheet" href="css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 </head>
 <body>
   <nav class="navbar">
@@ -29,8 +28,8 @@
         <li><a href="standings.html">Standings</a></li>
         <li><a href="lineup.html">Lineup</a></li>
         <li><a href="breakdown.html">Breakdown</a></li>
-        <li><a href="weekly-results.html" class="active">Weekly Results</a></li>
-        <li><a href="live.html"><span class="nav-live-dot"></span>Live</a></li>
+        <li><a href="weekly-results.html">Weekly Results</a></li>
+        <li><a href="live.html" class="active"><span class="nav-live-dot"></span>Live</a></li>
         <li><a href="history.html">History</a></li>
         <li><a href="usage.html">Usage</a></li>
         <li><a href="schedule.html">Schedule</a></li>
@@ -45,31 +44,53 @@
 
   <main class="container">
     <header class="page-header">
-      <h1>Weekly Results</h1>
-      <p class="subtitle">Earnings by week and cumulative totals</p>
+      <h1 id="liveTournament">Live Scoring</h1>
+      <p class="subtitle" id="liveRound"></p>
     </header>
 
-    <div class="card">
-      <h2>Weekly Earnings Grid</h2>
-      <div class="table-responsive">
-        <table class="data-table" id="weeklyTable">
-          <thead>
-            <tr>
-              <th>Player</th>
-            </tr>
-          </thead>
-          <tbody id="weeklyBody">
-            <tr><td class="loading">Loading weekly data...</td></tr>
-          </tbody>
-        </table>
+    <div id="liveStatus" style="text-align:center; margin-bottom:1rem;"></div>
+
+    <div id="noLiveData" style="display:none;">
+      <div class="card" style="text-align:center; padding:2rem;">
+        <h2>No Live Tournament</h2>
+        <p style="margin-top:0.5rem; color:var(--gray-600);">Live scoring will be available when a tournament is in progress.</p>
       </div>
     </div>
 
-    <div class="card">
-      <h2>Cumulative Earnings</h2>
-      <div class="chart-container">
-        <canvas id="earningsChart"></canvas>
+    <div id="liveContent" style="display:none;">
+      <div class="live-controls">
+        <div class="live-meta">
+          <span id="liveUpdated"></span>
+          <span id="liveCountdown" class="live-countdown"></span>
+        </div>
+        <button class="btn btn-secondary" id="refreshBtn">Refresh Now</button>
       </div>
+
+      <!-- Desktop Table -->
+      <div class="card live-desktop">
+        <div class="table-responsive">
+          <table class="data-table" id="liveTable">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Owner</th>
+                <th>G1</th>
+                <th>G2</th>
+                <th>G3</th>
+                <th>G4</th>
+                <th>G5</th>
+                <th class="currency">Live Total</th>
+              </tr>
+            </thead>
+            <tbody id="liveBody">
+              <tr><td colspan="8" class="loading">Loading live scores...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Mobile Cards -->
+      <div class="live-mobile" id="liveMobileCards"></div>
     </div>
   </main>
 
@@ -108,6 +129,6 @@
 
   <script src="js/supabase-client.js"></script>
   <script src="js/auth.js"></script>
-  <script src="js/weekly-results.js"></script>
+  <script src="js/live.js"></script>
 </body>
 </html>
