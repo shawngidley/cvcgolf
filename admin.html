@@ -173,7 +173,8 @@
 
       <!-- Player Management -->
       <div class="card">
-        <h2>View All Lineups This Week</h2>
+        <h2 style="cursor:pointer; user-select:none;" onclick="const c=document.getElementById('lineupsContent'); c.style.display=c.style.display==='none'?'block':'none'; this.querySelector('span').textContent=c.style.display==='none'?'▶':'▼';">View All Lineups This Week <span style="font-size:0.8rem;">▶</span></h2>
+        <div id="lineupsContent" style="display:none;">
         <div class="select-group" style="margin-bottom: 1rem;">
           <label for="viewLineupsWeek">Week:</label>
           <select id="viewLineupsWeek">
@@ -198,6 +199,7 @@
               <tr><td colspan="8" class="loading">Select a week</td></tr>
             </tbody>
           </table>
+        </div>
         </div>
       </div>
     </div>

@@ -148,7 +148,7 @@ async function savePreferences() {
 }
 
 function enforceThursdayLock() {
-  const normalTimes = '<option value="6am">6:00 AM</option><option value="7am">7:00 AM</option><option value="8am">8:00 AM</option><option value="9am">9:00 AM</option><option value="10am">10:00 AM</option><option value="11am">11:00 AM</option><option value="12pm">12:00 PM</option><option value="3pm">3:00 PM</option><option value="6pm">6:00 PM</option><option value="1130pm">11:30 PM</option>';
+  const normalTimes = '<option value="8am">8:00 AM</option><option value="11am">11:00 AM</option><option value="2pm">2:00 PM</option><option value="5pm">5:00 PM</option><option value="8pm">8:00 PM</option><option value="11pm">11:00 PM</option>';
   const thursdayTimes = '<option value="6am" selected>6:00 AM ET</option>';
 
   [1, 2].forEach(n => {

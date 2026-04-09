@@ -18,15 +18,12 @@ const TZ_MAP = {
 // Map reminder time codes to { hour, minute } values
 const TIME_MAP = {
   '6am': { hour: 6, minute: 0 },
-  '7am': { hour: 7, minute: 0 },
   '8am': { hour: 8, minute: 0 },
-  '9am': { hour: 9, minute: 0 },
-  '10am': { hour: 10, minute: 0 },
   '11am': { hour: 11, minute: 0 },
-  '12pm': { hour: 12, minute: 0 },
-  '3pm': { hour: 15, minute: 0 },
-  '6pm': { hour: 18, minute: 0 },
-  '1130pm': { hour: 23, minute: 30 }
+  '2pm': { hour: 14, minute: 0 },
+  '5pm': { hour: 17, minute: 0 },
+  '8pm': { hour: 20, minute: 0 },
+  '11pm': { hour: 23, minute: 0 }
 };
 
 exports.handler = async (event) => {
