@@ -16,12 +16,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadPlayers() {
   const { data: players } = await supabaseClient
     .from('players')
-    .select('id, name')
+    .select('id, name, is_guest')
     .order('name');
 
   const select = document.getElementById('playerName');
   if (players) {
-    players.forEach(p => {
+    const regular = players.filter(p => !p.is_guest);
+    const guests = players.filter(p => p.is_guest);
+    [...regular, ...guests].forEach(p => {
       const opt = document.createElement('option');
       opt.value = p.id;
       opt.textContent = p.name;
