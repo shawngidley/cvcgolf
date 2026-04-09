@@ -23,8 +23,9 @@ async function loadTournaments() {
 
   const select = document.getElementById('tournamentSelect');
 
-  // Only show locked or completed tournaments
-  const locked = (tournaments || []).filter(t => t.picks_locked || t.is_complete);
+  // Only show locked, completed, or past-tee-time tournaments
+  const now = new Date();
+  const locked = (tournaments || []).filter(t => t.picks_locked || t.is_complete || (t.first_tee_time && new Date(t.first_tee_time) <= now));
 
   if (locked.length === 0) {
     select.innerHTML = '<option value="">No locked tournaments yet</option>';
