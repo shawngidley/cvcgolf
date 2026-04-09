@@ -1,14 +1,10 @@
 // CVC Fantasy Golf 2026 - Breakdown Page
 
-const PLAYER_ABBREVS = [
-  'Cas', 'Cromer', 'Ehrbar', 'Federer', 'Gidley', 'Janssen', 'Nelson',
-  'D.Osicki', 'J.Osicki', 'Sotka', 'Sutton', 'Tomko', 'Walker', 'Yane'
-];
-
 let breakdownSortCol = 'count'; // 'name', 'count', 'earnings'
 let breakdownSortDir = 'desc';
 let breakdownGolferList = [];
 let breakdownPlayerOrder = [];
+let breakdownPlayerAbbrevs = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
   await loadTournaments();
@@ -76,9 +72,18 @@ async function loadBreakdown() {
   const earningsMap = {};
   results.forEach(r => { earningsMap[r.golfer_id] = parseFloat(r.earnings || 0); });
 
-  // Sort players alphabetically to match PLAYER_ABBREVS order
+  // Sort players alphabetically
   players.sort((a, b) => a.name.localeCompare(b.name));
   breakdownPlayerOrder = players.map(p => p.id);
+
+  // Generate abbreviations dynamically, adding first initial for duplicate last names
+  const lastNames = players.map(p => p.name.split(' ').pop());
+  const lastNameCount = {};
+  lastNames.forEach(l => { lastNameCount[l] = (lastNameCount[l] || 0) + 1; });
+  breakdownPlayerAbbrevs = players.map(p => {
+    const last = p.name.split(' ').pop();
+    return lastNameCount[last] > 1 ? `${p.name.charAt(0)}.${last}` : last;
+  });
 
   // Build picks map: golfer_id -> Set of player_ids
   const golferPicks = {};
@@ -120,7 +125,7 @@ function renderBreakdownTable() {
   }
 
   thead.innerHTML = headerTh('Golfer', 'name', 'breakdown-golfer-col') +
-    breakdownPlayerOrder.map((_, i) => `<th class="breakdown-player-th"><div class="rotated-header">${PLAYER_ABBREVS[i]}</div></th>`).join('') +
+    breakdownPlayerOrder.map((_, i) => `<th class="breakdown-player-th"><div class="rotated-header">${breakdownPlayerAbbrevs[i]}</div></th>`).join('') +
     headerTh('Total', 'count', 'breakdown-total-th') +
     headerTh('Earnings', 'earnings', 'breakdown-earnings-th');
 
