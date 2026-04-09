@@ -12,8 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function fetchLiveScores() {
-  const statusEl = document.getElementById('liveStatus');
-  statusEl.innerHTML = '<span class="live-loading">Fetching live scores...</span>';
   document.getElementById('refreshBtn').disabled = true;
 
   try {
@@ -21,7 +19,6 @@ async function fetchLiveScores() {
     const data = await res.json();
 
     if (!data.success) {
-      statusEl.innerHTML = `<span class="live-error">${data.error || 'No live data available'}</span>`;
       document.getElementById('liveContent').style.display = 'none';
       document.getElementById('noLiveData').style.display = 'block';
       document.getElementById('refreshBtn').disabled = false;
@@ -34,7 +31,7 @@ async function fetchLiveScores() {
     document.getElementById('noLiveData').style.display = 'none';
     scheduleRefresh();
   } catch (err) {
-    statusEl.innerHTML = '<span class="live-error">Error fetching live scores</span>';
+    // silently handle errors
   }
 
   document.getElementById('refreshBtn').disabled = false;

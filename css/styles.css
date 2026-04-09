@@ -817,8 +817,8 @@ body {
 
 /* ===== LIVE SCORING PAGE ===== */
 .live-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
-.live-meta { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.85rem; color: var(--gray-600); }
-.live-countdown { font-weight: 600; color: var(--augusta); }
+.live-meta { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.85rem; color: var(--white); }
+.live-countdown { font-weight: 600; color: var(--white); }
 .live-loading { color: var(--augusta); font-weight: 600; }
 .live-error { color: var(--red); font-weight: 600; }
 
