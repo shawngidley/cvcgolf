@@ -130,7 +130,7 @@ exports.handler = async (event) => {
     const allPickedNames = new Set();
     Object.values(lineupMap).forEach(lineup => lineup.forEach(l => allPickedNames.add(l.name)));
 
-    const normalize = (s) => s.toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
+    const normalize = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
 
     // Match our golfers to ESPN competitors (basic info from scoreboard)
     function findEspnCompetitor(dbName) {
