@@ -829,6 +829,10 @@ body {
 .live-badge-pre { background: var(--blue); color: #fff; }
 .live-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #fff; margin-right: 4px; vertical-align: middle; }
 
+/* Live leaderboard banner */
+.live-leaderboard-banner { background: linear-gradient(135deg, var(--augusta-dark), var(--augusta)); color: var(--white); text-align: center; padding: 0.6rem 1rem; font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; border-radius: var(--radius) var(--radius) 0 0; }
+.live-leaderboard-banner + .card { border-top-left-radius: 0; border-top-right-radius: 0; }
+
 /* Live table */
 #liveTable { border-collapse: collapse; }
 #liveTable thead th { text-align: center; }
