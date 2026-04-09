@@ -76,10 +76,12 @@ function renderLiveScores() {
       const scoreClass = getScoreClass(g.scoreToPar);
       const cutClass = g.isCut || g.isWD ? ' live-cut' : '';
       const gLastName = g.name.split(' ').pop();
+      const thruDisplay = g.thru && g.thru !== '-' && g.thru !== 'undefined' ? `<div class="live-golfer-thru">Thru ${g.thru}</div>` : '';
       return `<td class="live-golfer-cell${cutClass}">
         <div class="live-golfer-name">${gLastName}</div>
         <div class="live-golfer-score ${scoreClass}">${g.scoreToPar}</div>
         <div class="live-golfer-pos">${g.position}</div>
+        ${thruDisplay}
       </td>`;
     }).join('');
 
@@ -103,10 +105,11 @@ function renderLiveScores() {
       const scoreClass = getScoreClass(g.scoreToPar);
       const cutClass = g.isCut || g.isWD ? ' live-cut' : '';
       const gLastName = g.name.split(' ').pop();
+      const thruText = g.thru && g.thru !== '-' && g.thru !== 'undefined' ? ` (${g.thru})` : '';
       return `<div class="live-mobile-golfer${cutClass}">
         <span class="live-mobile-gname">${gLastName}</span>
         <span class="live-mobile-gscore ${scoreClass}">${g.scoreToPar}</span>
-        <span class="live-mobile-gpos">${g.position}</span>
+        <span class="live-mobile-gpos">${g.position}${thruText}</span>
         <span class="live-mobile-gearnings">${formatCurrency(g.earnings)}</span>
       </div>`;
     }).join('');
