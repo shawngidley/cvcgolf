@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>History - CVC Fantasy Golf 2026</title>
+  <title>Money - CVC Fantasy Golf 2026</title>
   <link rel="icon" type="image/png" href="/CVC_Golf_Logo.png">
   <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" href="/CVC_Golf_Logo.png">
@@ -30,11 +30,11 @@
         <li><a href="lineup.html">Lineup</a></li>
         <li><a href="breakdown.html">Breakdown</a></li>
         <li><a href="weekly-results.html">Weekly Results</a></li>
-        <li><a href="history.html" class="active">History</a></li>
+        <li><a href="history.html">History</a></li>
         <li><a href="usage.html">Usage</a></li>
         <li><a href="schedule.html">Schedule</a></li>
         <li><a href="salaries.html">Salaries</a></li>
-        <li><a href="money.html">Money</a></li>
+        <li><a href="money.html" class="active">Money</a></li>
         <li><a href="rules.html">Rules</a></li>
         <li><a href="account.html" id="accountLink">Account</a></li>
         <li><a href="admin.html" class="nav-admin" id="adminLink" style="display:none;">Admin</a></li>
@@ -45,61 +45,119 @@
 
   <main class="container">
     <header class="page-header">
-      <h1>Weekly History</h1>
-      <p class="subtitle">View lineups and results by week</p>
+      <h1>Money</h1>
+      <p class="subtitle">Entry fees, payouts, and winnings</p>
     </header>
 
-    <div class="history-controls">
-      <div class="select-group">
-        <select id="weekSelect"></select>
-      </div>
-      <div class="select-group">
-        <select id="playerFilter">
-          <option value="">All Players</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="card" id="weekOverview" style="display:none;">
-      <h2 id="weekTitle"></h2>
-      <div class="week-meta" id="weekMeta"></div>
-    </div>
-
-    <div class="card" id="weeklyStandingsCard" style="display:none;">
-      <h3>Weekly Fantasy Standings</h3>
+    <!-- Entry Fee Tracker -->
+    <div class="card">
+      <h2>2026 Entry Fees &mdash; $200 per player</h2>
       <div class="table-responsive">
-        <table class="data-table">
+        <table class="data-table" id="entryFeeTable">
           <thead>
             <tr>
-              <th>Rank</th>
               <th>Player</th>
-              <th>Lineup (Salary)</th>
-              <th>Best Pick</th>
-              <th>Finish</th>
-              <th class="currency">Weekly Earnings</th>
+              <th style="text-align:center">Entry Fee</th>
+              <th style="text-align:center">Status</th>
+              <th style="text-align:center">Date Paid</th>
+              <th>Notes</th>
             </tr>
           </thead>
-          <tbody id="weekStandingsBody"></tbody>
+          <tbody id="entryFeeBody">
+            <tr><td colspan="5" class="loading">Loading entry fees...</td></tr>
+          </tbody>
+          <tfoot>
+            <tr id="entryFeeTotals" style="font-weight:700; border-top:2px solid var(--gray-400);"></tr>
+          </tfoot>
         </table>
       </div>
     </div>
 
-    <div class="card" id="lineupDetailCard" style="display:none;">
-      <h3 id="lineupDetailTitle">Lineup Details</h3>
+    <!-- Prize Payout Structure -->
+    <div class="card">
+      <h2>Prize Payout Structure</h2>
+      <p style="margin-bottom:0.75rem; color:var(--gray-600);">14 players &times; $200 = <strong>$2,800 total pot</strong></p>
       <div class="table-responsive">
         <table class="data-table">
           <thead>
             <tr>
-              <th>Slot</th>
-              <th>Golfer</th>
-              <th>Salary</th>
-              <th>Finish</th>
-              <th>Score</th>
-              <th class="currency">Earnings</th>
+              <th>Prize Category</th>
+              <th style="text-align:center">Amount</th>
+              <th style="text-align:center">Qty</th>
+              <th style="text-align:right">Total</th>
             </tr>
           </thead>
-          <tbody id="lineupDetailBody"></tbody>
+          <tbody>
+            <tr style="border-bottom:1px solid var(--gray-200);"><td colspan="4" style="font-weight:700; padding-top:0.75rem;">Seasonal Pot &mdash; $2,080</td></tr>
+            <tr><td>Regular Season Overall Winner</td><td style="text-align:center">$350</td><td style="text-align:center">1</td><td style="text-align:right">$350</td></tr>
+            <tr><td>Playoff Winner</td><td style="text-align:center">$500</td><td style="text-align:center">1</td><td style="text-align:right">$500</td></tr>
+            <tr><td>Playoff Finalist + Advance</td><td style="text-align:center">$225</td><td style="text-align:center">2</td><td style="text-align:right">$450</td></tr>
+            <tr><td>Playoff Finalist No Advance</td><td style="text-align:center">$130</td><td style="text-align:center">1</td><td style="text-align:right">$130</td></tr>
+            <tr><td>Playoff Spots (excl. reg season winner)</td><td style="text-align:center">$130</td><td style="text-align:center">5</td><td style="text-align:right">$650</td></tr>
+            <tr style="border-bottom:1px solid var(--gray-200);"><td colspan="4" style="font-weight:700; padding-top:0.75rem;">Weekly Pot &mdash; $720</td></tr>
+            <tr><td>Weekly High Earner &mdash; Full Field (8 wks)</td><td style="text-align:center">$20</td><td style="text-align:center">8</td><td style="text-align:right">$160</td></tr>
+            <tr><td>Weekly High Earner &mdash; Signature + Players (9 wks)</td><td style="text-align:center">$40</td><td style="text-align:center">9</td><td style="text-align:right">$360</td></tr>
+            <tr><td>Weekly Major High Earner (4 majors)</td><td style="text-align:center">$50</td><td style="text-align:center">4</td><td style="text-align:right">$200</td></tr>
+          </tbody>
+          <tfoot>
+            <tr style="font-weight:700; border-top:2px solid var(--gray-400);">
+              <td colspan="3">TOTAL</td>
+              <td style="text-align:right">$2,800</td>
+            </tr>
+          </tfoot>
         </table>
+      </div>
+    </div>
+
+    <!-- Weekly High Earner Tracker -->
+    <div class="card">
+      <h2>Weekly High Earner Tracker</h2>
+      <div class="table-responsive">
+        <table class="data-table" id="weeklyBonusTable">
+          <thead>
+            <tr>
+              <th>Week</th>
+              <th>Tournament</th>
+              <th style="text-align:center">Type</th>
+              <th style="text-align:center">Bonus</th>
+              <th>High Earner</th>
+              <th style="text-align:center">Earnings</th>
+            </tr>
+          </thead>
+          <tbody id="weeklyBonusBody">
+            <tr><td colspan="6" class="loading">Loading weekly bonuses...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Current Winnings Tracker -->
+    <div class="card">
+      <h2>Current Winnings Tracker</h2>
+      <p style="margin-bottom:0.75rem; color:var(--gray-600);">Projected winnings based on current standings</p>
+      <div class="table-responsive">
+        <table class="data-table" id="winningsTable">
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th style="text-align:center">Weekly Bonuses</th>
+              <th style="text-align:center">Total Earned</th>
+            </tr>
+          </thead>
+          <tbody id="winningsBody">
+            <tr><td colspan="3" class="loading">Loading winnings...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Payment Methods -->
+    <div class="card">
+      <h2>Payment Methods</h2>
+      <div style="padding:0.5rem 0; line-height:1.8;">
+        <p><strong>Venmo:</strong> @Shawn-Gidley</p>
+        <p><strong>Zelle:</strong> shawngidley@gmail.com</p>
+        <p><strong>Cash:</strong> To Shawn Gidley</p>
       </div>
     </div>
   </main>
@@ -139,6 +197,6 @@
 
   <script src="js/supabase-client.js"></script>
   <script src="js/auth.js"></script>
-  <script src="js/history.js"></script>
+  <script src="js/money.js"></script>
 </body>
 </html>

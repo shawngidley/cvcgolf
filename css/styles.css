@@ -804,6 +804,15 @@ body {
 .toggle-switch input:checked + .toggle-slider { background: var(--augusta); }
 .toggle-switch input:checked + .toggle-slider::before { transform: translateX(22px); }
 
+/* ===== MONEY PAGE ===== */
+.money-paid { background: var(--augusta); color: #fff; padding: 0.15rem 0.5rem; border-radius: var(--radius); font-size: 0.75rem; font-weight: 600; }
+.money-unpaid { background: var(--red); color: #fff; padding: 0.15rem 0.5rem; border-radius: var(--radius); font-size: 0.75rem; font-weight: 600; }
+.money-toggle-btn { background: none; border: 1px solid var(--gray-300); border-radius: var(--radius); padding: 0.15rem 0.4rem; font-size: 0.7rem; cursor: pointer; margin-left: 0.4rem; color: var(--gray-600); }
+.money-toggle-btn:hover { background: var(--gray-100); }
+.money-major { background: var(--gold); color: var(--gray-900); padding: 0.15rem 0.5rem; border-radius: var(--radius); font-size: 0.75rem; font-weight: 600; }
+.money-signature { background: var(--blue); color: #fff; padding: 0.15rem 0.5rem; border-radius: var(--radius); font-size: 0.75rem; font-weight: 600; }
+.money-fullfield { background: var(--gray-500); color: #fff; padding: 0.15rem 0.5rem; border-radius: var(--radius); font-size: 0.75rem; font-weight: 600; }
+
 /* ===== NAV LIVE DOT ===== */
 .nav-live-dot {
   display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #2ecc40;
