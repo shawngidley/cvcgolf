@@ -231,8 +231,19 @@ exports.handler = async (event) => {
 
       const scoreToPar = c.score || '-';
       const thruRaw = st?.thru;
-      const thru = (thruRaw != null && thruRaw > 0) ? `${thruRaw}` : (st?.type?.shortDetail || '-');
-      const teeTime = st?.type?.shortDetail || '-';
+      const thru = (thruRaw != null && thruRaw > 0) ? `${thruRaw}` : '-';
+
+      // Extract tee time from competitor's status on the scoreboard
+      let teeTime = '-';
+      const rawTeeTime = c.status?.teeTime || c.status?.startDate || st?.startDate || '';
+      if (rawTeeTime) {
+        try {
+          const d = new Date(rawTeeTime);
+          if (!isNaN(d.getTime())) {
+            teeTime = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/New_York' });
+          }
+        } catch (e) { /* ignore */ }
+      }
 
       const linescores = c.linescores || [];
       const today = linescores.length > 0 ? (linescores[linescores.length - 1]?.displayValue || '-') : '-';
