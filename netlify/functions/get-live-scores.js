@@ -46,18 +46,24 @@ const PAYOUT_TABLE = [
   0.0064,  // 30th
 ];
 // 31-35: 0.005875 each, 36-40: 0.005025, 41-45: 0.004325, 46-50: 0.00375
+// 51-55: 0.00335, 56-60: 0.00305, 61-65: 0.00285, 65+: 0.0027
 const RANGE_PAYOUTS = [
   { start: 31, end: 35, pct: 0.005875 },
   { start: 36, end: 40, pct: 0.005025 },
   { start: 41, end: 45, pct: 0.004325 },
   { start: 46, end: 50, pct: 0.00375 },
+  { start: 51, end: 55, pct: 0.00335 },
+  { start: 56, end: 60, pct: 0.00305 },
+  { start: 61, end: 65, pct: 0.00285 },
 ];
+const MIN_PAYOUT_PCT = 0.0027; // 65+ (all who make the cut)
 
 function getPayoutForPosition(pos, purse) {
   if (pos >= 1 && pos <= 30) return Math.round(purse * PAYOUT_TABLE[pos - 1]);
   for (const r of RANGE_PAYOUTS) {
     if (pos >= r.start && pos <= r.end) return Math.round(purse * r.pct);
   }
+  if (pos > 65) return Math.round(purse * MIN_PAYOUT_PCT);
   return 0;
 }
 
@@ -266,7 +272,7 @@ exports.handler = async (event) => {
     // Calculate earnings for each ESPN golfer using full-field tie counts
     const earningsMap = {};
     espnGolfers.forEach(g => {
-      if (g.isCut || g.isWD || g.positionNum > 50) {
+      if (g.isCut || g.isWD) {
         earningsMap[g.espnId] = 0;
       } else {
         earningsMap[g.espnId] = calculateTiedEarnings(g.positionNum, g.tiedCount, purse);
