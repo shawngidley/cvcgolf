@@ -106,7 +106,7 @@ function renderLiveScores() {
       // Third column: tee time, thru holes, F, or CUT
       let thruDisplay = '-';
       if (g.isCut) {
-        thruDisplay = '<span style="color:var(--red);">CUT</span>';
+        thruDisplay = '-';
       } else if (g.isWD) {
         thruDisplay = '<span style="color:var(--red);">WD</span>';
       } else if (g.thru === '18' || g.thru === 'F' || g.thru === 'Finished') {
