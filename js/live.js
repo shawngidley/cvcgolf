@@ -88,7 +88,8 @@ function renderLiveScores() {
         }
       }
       const earningsDisplay = g.earnings > 0 ? `<div class="live-golfer-earnings">${formatCurrency(g.earnings)}</div>` : '';
-      const todayDisplay = g.today && g.today !== '-' ? `<span class="live-golfer-today">(${g.today})</span>` : '';
+      const todayClass = getScoreClass(g.today);
+      const todayDisplay = g.today && g.today !== '-' ? `<span class="live-golfer-today ${todayClass}">(${g.today})</span>` : '';
       return `<td class="live-golfer-cell${cutClass}">
         <div class="live-golfer-name">${gLastName}</div>
         <div class="live-golfer-score ${scoreClass}">${g.scoreToPar} ${todayDisplay}</div>
@@ -141,7 +142,7 @@ function renderLiveScores() {
 
       return `<div class="live-mobile-golfer${cutClass}">
         <span class="live-mobile-gname">${gLastName}</span>
-        <span class="live-mobile-gscore ${scoreClass}">${g.scoreToPar}${g.today && g.today !== '-' ? ` <span class="live-mobile-gtoday">(${g.today})</span>` : ''}</span>
+        <span class="live-mobile-gscore ${scoreClass}">${g.scoreToPar}${g.today && g.today !== '-' ? ` <span class="live-mobile-gtoday ${getScoreClass(g.today)}">(${g.today})</span>` : ''}</span>
         <span class="live-mobile-gpos">${g.position}</span>
         <span class="live-mobile-gthru">${thruDisplay}</span>
         <span class="live-mobile-gearnings">${formatCurrency(g.earnings)}</span>
