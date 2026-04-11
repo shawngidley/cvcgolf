@@ -142,7 +142,8 @@ function renderLiveScores() {
 
       return `<div class="live-mobile-golfer${cutClass}">
         <span class="live-mobile-gname">${gLastName}</span>
-        <span class="live-mobile-gscore ${scoreClass}">${g.scoreToPar}${g.today && g.today !== '-' ? ` <span class="live-mobile-gtoday ${getScoreClass(g.today)}">(${g.today})</span>` : ''}</span>
+        <span class="live-mobile-gscore ${scoreClass}">${g.scoreToPar}</span>
+        <span class="live-mobile-gtoday ${getScoreClass(g.today)}">${g.today && g.today !== '-' ? `(${g.today})` : ''}</span>
         <span class="live-mobile-gpos">${g.position}</span>
         <span class="live-mobile-gthru">${thruDisplay}</span>
         <span class="live-mobile-gearnings">${formatCurrency(g.earnings)}</span>
