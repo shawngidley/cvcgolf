@@ -230,7 +230,9 @@ exports.handler = async (event) => {
       const tiedCount = posInfo?.tiedCount || 1;
 
       const scoreToPar = c.score || '-';
-      const thru = st?.thru != null ? `${st.thru}` : (st?.type?.shortDetail || '-');
+      const thruRaw = st?.thru;
+      const thru = (thruRaw != null && thruRaw > 0) ? `${thruRaw}` : (st?.type?.shortDetail || '-');
+      const teeTime = st?.type?.shortDetail || '-';
 
       const linescores = c.linescores || [];
       const today = linescores.length > 0 ? (linescores[linescores.length - 1]?.displayValue || '-') : '-';
@@ -244,6 +246,7 @@ exports.handler = async (event) => {
         scoreToPar,
         today,
         thru,
+        teeTime,
         isCut,
         isWD
       };
@@ -279,6 +282,7 @@ exports.handler = async (event) => {
           scoreToPar: espnMatch?.scoreToPar || '-',
           today: espnMatch?.today || '-',
           thru: espnMatch?.thru || '-',
+          teeTime: espnMatch?.teeTime || '-',
           isCut: espnMatch?.isCut || false,
           isWD: espnMatch?.isWD || false,
           earnings

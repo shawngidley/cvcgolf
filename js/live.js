@@ -111,13 +111,14 @@ function renderLiveScores() {
         thruDisplay = '<span style="color:var(--red);">WD</span>';
       } else if (g.thru === '18' || g.thru === 'F' || g.thru === 'Finished') {
         thruDisplay = 'F';
-      } else if (g.thru && g.thru !== '-' && g.thru !== 'undefined') {
+      } else {
         const thruNum = parseInt(g.thru);
         if (!isNaN(thruNum) && thruNum > 0 && thruNum < 18) {
           thruDisplay = `Thru ${thruNum}`;
-        } else if (g.thru.includes(':') || g.thru.toLowerCase().includes('am') || g.thru.toLowerCase().includes('pm')) {
-          thruDisplay = g.thru;
-        } else {
+        } else if (g.teeTime && g.teeTime !== '-' && g.teeTime !== 'undefined') {
+          // Not started yet — show tee time from shortDetail
+          thruDisplay = g.teeTime;
+        } else if (g.thru && g.thru !== '-' && g.thru !== '0' && g.thru !== 'undefined') {
           thruDisplay = g.thru;
         }
       }
