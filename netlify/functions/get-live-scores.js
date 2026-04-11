@@ -12,7 +12,22 @@ const HEADERS = {
   'Content-Type': 'application/json'
 };
 
-// PGA payout structure by position (percentage of purse)
+// 2026 Masters exact payout table
+const MASTERS_2026_PAYOUTS = {
+  1: 4500000, 2: 2430000, 3: 1530000, 4: 1080000, 5: 900000,
+  6: 810000, 7: 753750, 8: 697500, 9: 652500, 10: 607500,
+  11: 562500, 12: 517500, 13: 472500, 14: 427500, 15: 405000,
+  16: 382500, 17: 360000, 18: 337500, 19: 315000, 20: 292500,
+  21: 270000, 22: 252000, 23: 234000, 24: 216000, 25: 198000,
+  26: 180000, 27: 173250, 28: 166500, 29: 159750, 30: 153000,
+  31: 146250, 32: 139500, 33: 132750, 34: 127125, 35: 121500,
+  36: 115875, 37: 110250, 38: 105750, 39: 101250, 40: 96750,
+  41: 92250, 42: 87750, 43: 83250, 44: 78750, 45: 74250,
+  46: 69750, 47: 65250, 48: 61650, 49: 58500, 50: 56700
+};
+const MASTERS_CUT_MIN = 25000;
+
+// Standard PGA payout structure by position (percentage of purse)
 const PAYOUT_TABLE = [
   0.18,    // 1st
   0.108,   // 2nd
@@ -58,6 +73,10 @@ const RANGE_PAYOUTS = [
 ];
 const MIN_PAYOUT_PCT = 0.0027; // 65+ (all who make the cut)
 
+function getMastersPayoutForPosition(pos) {
+  return MASTERS_2026_PAYOUTS[pos] || MASTERS_CUT_MIN;
+}
+
 function getPayoutForPosition(pos, purse) {
   if (pos >= 1 && pos <= 30) return Math.round(purse * PAYOUT_TABLE[pos - 1]);
   for (const r of RANGE_PAYOUTS) {
@@ -67,10 +86,12 @@ function getPayoutForPosition(pos, purse) {
   return 0;
 }
 
-function calculateTiedEarnings(position, tiedCount, purse) {
+function calculateTiedEarnings(position, tiedCount, purse, isMasters) {
   let total = 0;
   for (let i = 0; i < tiedCount; i++) {
-    total += getPayoutForPosition(position + i, purse);
+    total += isMasters
+      ? getMastersPayoutForPosition(position + i)
+      : getPayoutForPosition(position + i, purse);
   }
   return Math.round(total / tiedCount);
 }
@@ -270,12 +291,15 @@ exports.handler = async (event) => {
     });
 
     // Calculate earnings for each ESPN golfer using full-field tie counts
+    const isMasters = tournament.is_major && tournament.short_name === 'Masters';
     const earningsMap = {};
     espnGolfers.forEach(g => {
-      if (g.isCut || g.isWD) {
+      if (g.isWD) {
         earningsMap[g.espnId] = 0;
+      } else if (g.isCut) {
+        earningsMap[g.espnId] = isMasters ? MASTERS_CUT_MIN : 0;
       } else {
-        earningsMap[g.espnId] = calculateTiedEarnings(g.positionNum, g.tiedCount, purse);
+        earningsMap[g.espnId] = calculateTiedEarnings(g.positionNum, g.tiedCount, purse, isMasters);
       }
     });
 
