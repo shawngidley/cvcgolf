@@ -102,11 +102,31 @@ function renderLiveScores() {
       const scoreClass = getScoreClass(g.scoreToPar);
       const cutClass = g.isCut || g.isWD ? ' live-cut' : '';
       const gLastName = g.name.split(' ').pop();
-      const thruText = g.thru && g.thru !== '-' && g.thru !== 'undefined' ? ` (${g.thru})` : '';
+
+      // Third column: tee time, thru holes, F, or CUT
+      let thruDisplay = '-';
+      if (g.isCut) {
+        thruDisplay = '<span style="color:var(--red);">CUT</span>';
+      } else if (g.isWD) {
+        thruDisplay = '<span style="color:var(--red);">WD</span>';
+      } else if (g.thru === '18' || g.thru === 'F' || g.thru === 'Finished') {
+        thruDisplay = 'F';
+      } else if (g.thru && g.thru !== '-' && g.thru !== 'undefined') {
+        const thruNum = parseInt(g.thru);
+        if (!isNaN(thruNum) && thruNum > 0 && thruNum < 18) {
+          thruDisplay = `Thru ${thruNum}`;
+        } else if (g.thru.includes(':') || g.thru.toLowerCase().includes('am') || g.thru.toLowerCase().includes('pm')) {
+          thruDisplay = g.thru;
+        } else {
+          thruDisplay = g.thru;
+        }
+      }
+
       return `<div class="live-mobile-golfer${cutClass}">
         <span class="live-mobile-gname">${gLastName}</span>
         <span class="live-mobile-gscore ${scoreClass}">${g.scoreToPar}</span>
-        <span class="live-mobile-gpos">${g.position}${thruText}</span>
+        <span class="live-mobile-gpos">${g.position}</span>
+        <span class="live-mobile-gthru">${thruDisplay}</span>
         <span class="live-mobile-gearnings">${formatCurrency(g.earnings)}</span>
       </div>`;
     }).join('');
