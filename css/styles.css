@@ -853,6 +853,7 @@ body {
 .live-golfer-score { font-size: 0.85rem; font-weight: 700; }
 .live-golfer-pos { font-size: 0.7rem; color: var(--gray-500); }
 .live-golfer-thru { font-size: 0.65rem; color: var(--gray-400); font-style: italic; }
+.live-golfer-earnings { font-size: 0.65rem; color: var(--gray-500); font-weight: 600; }
 .live-cut { opacity: 0.45; text-decoration: line-through; }
 .score-under { color: #2ecc40; }
 .score-over { color: var(--red); }

@@ -73,12 +73,27 @@ function renderLiveScores() {
       const scoreClass = getScoreClass(g.scoreToPar);
       const cutClass = g.isCut || g.isWD ? ' live-cut' : '';
       const gLastName = g.name.split(' ').pop();
-      const thruDisplay = g.thru && g.thru !== '-' && g.thru !== 'undefined' ? `<div class="live-golfer-thru">Thru ${g.thru}</div>` : '';
+      // Thru / tee time display
+      let thruDisplay = '';
+      if (g.isCut || g.isWD) {
+        thruDisplay = '';
+      } else if (g.thru === '18' || g.thru === 'F' || g.thru === 'Finished') {
+        thruDisplay = '<div class="live-golfer-thru">F</div>';
+      } else {
+        const thruNum = parseInt(g.thru);
+        if (!isNaN(thruNum) && thruNum > 0 && thruNum < 18) {
+          thruDisplay = `<div class="live-golfer-thru">Thru ${thruNum}</div>`;
+        } else if (g.teeTime && g.teeTime !== '-' && g.teeTime !== 'undefined') {
+          thruDisplay = `<div class="live-golfer-thru">${g.teeTime}</div>`;
+        }
+      }
+      const earningsDisplay = g.earnings > 0 ? `<div class="live-golfer-earnings">${formatCurrency(g.earnings)}</div>` : '';
       return `<td class="live-golfer-cell${cutClass}">
         <div class="live-golfer-name">${gLastName}</div>
         <div class="live-golfer-score ${scoreClass}">${g.scoreToPar}</div>
         <div class="live-golfer-pos">${g.position}</div>
         ${thruDisplay}
+        ${earningsDisplay}
       </td>`;
     }).join('');
 
