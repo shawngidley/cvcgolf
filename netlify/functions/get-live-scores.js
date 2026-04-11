@@ -233,9 +233,9 @@ exports.handler = async (event) => {
       const thruRaw = st?.thru;
       const thru = (thruRaw != null && thruRaw > 0) ? `${thruRaw}` : '-';
 
-      // Extract tee time from competitor's status on the scoreboard
+      // Extract tee time from status API response
       let teeTime = '-';
-      const rawTeeTime = c.status?.teeTime || c.status?.startDate || st?.startDate || '';
+      const rawTeeTime = st?.teeTime || st?.displayValue || '';
       if (rawTeeTime) {
         try {
           const d = new Date(rawTeeTime);
@@ -317,18 +317,11 @@ exports.handler = async (event) => {
     // Assign ranks
     ownerStandings.forEach((o, i) => { o.rank = i + 1; });
 
-    // Debug: include sample competitor structure to find tee time field
-    const sampleCompetitor = competitors[0] ? JSON.parse(JSON.stringify(competitors[0])) : null;
-    const sampleStatus = sampleCompetitor ? statusMap[sampleCompetitor.id] : null;
-
     return {
       statusCode: 200,
       headers: HEADERS,
       body: JSON.stringify({
         success: true,
-        _debug_competitor_keys: sampleCompetitor ? Object.keys(sampleCompetitor) : [],
-        _debug_competitor_status: sampleCompetitor?.status || null,
-        _debug_status_api: sampleStatus || null,
         tournament: {
           id: tournament.id,
           name: tournament.name,
