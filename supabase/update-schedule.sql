@@ -142,7 +142,7 @@ UPDATE tournaments SET
   location = 'Augusta, GA',
   start_date = '2026-04-09',
   end_date = '2026-04-12',
-  purse_millions = 21.00,
+  purse_millions = 22.50,
   is_major = TRUE,
   is_signature = FALSE,
   is_complete = FALSE,

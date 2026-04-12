@@ -33,7 +33,7 @@ INSERT INTO tournaments (week_number, name, short_name, course, location, start_
   (6, 'Valspar Championship', 'Valspar', 'Innisbrook (Copperhead)', 'Palm Harbor, FL', '2026-03-19', '2026-03-22', 8.70, FALSE, FALSE, TRUE, FALSE, 6),
   (7, 'Texas Children''s Houston Open', 'Houston', 'Memorial Park Golf Course', 'Houston, TX', '2026-03-26', '2026-03-29', 9.50, FALSE, FALSE, TRUE, FALSE, 7),
   (8, 'Valero Texas Open', 'Texas Open', 'TPC San Antonio (Oaks)', 'San Antonio, TX', '2026-04-02', '2026-04-05', 9.50, FALSE, FALSE, TRUE, FALSE, 8),
-  (9, 'THE MASTERS', 'Masters', 'Augusta National Golf Club', 'Augusta, GA', '2026-04-09', '2026-04-12', 21.00, TRUE, FALSE, FALSE, TRUE, 9),
+  (9, 'THE MASTERS', 'Masters', 'Augusta National Golf Club', 'Augusta, GA', '2026-04-09', '2026-04-12', 22.50, TRUE, FALSE, FALSE, TRUE, 9),
   (10, 'RBC Heritage', 'Heritage', 'Harbour Town Golf Links', 'Hilton Head, SC', '2026-04-16', '2026-04-19', 20.00, FALSE, TRUE, FALSE, FALSE, 10),
   (11, 'Cadillac Championship', 'Cadillac', 'TPC Doral (Blue Monster)', 'Miami, FL', '2026-04-30', '2026-05-03', 20.00, FALSE, TRUE, FALSE, FALSE, 11),
   (12, 'Truist Championship', 'Truist', 'TPC Potomac', 'Potomac, MD', '2026-05-07', '2026-05-10', 20.00, FALSE, TRUE, FALSE, FALSE, 12),

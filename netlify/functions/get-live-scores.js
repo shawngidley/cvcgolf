@@ -12,7 +12,7 @@ const HEADERS = {
   'Content-Type': 'application/json'
 };
 
-// 2026 Masters exact payout table
+// 2026 Masters exact payout table (purse: $22.5M)
 const MASTERS_2026_PAYOUTS = {
   1: 4500000, 2: 2430000, 3: 1530000, 4: 1080000, 5: 900000,
   6: 810000, 7: 753750, 8: 697500, 9: 652500, 10: 607500,
@@ -23,9 +23,9 @@ const MASTERS_2026_PAYOUTS = {
   31: 146250, 32: 139500, 33: 132750, 34: 127125, 35: 121500,
   36: 115875, 37: 110250, 38: 105750, 39: 101250, 40: 96750,
   41: 92250, 42: 87750, 43: 83250, 44: 78750, 45: 74250,
-  46: 69750, 47: 65250, 48: 61650, 49: 58500, 50: 56700
+  46: 69750, 47: 65250, 48: 61650, 49: 58500, 50: 56700,
+  51: 55250, 52: 54000, 53: 53100, 54: 52200
 };
-const MASTERS_CUT_MIN = 25000;
 
 // Standard PGA payout structure by position (percentage of purse)
 const PAYOUT_TABLE = [
@@ -74,7 +74,7 @@ const RANGE_PAYOUTS = [
 const MIN_PAYOUT_PCT = 0.0027; // 65+ (all who make the cut)
 
 function getMastersPayoutForPosition(pos) {
-  return MASTERS_2026_PAYOUTS[pos] || MASTERS_CUT_MIN;
+  return MASTERS_2026_PAYOUTS[pos] || 0;
 }
 
 function getPayoutForPosition(pos, purse) {
@@ -294,10 +294,8 @@ exports.handler = async (event) => {
     const isMasters = tournament.is_major && tournament.short_name === 'Masters';
     const earningsMap = {};
     espnGolfers.forEach(g => {
-      if (g.isWD) {
+      if (g.isWD || g.isCut) {
         earningsMap[g.espnId] = 0;
-      } else if (g.isCut) {
-        earningsMap[g.espnId] = isMasters ? MASTERS_CUT_MIN : 0;
       } else {
         earningsMap[g.espnId] = calculateTiedEarnings(g.positionNum, g.tiedCount, purse, isMasters);
       }
