@@ -10,7 +10,7 @@ async function loadEntryFees() {
   const tbody = document.getElementById('entryFeeBody');
 
   if (!fees || fees.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" class="loading">No entry fee data yet</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" class="loading">No entry fee data yet</td></tr>';
     return;
   }
 
@@ -33,7 +33,6 @@ async function loadEntryFees() {
       <td style="text-align:center">$${f.amount}</td>
       <td style="text-align:center">${statusBadge} ${adminToggle}</td>
       <td style="text-align:center">${dateStr}</td>
-      <td>${f.notes || ''}</td>
     </tr>`;
   }).join('');
 
@@ -41,7 +40,7 @@ async function loadEntryFees() {
   document.getElementById('entryFeeTotals').innerHTML = `
     <td colspan="2">Total: ${paidCount} of ${sorted.length} paid</td>
     <td style="text-align:center; color:${paidTotal < totalOwed ? 'var(--red)' : 'var(--augusta)'};">$${paidTotal.toLocaleString()} / $${totalOwed.toLocaleString()}</td>
-    <td colspan="2"></td>`;
+    <td></td>`;
 }
 
 async function togglePaid(feeId, newStatus) {
