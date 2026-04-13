@@ -244,41 +244,20 @@ exports.handler = async (event) => {
     // Check if ESPN provided any earnings
     const hasEspnEarnings = Object.keys(espnEarningsMap).length > 0;
 
-    // Step 6: Calculate positions and ties from FULL field (for fallback earnings)
-    const sortedCompetitors = [...competitors].sort((a, b) => (a.order || 999) - (b.order || 999));
-    const scoreGroups = {};
-
-    sortedCompetitors.forEach(c => {
-      const st = statusMap[c.id];
+    // Step 6: Build position info from ESPN status API (authoritative source)
+    // Group by position number to determine tie counts
+    const positionGroups = {}; // posNum -> [espnId, ...]
+    allCompetitorIds.forEach(cId => {
+      const st = statusMap[cId];
+      if (!st) return;
       const statusName = st?.type?.name || '';
-      if (statusName === 'STATUS_CUT' || statusName === 'STATUS_WITHDRAWN' || statusName === 'STATUS_DISQUALIFIED') {
-        return;
+      if (statusName === 'STATUS_CUT' || statusName === 'STATUS_WITHDRAWN' || statusName === 'STATUS_DISQUALIFIED') return;
+      const posDisplay = st?.position?.displayName || '';
+      const posNum = parseInt(posDisplay.replace('T', ''));
+      if (!isNaN(posNum)) {
+        if (!positionGroups[posNum]) positionGroups[posNum] = [];
+        positionGroups[posNum].push(cId);
       }
-      const score = c.score || 'X';
-      if (!scoreGroups[score]) scoreGroups[score] = [];
-      scoreGroups[score].push(c.id);
-    });
-
-    const positionMap = {};
-    let currentPos = 1;
-    const scoreOrder = Object.keys(scoreGroups).sort((a, b) => {
-      const aFirst = sortedCompetitors.find(c => scoreGroups[a].includes(c.id));
-      const bFirst = sortedCompetitors.find(c => scoreGroups[b].includes(c.id));
-      return (aFirst?.order || 999) - (bFirst?.order || 999);
-    });
-
-    scoreOrder.forEach(score => {
-      const ids = scoreGroups[score];
-      const tiedCount = ids.length;
-      const isTied = tiedCount > 1;
-      ids.forEach(id => {
-        positionMap[id] = {
-          position: isTied ? `T${currentPos}` : `${currentPos}`,
-          positionNum: currentPos,
-          tiedCount
-        };
-      });
-      currentPos += tiedCount;
     });
 
     // Step 7: Build results — use ESPN earnings if available, otherwise calculate from position
@@ -303,10 +282,13 @@ exports.handler = async (event) => {
       const isCut = statusName === 'STATUS_CUT';
       const isWD = statusName === 'STATUS_WITHDRAWN' || statusName === 'STATUS_DISQUALIFIED';
 
-      const posInfo = positionMap[espnId];
-      const position = isCut ? 'CUT' : isWD ? 'WD' : (posInfo?.position || st?.position?.displayName || '-');
-      const positionNum = posInfo?.positionNum || 999;
-      const tiedCount = posInfo?.tiedCount || 1;
+      // Use ESPN's position directly
+      const posDisplay = st?.position?.displayName || '-';
+      const position = isCut ? 'CUT' : isWD ? 'WD' : posDisplay;
+      const posNum = parseInt(posDisplay.replace('T', ''));
+      const positionNum = isNaN(posNum) ? 999 : posNum;
+      const isTied = posDisplay.startsWith('T');
+      const tiedCount = isTied ? (positionGroups[positionNum]?.length || 1) : 1;
 
       let earnings = 0;
       if (hasEspnEarnings) {
