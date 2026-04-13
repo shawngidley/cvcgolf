@@ -130,7 +130,64 @@ exports.handler = async (event) => {
     const isComplete = espnEvent.status?.type?.completed === true;
 
     // Step 2: Get competitor list from ESPN
-    const competitors = espnEvent.competitions?.[0]?.competitors || [];
+    // Scoreboard may truncate completed events, so also fetch from core API
+    let competitors = espnEvent.competitions?.[0]?.competitors || [];
+
+    // If scoreboard has few competitors, fetch full field from core API
+    if (competitors.length < 30) {
+      try {
+        const coreUrl = `https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/events/${eventId}/competitions/${eventId}/competitors?limit=100`;
+        const coreRes = await fetch(coreUrl);
+        if (coreRes.ok) {
+          const coreData = await coreRes.json();
+          const coreRefs = coreData.items || [];
+          // Fetch each competitor's details
+          const detailFetches = coreRefs.map(async (item, idx) => {
+            try {
+              const ref = item.$ref || item.href;
+              if (!ref) return null;
+              // Extract competitor ID from the ref URL
+              const idMatch = ref.match(/competitors\/(\d+)/);
+              const cId = idMatch ? idMatch[1] : null;
+              if (!cId) return null;
+              // Fetch athlete name from the athlete endpoint
+              const athleteUrl = `https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/events/${eventId}/competitions/${eventId}/competitors/${cId}`;
+              const aRes = await fetch(athleteUrl);
+              if (!aRes.ok) return null;
+              const aData = await aRes.json();
+              // Get athlete details
+              let athleteName = '';
+              if (aData.athlete && typeof aData.athlete === 'object' && aData.athlete.$ref) {
+                try {
+                  const nameRes = await fetch(aData.athlete.$ref);
+                  if (nameRes.ok) {
+                    const nameData = await nameRes.json();
+                    athleteName = nameData.displayName || nameData.fullName || '';
+                  }
+                } catch (e) { /* ignore */ }
+              }
+              // Get score from score endpoint
+              let score = '';
+              if (aData.score && typeof aData.score === 'object' && aData.score.$ref) {
+                try {
+                  const scoreRes = await fetch(aData.score.$ref);
+                  if (scoreRes.ok) {
+                    const scoreData = await scoreRes.json();
+                    score = scoreData.displayValue || '';
+                  }
+                } catch (e) { /* ignore */ }
+              }
+              return { id: cId, athlete: { displayName: athleteName }, score, order: idx + 1 };
+            } catch (e) { return null; }
+          });
+          const fullCompetitors = (await Promise.all(detailFetches)).filter(Boolean);
+          if (fullCompetitors.length > competitors.length) {
+            competitors = fullCompetitors;
+          }
+        }
+      } catch (e) { /* fall back to scoreboard competitors */ }
+    }
+
     const espnGolfers = competitors.map(c => ({
       espnId: c.id,
       name: c.athlete?.displayName || c.athlete?.fullName || '',
