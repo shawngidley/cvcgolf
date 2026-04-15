@@ -308,7 +308,13 @@ async function recalcEverything() {
     }
   }
 
-  // Rebuild golfer usage from golfer_earnings
+  // Rebuild golfer usage from golfer_earnings (only count if golfer started)
+  const completedTournamentIds = new Set((completedTournaments || []).map(t => t.id));
+  const { data: allEarnings } = await supabaseClient
+    .from('golfer_earnings')
+    .select('golfer_id, tournament_id');
+  const earningsSet = new Set((allEarnings || []).map(ge => `${ge.golfer_id}-${ge.tournament_id}`));
+
   const { data: players } = await supabaseClient.from('players').select('id').neq('is_guest', true);
   for (const player of players) {
     await supabaseClient.from('golfer_usage').delete().eq('player_id', player.id);
@@ -323,19 +329,18 @@ async function recalcEverything() {
     const usage = {};
     lineups.forEach(l => {
       if (!usage[l.golfer_id]) usage[l.golfer_id] = { count: 0, tournamentIds: [] };
-      usage[l.golfer_id].count++;
-      usage[l.golfer_id].tournamentIds.push(l.tournament_id);
+      const isComplete = completedTournamentIds.has(l.tournament_id);
+      const started = earningsSet.has(`${l.golfer_id}-${l.tournament_id}`);
+      if (!isComplete || started) {
+        usage[l.golfer_id].count++;
+        usage[l.golfer_id].tournamentIds.push(l.tournament_id);
+      }
     });
 
     for (const [golferId, info] of Object.entries(usage)) {
-      const { data: ge } = await supabaseClient
-        .from('golfer_earnings')
-        .select('earnings, tournament_id')
-        .eq('golfer_id', parseInt(golferId));
-
       const pickedTIds = new Set(info.tournamentIds);
-      const totalE = (ge || [])
-        .filter(r => pickedTIds.has(r.tournament_id))
+      const totalE = (allEarnings || [])
+        .filter(r => r.golfer_id === parseInt(golferId) && pickedTIds.has(r.tournament_id))
         .reduce((sum, r) => sum + parseFloat(r.earnings || 0), 0);
 
       await supabaseClient.from('golfer_usage').upsert({
