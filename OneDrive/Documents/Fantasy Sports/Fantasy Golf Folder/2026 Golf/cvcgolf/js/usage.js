@@ -68,6 +68,9 @@ async function loadUsage() {
     });
   }
 
+  console.log('DEBUG completedTournamentIds:', [...completedTournamentIds]);
+  console.log('DEBUG earningsMap keys:', Object.keys(earningsMap));
+
   // Aggregate usage per golfer
   const usageByGolfer = {};
   lineups.forEach(l => {
@@ -84,6 +87,7 @@ async function loadUsage() {
     const earningsKey = `${l.golfer_id}-${l.tournament_id}`;
     const isComplete = completedTournamentIds.has(l.tournament_id);
     const started = earningsKey in earningsMap;
+    console.log(`DEBUG lineup: golfer=${l.golfers?.name} golfer_id=${l.golfer_id} tournament_id=${l.tournament_id} isComplete=${isComplete} started=${started}`);
     // Only count as usage if: tournament not yet complete, OR golfer has a golfer_earnings entry (they started)
     if (!isComplete || started) {
       usageByGolfer[l.golfer_id].times_used++;
