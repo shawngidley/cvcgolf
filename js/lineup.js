@@ -180,6 +180,9 @@ async function loadGolferUsage() {
     });
   }
 }
+
+async function loadExistingLineup() {
+  if (!currentTournament) return;
   const player = getCurrentPlayer();
 
   const { data: lineup } = await supabaseClient
