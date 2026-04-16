@@ -20,7 +20,10 @@ async function fetchLiveScores() {
 
     if (!data.success) {
       document.getElementById('liveContent').style.display = 'none';
-      document.getElementById('noLiveData').style.display = 'block';
+      const noData = document.getElementById('noLiveData');
+      noData.style.display = 'block';
+      const errEl = document.getElementById('liveError');
+      if (errEl) errEl.textContent = data.error ? `Error: ${data.error}` : '';
       document.getElementById('refreshBtn').disabled = false;
       return;
     }
@@ -31,7 +34,8 @@ async function fetchLiveScores() {
     document.getElementById('noLiveData').style.display = 'none';
     scheduleRefresh();
   } catch (err) {
-    // silently handle errors
+    const errEl = document.getElementById("liveError");
+    if (errEl) errEl.textContent = "Error: " + err.message;
   }
 
   document.getElementById('refreshBtn').disabled = false;

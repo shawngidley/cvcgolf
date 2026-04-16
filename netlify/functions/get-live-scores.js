@@ -138,10 +138,20 @@ exports.handler = async (event) => {
     }
 
     const data = await scoreboardRes.json();
-    const espnEvent = data.events?.[0];
+
+    // Try to match ESPN event to our tournament by name, fall back to events[0]
+    const allEvents = data.events || [];
+    const normalizeEvt = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const shortNorm = normalizeEvt(tournament.short_name);
+    const fullNorm = normalizeEvt(tournament.name);
+    let espnEvent = allEvents.find(e => {
+      const en = normalizeEvt(e.name);
+      const es = normalizeEvt(e.shortName || '');
+      return en.includes(shortNorm) || es.includes(shortNorm) || shortNorm.includes(en) || en.includes(fullNorm);
+    }) || allEvents[0];
 
     if (!espnEvent) {
-      return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ success: false, error: 'No ESPN event found' }) };
+      return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ success: false, error: 'No ESPN event found', available_events: allEvents.map(e => e.name) }) };
     }
 
     const eventId = espnEvent.id;
