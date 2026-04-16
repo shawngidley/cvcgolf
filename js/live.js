@@ -23,14 +23,7 @@ async function fetchLiveScores() {
       const noData = document.getElementById('noLiveData');
       noData.style.display = 'block';
       const errEl = document.getElementById('liveError');
-      if (errEl) {
-        let msg = data.error || "Unknown error";
-        if (data.debug_tournaments) {
-          const curr = data.debug_tournaments.find(t => t.is_current);
-          msg += curr ? " (DB current: " + curr.name + ")" : " (DB: none marked current)";
-        }
-        errEl.textContent = "Error: " + msg;
-      }
+      if (errEl) errEl.textContent = data.error ? "Error: " + data.error : "";
       document.getElementById('refreshBtn').disabled = false;
       return;
     }
