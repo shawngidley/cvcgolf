@@ -169,8 +169,6 @@ async function loadGolferUsage() {
 
   // If golfer_earnings unavailable, fall back to counting all picks
   const earningsAvailable = golferEarnings !== null;
-  // Build earnings presence lookup
-  const earningsSet = new Set((golferEarnings || []).map(ge => `${ge.golfer_id}-${ge.tournament_id}`));
   const earningsSet = new Set((golferEarnings || []).map(ge => `${ge.golfer_id}-${ge.tournament_id}`));
 
   if (allLineups) {
@@ -180,17 +178,16 @@ async function loadGolferUsage() {
       }
       const isComplete = earningsAvailable && completedTournamentIds.has(l.tournament_id);
       const started = earningsSet.has(`${l.golfer_id}-${l.tournament_id}`);
-      // Only count as usage if tournament not yet complete, OR golfer has a golfer_earnings entry (they started)
       if (!isComplete || started) {
         golferUsageMap[l.golfer_id].times_used++;
       }
     });
   }
 
-  // Get major usage (same started check)
+  // Get major usage by counting lineups in major tournaments (same started check)
   const { data: majorLineups } = await supabaseClient
     .from('lineups')
-    .select('golfer_id, tournament_id, tournaments!inner(is_major, is_complete)')
+    .select('golfer_id, tournament_id, tournaments!inner(is_major)')
     .eq('player_id', player.id)
     .eq('tournaments.is_major', true);
 
@@ -199,7 +196,7 @@ async function loadGolferUsage() {
       if (!golferUsageMap[l.golfer_id]) {
         golferUsageMap[l.golfer_id] = { times_used: 0, major_uses: 0 };
       }
-      const isComplete = earningsAvailable && (l.tournaments?.is_complete ?? completedTournamentIds.has(l.tournament_id));
+      const isComplete = earningsAvailable && completedTournamentIds.has(l.tournament_id);
       const started = earningsSet.has(`${l.golfer_id}-${l.tournament_id}`);
       if (!isComplete || started) {
         golferUsageMap[l.golfer_id].major_uses++;
