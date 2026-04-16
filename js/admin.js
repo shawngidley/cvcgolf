@@ -91,9 +91,18 @@ async function togglePicks(locked) {
 async function setCurrentTournament() {
   const id = document.getElementById('adminWeekSelect').value;
   if (!id) return;
-  await supabaseClient.from('tournaments').update({ is_current: false }).neq('id', 0);
-  await supabaseClient.from('tournaments').update({ is_current: true }).eq('id', id);
-  showMsg('tournamentMsg', 'Set as current tournament.', 'success');
+  try {
+    const res = await fetch('/.netlify/functions/set-current-tournament', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tournament_id: id })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Unknown error');
+    showMsg('tournamentMsg', 'Set as current tournament.', 'success');
+  } catch (err) {
+    showMsg('tournamentMsg', 'Error: ' + err.message, 'error');
+  }
 }
 
 async function markComplete() {
