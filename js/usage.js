@@ -44,12 +44,13 @@ async function loadUsage() {
     .from('golfer_earnings')
     .select('golfer_id, tournament_id, earnings');
 
-  // Get completed tournament IDs
-  const { data: completedTournaments } = await supabaseClient
+  // Only count picks from finalized tournaments (locked or complete)
+  const { data: finalizedTournaments } = await supabaseClient
     .from('tournaments')
-    .select('id')
-    .eq('is_complete', true);
-  const completedTournamentIds = new Set((completedTournaments || []).map(t => t.id));
+    .select('id, is_complete, picks_locked')
+    .or('is_complete.eq.true,picks_locked.eq.true');
+  const finalizedIds = new Set((finalizedTournaments || []).map(t => t.id));
+  const completedIds = new Set((finalizedTournaments || []).filter(t => t.is_complete).map(t => t.id));
 
   const summary = document.getElementById('usageSummary');
   const tbody = document.getElementById('usageBody');
@@ -82,9 +83,10 @@ async function loadUsage() {
       };
     }
     const earningsKey = `${l.golfer_id}-${l.tournament_id}`;
-    const isComplete = completedTournamentIds.has(l.tournament_id);
+    if (!finalizedIds.has(l.tournament_id)) return;
+    const isComplete = completedIds.has(l.tournament_id);
     const started = earningsKey in earningsMap;
-    // Only count as usage if: tournament not yet complete, OR golfer has a golfer_earnings entry (they started)
+    // For complete tournaments, only count if golfer started (WD before start = no usage)
     if (!isComplete || started) {
       usageByGolfer[l.golfer_id].times_used++;
     }
