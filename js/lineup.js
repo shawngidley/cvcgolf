@@ -149,25 +149,40 @@ async function loadGolferUsage() {
   if (!player) return;
   golferUsageMap = {};
 
-  // Count usage directly from lineups table
   const { data: allLineups } = await supabaseClient
     .from('lineups')
-    .select('golfer_id')
+    .select('golfer_id, tournament_id')
     .eq('player_id', player.id);
+
+  const { data: golferEarnings, error: earningsError } = await supabaseClient
+    .from('golfer_earnings')
+    .select('golfer_id, tournament_id');
+
+  const { data: completedTournaments } = await supabaseClient
+    .from('tournaments')
+    .select('id')
+    .eq('is_complete', true);
+
+  const completedIds = new Set((completedTournaments || []).map(t => t.id));
+  const earningsOk = !earningsError && Array.isArray(golferEarnings) && golferEarnings.length > 0;
+  const earningsSet = new Set((golferEarnings || []).map(ge => `${ge.golfer_id}-${ge.tournament_id}`));
 
   if (allLineups) {
     allLineups.forEach(l => {
       if (!golferUsageMap[l.golfer_id]) {
         golferUsageMap[l.golfer_id] = { times_used: 0, major_uses: 0 };
       }
-      golferUsageMap[l.golfer_id].times_used++;
+      const isComplete = earningsOk && completedIds.has(l.tournament_id);
+      const started = earningsSet.has(`${l.golfer_id}-${l.tournament_id}`);
+      if (!isComplete || started) {
+        golferUsageMap[l.golfer_id].times_used++;
+      }
     });
   }
 
-  // Get major usage by counting lineups in major tournaments
   const { data: majorLineups } = await supabaseClient
     .from('lineups')
-    .select('golfer_id, tournaments!inner(is_major)')
+    .select('golfer_id, tournament_id, tournaments!inner(is_major)')
     .eq('player_id', player.id)
     .eq('tournaments.is_major', true);
 
@@ -176,7 +191,11 @@ async function loadGolferUsage() {
       if (!golferUsageMap[l.golfer_id]) {
         golferUsageMap[l.golfer_id] = { times_used: 0, major_uses: 0 };
       }
-      golferUsageMap[l.golfer_id].major_uses++;
+      const isComplete = earningsOk && completedIds.has(l.tournament_id);
+      const started = earningsSet.has(`${l.golfer_id}-${l.tournament_id}`);
+      if (!isComplete || started) {
+        golferUsageMap[l.golfer_id].major_uses++;
+      }
     });
   }
 }
