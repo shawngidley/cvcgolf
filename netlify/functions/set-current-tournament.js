@@ -22,6 +22,8 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers: HEADERS, body: JSON.stringify({ success: false, error: 'tournament_id required' }) };
     }
 
+    const usingServiceKey = !!process.env.SUPABASE_SERVICE_KEY;
+
     // Clear is_current from all tournaments that currently have it set
     const { error: clearError } = await supabase
       .from('tournaments')
@@ -38,7 +40,18 @@ exports.handler = async (event) => {
 
     if (setError) throw new Error('Set failed: ' + setError.message);
 
-    return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ success: true }) };
+    // Verify the write actually persisted
+    const { data: verify } = await supabase
+      .from('tournaments')
+      .select('id, name, is_current, week_number')
+      .eq('id', tournament_id)
+      .single();
+
+    if (!verify || !verify.is_current) {
+      throw new Error('Write did not persist (RLS may be blocking). Service key present: ' + usingServiceKey);
+    }
+
+    return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ success: true, tournament: verify.name, using_service_key: usingServiceKey }) };
   } catch (err) {
     return { statusCode: 500, headers: HEADERS, body: JSON.stringify({ success: false, error: err.message }) };
   }
