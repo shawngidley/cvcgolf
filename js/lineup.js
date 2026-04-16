@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await loadCurrentTournament();
   await Promise.all([loadGolfers(), loadGolferUsage()]);
+  renderGolferPool();
   await loadExistingLineup();
   setupControls();
 });
@@ -141,7 +142,6 @@ async function loadGolfers() {
   salaryFilter.innerHTML = '<option value="">All Salaries</option>' +
     salarySet.map(s => `<option value="${s}">$${s}</option>`).join('');
 
-  renderGolferPool();
 }
 
 async function loadGolferUsage() {
