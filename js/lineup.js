@@ -149,45 +149,25 @@ async function loadGolferUsage() {
   if (!player) return;
   golferUsageMap = {};
 
-  // Fetch all lineups with tournament_id
+  // Count usage directly from lineups table
   const { data: allLineups } = await supabaseClient
     .from('lineups')
-    .select('golfer_id, tournament_id')
+    .select('golfer_id')
     .eq('player_id', player.id);
-
-  // Fetch golfer_earnings to determine which golfers actually started
-  const { data: golferEarnings } = await supabaseClient
-    .from('golfer_earnings')
-    .select('golfer_id, tournament_id');
-
-  // Fetch completed tournament IDs
-  const { data: completedTournaments } = await supabaseClient
-    .from('tournaments')
-    .select('id')
-    .eq('is_complete', true);
-  const completedTournamentIds = new Set((completedTournaments || []).map(t => t.id));
-
-  // If golfer_earnings unavailable, fall back to counting all picks
-  const earningsAvailable = golferEarnings !== null;
-  const earningsSet = new Set((golferEarnings || []).map(ge => `${ge.golfer_id}-${ge.tournament_id}`));
 
   if (allLineups) {
     allLineups.forEach(l => {
       if (!golferUsageMap[l.golfer_id]) {
         golferUsageMap[l.golfer_id] = { times_used: 0, major_uses: 0 };
       }
-      const isComplete = earningsAvailable && completedTournamentIds.has(l.tournament_id);
-      const started = earningsSet.has(`${l.golfer_id}-${l.tournament_id}`);
-      if (!isComplete || started) {
-        golferUsageMap[l.golfer_id].times_used++;
-      }
+      golferUsageMap[l.golfer_id].times_used++;
     });
   }
 
-  // Get major usage by counting lineups in major tournaments (same started check)
+  // Get major usage by counting lineups in major tournaments
   const { data: majorLineups } = await supabaseClient
     .from('lineups')
-    .select('golfer_id, tournament_id, tournaments!inner(is_major)')
+    .select('golfer_id, tournaments!inner(is_major)')
     .eq('player_id', player.id)
     .eq('tournaments.is_major', true);
 
@@ -196,17 +176,10 @@ async function loadGolferUsage() {
       if (!golferUsageMap[l.golfer_id]) {
         golferUsageMap[l.golfer_id] = { times_used: 0, major_uses: 0 };
       }
-      const isComplete = earningsAvailable && completedTournamentIds.has(l.tournament_id);
-      const started = earningsSet.has(`${l.golfer_id}-${l.tournament_id}`);
-      if (!isComplete || started) {
-        golferUsageMap[l.golfer_id].major_uses++;
-      }
+      golferUsageMap[l.golfer_id].major_uses++;
     });
   }
 }
-
-async function loadExistingLineup() {
-  if (!currentTournament) return;
   const player = getCurrentPlayer();
 
   const { data: lineup } = await supabaseClient
