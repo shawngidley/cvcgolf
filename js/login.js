@@ -4,7 +4,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   // If already logged in, redirect
   const existing = localStorage.getItem('cvc_golf_player');
   if (existing) {
-    window.location.href = 'standings.html';
+    // Send to live page if a tournament is currently active
+    const { data: current } = await supabaseClient
+      .from('tournaments')
+      .select('id')
+      .eq('is_current', true)
+      .limit(1);
+
+    if (current && current.length > 0) {
+      window.location.href = 'live.html';
+    } else {
+      window.location.href = 'standings.html';
+    }
     return;
   }
 
@@ -65,5 +76,12 @@ async function handleLogin(e) {
     is_guest: player.is_guest || false
   }));
 
-  window.location.href = 'standings.html';
+  // Send to live page if a tournament is currently active
+  const { data: current } = await supabaseClient
+    .from('tournaments')
+    .select('id')
+    .eq('is_current', true)
+    .limit(1);
+
+  window.location.href = (current && current.length > 0) ? 'live.html' : 'standings.html';
 }
