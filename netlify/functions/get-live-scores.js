@@ -101,14 +101,16 @@ exports.handler = async (event) => {
 
   try {
     // Get current tournament
-    const { data: tournament } = await supabase
+    const { data: tournament, error: tError } = await supabase
       .from('tournaments')
       .select('*')
       .eq('is_current', true)
       .single();
 
     if (!tournament) {
-      return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ success: false, error: 'No current tournament' }) };
+      // Debug: fetch all tournaments to see what is_current looks like
+      const { data: allT } = await supabase.from('tournaments').select('id, name, is_current, week_number').order('week_number');
+      return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ success: false, error: tError ? tError.message : 'No current tournament', debug_tournaments: allT }) };
     }
 
     const purse = (tournament.purse_millions || 20) * 1000000;
