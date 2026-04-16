@@ -167,7 +167,10 @@ async function loadGolferUsage() {
     .eq('is_complete', true);
   const completedTournamentIds = new Set((completedTournaments || []).map(t => t.id));
 
+  // If golfer_earnings unavailable, fall back to counting all picks
+  const earningsAvailable = golferEarnings !== null;
   // Build earnings presence lookup
+  const earningsSet = new Set((golferEarnings || []).map(ge => `${ge.golfer_id}-${ge.tournament_id}`));
   const earningsSet = new Set((golferEarnings || []).map(ge => `${ge.golfer_id}-${ge.tournament_id}`));
 
   if (allLineups) {
@@ -175,7 +178,7 @@ async function loadGolferUsage() {
       if (!golferUsageMap[l.golfer_id]) {
         golferUsageMap[l.golfer_id] = { times_used: 0, major_uses: 0 };
       }
-      const isComplete = completedTournamentIds.has(l.tournament_id);
+      const isComplete = earningsAvailable && completedTournamentIds.has(l.tournament_id);
       const started = earningsSet.has(`${l.golfer_id}-${l.tournament_id}`);
       // Only count as usage if tournament not yet complete, OR golfer has a golfer_earnings entry (they started)
       if (!isComplete || started) {
@@ -196,7 +199,7 @@ async function loadGolferUsage() {
       if (!golferUsageMap[l.golfer_id]) {
         golferUsageMap[l.golfer_id] = { times_used: 0, major_uses: 0 };
       }
-      const isComplete = l.tournaments?.is_complete ?? completedTournamentIds.has(l.tournament_id);
+      const isComplete = earningsAvailable && (l.tournaments?.is_complete ?? completedTournamentIds.has(l.tournament_id));
       const started = earningsSet.has(`${l.golfer_id}-${l.tournament_id}`);
       if (!isComplete || started) {
         golferUsageMap[l.golfer_id].major_uses++;
