@@ -105,7 +105,6 @@ exports.handler = async (event) => {
       .from('tournaments')
       .select('*')
       .eq('is_current', true)
-      .order('week_number', { ascending: false })
       .limit(1);
     const tournament = tournamentRows?.[0] || null;
 

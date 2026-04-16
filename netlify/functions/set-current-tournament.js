@@ -22,13 +22,13 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers: HEADERS, body: JSON.stringify({ success: false, error: 'tournament_id required' }) };
     }
 
-    // Clear is_current from all tournaments
+    // Clear is_current from all tournaments that currently have it set
     const { error: clearError } = await supabase
       .from('tournaments')
       .update({ is_current: false })
-      .neq('id', 0);
+      .eq('is_current', true);
 
-    if (clearError) throw clearError;
+    if (clearError) throw new Error('Clear failed: ' + clearError.message);
 
     // Set is_current on the selected tournament
     const { error: setError } = await supabase
@@ -36,7 +36,7 @@ exports.handler = async (event) => {
       .update({ is_current: true })
       .eq('id', tournament_id);
 
-    if (setError) throw setError;
+    if (setError) throw new Error('Set failed: ' + setError.message);
 
     return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ success: true }) };
   } catch (err) {
