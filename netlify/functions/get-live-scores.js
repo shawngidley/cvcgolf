@@ -163,6 +163,9 @@ exports.handler = async (event) => {
     const competition = espnEvent.competitions?.[0];
     const competitors = competition?.competitors || [];
     const roundDisplay = competition?.status?.type?.shortDetail || espnEvent.status?.type?.shortDetail || '';
+    // ESPN doesn't expose period on competition.status, so parse from the display string
+    const roundMatch = roundDisplay.match(/Round\s+(\d+)/i);
+    const currentRound = roundMatch ? parseInt(roundMatch[1]) : 0;
 
     // Get unique golfer IDs we need to look up (only our picked golfers)
     const allPickedNames = new Set();
@@ -284,7 +287,19 @@ exports.handler = async (event) => {
       }
 
       const linescores = c.linescores || [];
-      const today = linescores.length > 0 ? (linescores[linescores.length - 1]?.displayValue || '-') : '-';
+      // ESPN pads linescores with empty placeholder entries for future rounds — index by current round
+      let todayLinescore;
+      if (currentRound > 0) {
+        todayLinescore = linescores[currentRound - 1];
+      } else {
+        for (let i = linescores.length - 1; i >= 0; i--) {
+          if (linescores[i]?.linescores?.length > 0 || linescores[i]?.value > 0) {
+            todayLinescore = linescores[i];
+            break;
+          }
+        }
+      }
+      const today = todayLinescore?.displayValue || '-';
 
       return {
         espnId: c.id,
