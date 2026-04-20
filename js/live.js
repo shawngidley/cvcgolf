@@ -20,10 +20,7 @@ async function fetchLiveScores() {
 
     if (!data.success) {
       document.getElementById('liveContent').style.display = 'none';
-      const noData = document.getElementById('noLiveData');
-      noData.style.display = 'block';
-      const errEl = document.getElementById('liveError');
-      if (errEl) errEl.textContent = data.error ? "Error: " + data.error : "";
+      document.getElementById('noLiveData').style.display = 'block';
       document.getElementById('refreshBtn').disabled = false;
       return;
     }
@@ -34,8 +31,7 @@ async function fetchLiveScores() {
     document.getElementById('noLiveData').style.display = 'none';
     scheduleRefresh();
   } catch (err) {
-    const errEl = document.getElementById("liveError");
-    if (errEl) errEl.textContent = "Error: " + err.message;
+    // silently handle errors
   }
 
   document.getElementById('refreshBtn').disabled = false;
