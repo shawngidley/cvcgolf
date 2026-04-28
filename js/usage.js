@@ -33,10 +33,10 @@ async function loadUsage() {
   const playerId = document.getElementById('usagePlayerSelect').value;
   if (!playerId) return;
 
-  // Get this player's lineups with golfer info
+  // Get this player's lineups with golfer and tournament info
   const { data: lineups } = await supabaseClient
     .from('lineups')
-    .select('golfer_id, tournament_id, golfers(name, salary, is_liv)')
+    .select('golfer_id, tournament_id, golfers(name, salary, is_liv), tournaments(is_major)')
     .eq('player_id', playerId);
 
   // Get all golfer_earnings
@@ -56,7 +56,7 @@ async function loadUsage() {
   const tbody = document.getElementById('usageBody');
 
   if (!lineups || lineups.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" class="loading">No usage data yet</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="loading">No usage data yet</td></tr>';
     summary.style.display = 'none';
     return;
   }
@@ -79,6 +79,7 @@ async function loadUsage() {
         salary: l.golfers?.salary || 0,
         is_liv: l.golfers?.is_liv || false,
         times_used: 0,
+        major_uses: 0,
         total_earnings: 0
       };
     }
@@ -89,6 +90,9 @@ async function loadUsage() {
     // For complete tournaments, only count if golfer started (WD before start = no usage)
     if (!isComplete || started) {
       usageByGolfer[l.golfer_id].times_used++;
+      if (l.tournaments?.is_major) {
+        usageByGolfer[l.golfer_id].major_uses++;
+      }
     }
     usageByGolfer[l.golfer_id].total_earnings += earningsMap[earningsKey] || 0;
   });
@@ -119,13 +123,13 @@ async function loadUsage() {
 }
 
 function renderUsageHeaders() {
-  const headers = ['Golfer', 'Salary', 'Times Used', 'Total Earned', 'Avg/Use', 'Usage Bar'];
+  const headers = ['Golfer', 'Salary', 'Times Used', 'Majors', 'Total Earned', 'Avg/Use', 'Usage Bar'];
   const table = document.querySelector('#usageTable thead tr');
   table.innerHTML = headers.map((h, i) => {
-    if (i === 5) return `<th>${h}</th>`; // Usage Bar not sortable
+    if (i === 6) return `<th>${h}</th>`; // Usage Bar not sortable
     const arrow = i === usageSortCol ? (usageSortDir === 'asc' ? ' \u2191' : ' \u2193') : ' \u2195';
     const activeClass = i === usageSortCol ? ' sortable-active' : '';
-    const currClass = (i === 3 || i === 4) ? ' currency' : '';
+    const currClass = (i === 4 || i === 5) ? ' currency' : '';
     const stickyClass = i === 0 ? ' usage-golfer-col' : '';
     return `<th class="sortable-th${activeClass}${currClass}${stickyClass}" data-col="${i}">${h}${arrow}</th>`;
   }).join('');
@@ -152,8 +156,9 @@ function renderUsageTable() {
       case 0: va = a.name.toLowerCase(); vb = b.name.toLowerCase(); break;
       case 1: va = a.salary; vb = b.salary; break;
       case 2: va = a.times_used; vb = b.times_used; break;
-      case 3: va = a.total_earnings; vb = b.total_earnings; break;
-      case 4: va = a.avg; vb = b.avg; break;
+      case 3: va = a.major_uses; vb = b.major_uses; break;
+      case 4: va = a.total_earnings; vb = b.total_earnings; break;
+      case 5: va = a.avg; vb = b.avg; break;
       default: va = a.times_used; vb = b.times_used;
     }
     if (typeof va === 'string') {
@@ -172,6 +177,7 @@ function renderUsageTable() {
         <td class="usage-golfer-col"><strong>${u.name}</strong></td>
         <td>$${u.salary}</td>
         <td>${u.times_used}/${u.maxUses}</td>
+        <td>${u.major_uses}/2</td>
         <td class="currency">${formatCurrency(u.total_earnings)}</td>
         <td class="currency">${formatCurrency(u.avg)}</td>
         <td><div class="usage-bar" style="width: ${barWidth}%"></div></td>

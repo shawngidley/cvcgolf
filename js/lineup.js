@@ -338,9 +338,12 @@ function renderGolferPool() {
         ? '<span class="g-usage usage-liv-maxed">LIV 2/2</span>'
         : `<span class="g-usage usage-liv">LIV ${usage.times_used}/2</span>`)
       : '';
-    const majorBadge = (isMajorWeek && usage.major_uses >= MAX_MAJOR_USES)
-      ? '<span class="g-usage usage-major-maxed">Major 2/2</span>'
-      : (isMajorWeek ? `<span class="g-usage usage-major">Major ${usage.major_uses}/2</span>` : '');
+    let majorBadge = '';
+    if (isMajorWeek || usage.major_uses > 0) {
+      majorBadge = usage.major_uses >= MAX_MAJOR_USES
+        ? '<span class="g-usage usage-major-maxed">Major 2/2</span>'
+        : `<span class="g-usage usage-major">Major ${usage.major_uses}/2</span>`;
+    }
 
     return `<div class="golfer-row ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''} ${maxedOut ? 'maxed-out' : ''} ${majorMaxed && !maxedOut ? 'major-maxed' : ''}"
       data-id="${g.id}" data-name="${g.name}" data-salary="${g.salary}">
