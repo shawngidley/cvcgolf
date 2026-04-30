@@ -11,7 +11,7 @@ UPDATE tournaments SET first_tee_time = '2026-03-26 12:00:00+00' WHERE week_numb
 UPDATE tournaments SET first_tee_time = '2026-04-02 12:00:00+00' WHERE week_number = 8;
 UPDATE tournaments SET first_tee_time = '2026-04-09 11:25:00+00' WHERE week_number = 9;
 UPDATE tournaments SET first_tee_time = '2026-04-16 11:00:00+00' WHERE week_number = 10;
-UPDATE tournaments SET first_tee_time = '2026-04-30 11:00:00+00' WHERE week_number = 11;
+UPDATE tournaments SET first_tee_time = '2026-04-30 12:40:00+00' WHERE week_number = 11;
 UPDATE tournaments SET first_tee_time = '2026-05-07 11:00:00+00' WHERE week_number = 12;
 UPDATE tournaments SET first_tee_time = '2026-05-14 11:00:00+00' WHERE week_number = 13;
 UPDATE tournaments SET first_tee_time = '2026-05-21 12:00:00+00' WHERE week_number = 14;
