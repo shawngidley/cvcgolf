@@ -46,6 +46,12 @@ exports.handler = async (event) => {
 
     if (!tournament) return EMPTY;
 
+    // Load all active golfer names from DB for field matching
+    const { data: dbGolfers } = await supabase.from('golfers').select('name').eq('is_active', true);
+    const dbNames = (dbGolfers || []).map(g => g.name);
+    const normName = (s) => s.replace(/[øØ]/g, 'o').replace(/[æÆ]/g, 'ae').replace(/[åÅ]/g, 'a').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
+    const dbNormed = dbNames.map(n => ({ original: n, norm: normName(n) }));
+
     // Fetch ESPN scoreboard for the tournament's start date
     const dateStr = tournament.start_date.replace(/-/g, '');
     const scoreboardRes = await fetch(
@@ -160,6 +166,21 @@ exports.handler = async (event) => {
       }));
     }
 
+    // Auto-add field golfers not in DB at $15
+    const newGolfers = [];
+    for (const espnName of fieldNames) {
+      const normEspn = normName(espnName);
+      const inDb = dbNormed.find(d => d.norm === normEspn);
+      if (!inDb) {
+        newGolfers.push({ name: espnName, salary: 15, is_active: true, is_liv: false });
+      }
+    }
+
+    if (newGolfers.length > 0) {
+      await supabase.from('golfers').insert(newGolfers);
+      console.log(`[get-wd-status] Added ${newGolfers.length} new golfer(s): ${newGolfers.map(g => g.name).join(', ')}`);
+    }
+
     return {
       statusCode: 200,
       headers: HEADERS,
@@ -168,7 +189,8 @@ exports.handler = async (event) => {
         wdGolfers: wdNames,
         fieldGolfers: fieldNames,
         teeTimeMap: espnTeeTimeMap,
-        tournament: tournament.name
+        tournament: tournament.name,
+        newGolfers: newGolfers.map(g => g.name)
       })
     };
 
