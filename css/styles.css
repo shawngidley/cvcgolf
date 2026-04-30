@@ -594,6 +594,9 @@ body {
 .g-usage.usage-liv { background: #fde8e8; color: #c0392b; font-size: 0.65rem; }
 .g-usage.usage-liv-maxed { background: #e0e0e0; color: #757575; font-size: 0.65rem; }
 
+/* WD (withdrawal) badge */
+.wd-badge { display: inline-block; padding: 0.1rem 0.35rem; border-radius: 999px; font-size: 0.65rem; font-weight: 700; background: #c62828; color: #fff; margin-left: 0.35rem; vertical-align: middle; letter-spacing: 0.03em; }
+
 
 /* ===== HISTORY CONTROLS ===== */
 .history-controls, .picks-controls {

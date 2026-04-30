@@ -10,6 +10,7 @@ let allGolfers = [];
 let currentTournament = null;
 let isLocked = false;
 let golferUsageMap = {};   // golfer_id -> { times_used, major_uses }
+let wdStatusMap = {};      // golfer name -> true if withdrawn
 
 document.addEventListener('DOMContentLoaded', async () => {
   const player = getCurrentPlayer();
@@ -19,6 +20,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   await Promise.all([loadGolfers(), loadGolferUsage()]);
   renderGolferPool();
   await loadExistingLineup();
+  await loadWDStatus();
+  updateUI();
   setupControls();
 });
 
@@ -227,6 +230,20 @@ async function loadExistingLineup() {
   }
 }
 
+async function loadWDStatus() {
+  try {
+    const res = await fetch('/.netlify/functions/get-live-scores');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.success || !data.standings) return;
+    data.standings.forEach(player => {
+      (player.golfers || []).forEach(g => {
+        if (g.isWD) wdStatusMap[g.name] = true;
+      });
+    });
+  } catch (e) { /* silently skip if no active tournament or function unavailable */ }
+}
+
 function setupControls() {
   document.getElementById('golferSearch').addEventListener('input', renderGolferPool);
   document.getElementById('salaryFilter').addEventListener('change', renderGolferPool);
@@ -252,7 +269,12 @@ function updateUI() {
     if (golfer) {
       slot.classList.remove('empty');
       slot.classList.add('filled');
-      slot.querySelector('.slot-name').textContent = golfer.name;
+      const nameEl = slot.querySelector('.slot-name');
+      if (wdStatusMap[golfer.name]) {
+        nameEl.innerHTML = `${golfer.name} <span class="wd-badge">WD</span>`;
+      } else {
+        nameEl.textContent = golfer.name;
+      }
       slot.querySelector('.slot-salary').textContent = `$${golfer.salary}`;
       if (!isLocked) {
         slot.onclick = () => removeGolfer(i);
@@ -345,9 +367,10 @@ function renderGolferPool() {
         : `<span class="g-usage usage-major">Major ${usage.major_uses}/2</span>`;
     }
 
+    const wdBadge = wdStatusMap[g.name] ? ' <span class="wd-badge">WD</span>' : '';
     return `<div class="golfer-row ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''} ${maxedOut ? 'maxed-out' : ''} ${majorMaxed && !maxedOut ? 'major-maxed' : ''}"
       data-id="${g.id}" data-name="${g.name}" data-salary="${g.salary}">
-      <span class="g-name">${g.name}</span>
+      <span class="g-name">${g.name}${wdBadge}</span>
       ${livBadge}
       ${majorBadge}
       ${usageBadge}
