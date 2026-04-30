@@ -239,7 +239,7 @@ async function loadWDStatus() {
     if (!res.ok) return;
     const data = await res.json();
     if (!data.success) return;
-    const normalize = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
+    const normalize = (s) => s.replace(/[øØ]/g, 'o').replace(/[æÆ]/g, 'ae').replace(/[åÅ]/g, 'a').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
 
     (data.wdGolfers || []).forEach(espnName => {
       const match = allGolfers.find(g => normalize(g.name) === normalize(espnName));
