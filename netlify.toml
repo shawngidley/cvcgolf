@@ -21,6 +21,10 @@
 [functions."send-reminders"]
   schedule = "0,30 * * * *"
 
+# Auto-activate tournament when first_tee_time passes — runs every hour on Thursdays
+[functions."activate-tournament"]
+  schedule = "0 * * * 4"
+
 # Sync first tee time from ESPN every Wednesday at 1pm ET (17:00 UTC)
 # Falls back to 7am ET if ESPN tee times not posted yet
 [functions."sync-tee-time"]
