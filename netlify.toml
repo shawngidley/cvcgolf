@@ -21,6 +21,11 @@
 [functions."send-reminders"]
   schedule = "0,30 * * * *"
 
+# Sync first tee time from ESPN every Wednesday at 1pm ET (17:00 UTC)
+# Falls back to 7am ET if ESPN tee times not posted yet
+[functions."sync-tee-time"]
+  schedule = "0 17 * * 3"
+
 # Auto-finalize: every 15 min from 6 PM ET Sunday to 1 AM ET Monday
 # EDT: 6 PM ET = 22:00 UTC, 1 AM ET = 05:00 UTC next day
 # Runs Sunday 22:00-23:59 UTC and Monday 00:00-05:00 UTC
