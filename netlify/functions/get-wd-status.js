@@ -14,7 +14,7 @@ const HEADERS = {
   'Content-Type': 'application/json'
 };
 
-const EMPTY = { statusCode: 200, headers: HEADERS, body: JSON.stringify({ success: true, wdGolfers: [] }) };
+const EMPTY = { statusCode: 200, headers: HEADERS, body: JSON.stringify({ success: true, wdGolfers: [], fieldGolfers: [], teeTimeMap: {} }) };
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: HEADERS, body: '' };
@@ -99,8 +99,10 @@ exports.handler = async (event) => {
 
     if (competitorIds.length === 0) return EMPTY;
 
-    // Batch-fetch all competitor statuses, collect WD names
+    // Batch-fetch all competitor statuses — collect WD names, confirmed field, and tee times
     const wdNames = [];
+    const fieldNames = [];
+    const espnTeeTimeMap = {}; // ESPN name -> tee time string ET
     const batchSize = 25;
 
     for (let i = 0; i < competitorIds.length; i += batchSize) {
@@ -113,7 +115,7 @@ exports.handler = async (event) => {
           if (!res.ok) return;
           const statusData = await res.json();
           const statusName = statusData?.type?.name || '';
-          if (statusName !== 'STATUS_WITHDRAWN' && statusName !== 'STATUS_DISQUALIFIED') return;
+          const isWD = statusName === 'STATUS_WITHDRAWN' || statusName === 'STATUS_DISQUALIFIED';
 
           // Use name from scoreboard map if available; otherwise fetch from competitor endpoint
           let name = nameMap[cId];
@@ -135,7 +137,25 @@ exports.handler = async (event) => {
             } catch (e) { /* ignore */ }
           }
 
-          if (name) wdNames.push(name);
+          if (!name) return;
+
+          if (isWD) {
+            wdNames.push(name);
+          } else {
+            fieldNames.push(name);
+            // Capture Round 1 tee time if available
+            const rawTeeTime = statusData.teeTime || '';
+            if (rawTeeTime) {
+              try {
+                const d = new Date(rawTeeTime);
+                if (!isNaN(d.getTime())) {
+                  espnTeeTimeMap[name] = d.toLocaleTimeString('en-US', {
+                    hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/New_York'
+                  });
+                }
+              } catch (e) { /* ignore */ }
+            }
+          }
         } catch (e) { /* ignore individual failures */ }
       }));
     }
@@ -143,7 +163,13 @@ exports.handler = async (event) => {
     return {
       statusCode: 200,
       headers: HEADERS,
-      body: JSON.stringify({ success: true, wdGolfers: wdNames, tournament: tournament.name })
+      body: JSON.stringify({
+        success: true,
+        wdGolfers: wdNames,
+        fieldGolfers: fieldNames,
+        teeTimeMap: espnTeeTimeMap,
+        tournament: tournament.name
+      })
     };
 
   } catch (err) {

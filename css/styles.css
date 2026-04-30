@@ -597,6 +597,14 @@ body {
 /* WD (withdrawal) badge */
 .wd-badge { display: inline-block; padding: 0.1rem 0.35rem; border-radius: 999px; font-size: 0.65rem; font-weight: 700; background: #c62828; color: #fff; margin-left: 0.35rem; vertical-align: middle; letter-spacing: 0.03em; }
 
+/* Field filter button */
+.btn-field-filter { padding: 0.5rem 0.85rem; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 0.85rem; font-family: var(--font-body); background: #fff; color: var(--text); cursor: pointer; white-space: nowrap; }
+.btn-field-filter:hover { border-color: var(--augusta); color: var(--augusta); }
+.btn-field-filter.active { background: var(--augusta); color: #fff; border-color: var(--augusta); font-weight: 600; }
+
+/* Round 1 tee time in golfer pool */
+.g-tee-time { font-size: 0.72rem; color: var(--gray-500); white-space: nowrap; margin-left: 4px; }
+
 
 /* ===== HISTORY CONTROLS ===== */
 .history-controls, .picks-controls {

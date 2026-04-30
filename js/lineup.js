@@ -11,6 +11,9 @@ let currentTournament = null;
 let isLocked = false;
 let golferUsageMap = {};   // golfer_id -> { times_used, major_uses }
 let wdStatusMap = {};      // golfer name -> true if withdrawn
+let confirmedFieldMap = {}; // golfer name -> true if confirmed in field
+let teeTimeMap = {};        // golfer name -> Round 1 tee time string
+let fieldFilterActive = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   const player = getCurrentPlayer();
@@ -235,13 +238,30 @@ async function loadWDStatus() {
     const res = await fetch('/.netlify/functions/get-wd-status');
     if (!res.ok) return;
     const data = await res.json();
-    if (!data.success || !data.wdGolfers?.length) return;
+    if (!data.success) return;
     const normalize = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
-    data.wdGolfers.forEach(espnName => {
-      const normEspn = normalize(espnName);
-      const match = allGolfers.find(g => normalize(g.name) === normEspn);
+
+    (data.wdGolfers || []).forEach(espnName => {
+      const match = allGolfers.find(g => normalize(g.name) === normalize(espnName));
       if (match) wdStatusMap[match.name] = true;
     });
+
+    (data.fieldGolfers || []).forEach(espnName => {
+      const match = allGolfers.find(g => normalize(g.name) === normalize(espnName));
+      if (match) confirmedFieldMap[match.name] = true;
+    });
+
+    const rawTeeTimeMap = data.teeTimeMap || {};
+    Object.entries(rawTeeTimeMap).forEach(([espnName, teeTime]) => {
+      const match = allGolfers.find(g => normalize(g.name) === normalize(espnName));
+      if (match) teeTimeMap[match.name] = teeTime;
+    });
+
+    // Show Field button only if we have field data
+    const fieldBtn = document.getElementById('fieldFilterBtn');
+    if (fieldBtn && Object.keys(confirmedFieldMap).length > 0) {
+      fieldBtn.style.display = '';
+    }
   } catch (e) { /* silently skip */ }
 }
 
@@ -249,6 +269,12 @@ function setupControls() {
   document.getElementById('golferSearch').addEventListener('input', renderGolferPool);
   document.getElementById('salaryFilter').addEventListener('change', renderGolferPool);
   document.getElementById('submitLineup').addEventListener('click', submitLineup);
+  document.getElementById('fieldFilterBtn').addEventListener('click', () => {
+    fieldFilterActive = !fieldFilterActive;
+    const btn = document.getElementById('fieldFilterBtn');
+    btn.classList.toggle('active', fieldFilterActive);
+    renderGolferPool();
+  });
 }
 
 function getSalaryUsed() {
@@ -324,6 +350,7 @@ function renderGolferPool() {
   let filtered = allGolfers;
   if (search) filtered = filtered.filter(g => g.name.toLowerCase().includes(search));
   if (salaryFilterVal) filtered = filtered.filter(g => g.salary === parseInt(salaryFilterVal));
+  if (fieldFilterActive) filtered = filtered.filter(g => confirmedFieldMap[g.name]);
 
   // Sort: available first, maxed out at bottom
   filtered = [...filtered].sort((a, b) => {
@@ -369,9 +396,11 @@ function renderGolferPool() {
     }
 
     const wdBadge = wdStatusMap[g.name] ? ' <span class="wd-badge">WD</span>' : '';
+    const teeTime = teeTimeMap[g.name] ? `<span class="g-tee-time">${teeTimeMap[g.name]}</span>` : '';
     return `<div class="golfer-row ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''} ${maxedOut ? 'maxed-out' : ''} ${majorMaxed && !maxedOut ? 'major-maxed' : ''}"
       data-id="${g.id}" data-name="${g.name}" data-salary="${g.salary}">
       <span class="g-name">${g.name}${wdBadge}</span>
+      ${teeTime}
       ${livBadge}
       ${majorBadge}
       ${usageBadge}
