@@ -232,16 +232,17 @@ async function loadExistingLineup() {
 
 async function loadWDStatus() {
   try {
-    const res = await fetch('/.netlify/functions/get-live-scores');
+    const res = await fetch('/.netlify/functions/get-wd-status');
     if (!res.ok) return;
     const data = await res.json();
-    if (!data.success || !data.standings) return;
-    data.standings.forEach(player => {
-      (player.golfers || []).forEach(g => {
-        if (g.isWD) wdStatusMap[g.name] = true;
-      });
+    if (!data.success || !data.wdGolfers?.length) return;
+    const normalize = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
+    data.wdGolfers.forEach(espnName => {
+      const normEspn = normalize(espnName);
+      const match = allGolfers.find(g => normalize(g.name) === normEspn);
+      if (match) wdStatusMap[match.name] = true;
     });
-  } catch (e) { /* silently skip if no active tournament or function unavailable */ }
+  } catch (e) { /* silently skip */ }
 }
 
 function setupControls() {
