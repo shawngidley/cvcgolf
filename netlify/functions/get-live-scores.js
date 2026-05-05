@@ -114,6 +114,28 @@ exports.handler = async (event) => {
 
     const purse = (tournament.purse_millions || 20) * 1000000;
 
+    // Check lock status — don't expose lineups before tournament starts
+    let lockDate;
+    if (tournament.first_tee_time) {
+      lockDate = new Date(tournament.first_tee_time);
+    } else {
+      lockDate = new Date(tournament.start_date + 'T00:00:00');
+    }
+    const isLocked = tournament.picks_locked || tournament.is_complete || new Date() >= lockDate;
+
+    if (!isLocked) {
+      return {
+        statusCode: 200,
+        headers: HEADERS,
+        body: JSON.stringify({
+          success: false,
+          reason: 'pre_lock',
+          lock_time: lockDate.toISOString(),
+          tournament: { name: tournament.name, week_number: tournament.week_number }
+        })
+      };
+    }
+
     // Get all players and their lineups for this tournament
     const [playersRes, lineupsRes] = await Promise.all([
       supabase.from('players').select('id, name').neq('is_guest', true).order('name'),

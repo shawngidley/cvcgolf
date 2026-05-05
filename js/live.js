@@ -19,8 +19,23 @@ async function fetchLiveScores() {
     const data = await res.json();
 
     if (!data.success) {
+      const noLiveEl = document.getElementById('noLiveData');
+      if (data.reason === 'pre_lock' && data.lock_time) {
+        const lockDate = new Date(data.lock_time);
+        const timeStr = lockDate.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true });
+        const dateStr = lockDate.toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'long', day: 'numeric' });
+        noLiveEl.innerHTML = `<div class="card" style="text-align:center; padding:2rem;">
+          <h2>&#128274; Lineups Hidden</h2>
+          <p style="margin-top:0.5rem; color:var(--gray-600);">Picks will be revealed when the tournament locks on ${dateStr} at ${timeStr} ET.</p>
+        </div>`;
+      } else {
+        noLiveEl.innerHTML = `<div class="card" style="text-align:center; padding:2rem;">
+          <h2>Between Tournaments</h2>
+          <p style="margin-top:0.5rem; color:var(--gray-600);">No tournament is currently active. Check the schedule for upcoming events.</p>
+        </div>`;
+      }
       document.getElementById('liveContent').style.display = 'none';
-      document.getElementById('noLiveData').style.display = 'block';
+      noLiveEl.style.display = 'block';
       document.getElementById('refreshBtn').disabled = false;
       return;
     }
@@ -90,6 +105,12 @@ function renderLiveScores() {
       const earningsDisplay = g.earnings > 0 ? `<div class="live-golfer-earnings">${formatCurrency(g.earnings)}</div>` : '';
       const todayClass = getScoreClass(g.today);
       const todayDisplay = g.today && g.today !== '-' ? `<span class="live-golfer-today ${todayClass}">(${g.today})</span>` : '';
+      if (g.isWD) {
+        return `<td class="live-golfer-cell live-cut">
+          <div class="live-golfer-name">${gLastName}</div>
+          <div class="live-golfer-score" style="color:var(--red);">WD</div>
+        </td>`;
+      }
       return `<td class="live-golfer-cell${cutClass}">
         <div class="live-golfer-name">${gLastName}</div>
         <div class="live-golfer-score ${scoreClass}">${g.scoreToPar} ${todayDisplay}</div>
