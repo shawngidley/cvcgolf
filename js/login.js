@@ -4,18 +4,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // If already logged in, redirect
   const existing = localStorage.getItem('cvc_golf_player');
   if (existing) {
-    // Send to live page if a tournament is currently active
-    const { data: current } = await supabaseClient
-      .from('tournaments')
-      .select('id')
-      .eq('is_current', true)
-      .limit(1);
-
-    if (current && current.length > 0) {
-      window.location.href = 'live.html';
-    } else {
-      window.location.href = 'standings.html';
-    }
+    window.location.href = await getTournamentLandingPage();
     return;
   }
 
@@ -76,12 +65,24 @@ async function handleLogin(e) {
     is_guest: player.is_guest || false
   }));
 
-  // Send to live page if a tournament is currently active
-  const { data: current } = await supabaseClient
-    .from('tournaments')
-    .select('id')
-    .eq('is_current', true)
-    .limit(1);
+  window.location.href = await getTournamentLandingPage();
+}
 
-  window.location.href = (current && current.length > 0) ? 'live.html' : 'standings.html';
+async function getTournamentLandingPage() {
+  try {
+    const { data } = await supabaseClient
+      .from('tournaments')
+      .select('first_tee_time, picks_locked, is_complete, start_date')
+      .eq('is_current', true)
+      .limit(1)
+      .single();
+
+    if (data && !data.is_complete) {
+      const lockDate = data.first_tee_time
+        ? new Date(data.first_tee_time)
+        : new Date(data.start_date + 'T00:00:00');
+      if (data.picks_locked || new Date() >= lockDate) return 'live.html';
+    }
+  } catch (e) { /* fall through */ }
+  return 'standings.html';
 }
