@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rules - CVC Fantasy Golf 2026</title>
+  <link rel="icon" type="image/png" href="/CVC_Golf_Logo.png">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/CVC_Golf_Logo.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CVC Golf">
+  <meta name="theme-color" content="#1a4a1a">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="standings.html" class="nav-logo">
+        <div class="nav-badge">CVC</div>
+        <span>Fantasy Golf</span>
+      </a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="standings.html">Standings</a></li>
+        <li><a href="live.html"><span class="nav-live-dot"></span>Live</a></li>
+        <li><a href="lineup.html">Lineup</a></li>
+        <li><a href="breakdown.html">Breakdown</a></li>
+        <li><a href="weekly-results.html">Weekly Results</a></li>
+        <li><a href="history.html">History</a></li>
+        <li><a href="usage.html">Usage</a></li>
+        <li><a href="schedule.html">Schedule</a></li>
+        <li><a href="salaries.html">Salaries</a></li>
+        <li><a href="money.html">Money</a></li>
+        <li><a href="rules.html" class="active">Rules</a></li>
+        <li><a href="account.html" id="accountLink">Account</a></li>
+        <li><a href="admin.html" class="nav-admin" id="adminLink" style="display:none;">Admin</a></li>
+        <li><a href="#" class="nav-logout" id="logoutLink">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="container">
+    <header class="page-header">
+      <h1>League Rules</h1>
+      <p class="subtitle">CVC Fantasy Golf 2026 - Official Rules</p>
+    </header>
+
+    <div class="rules-content">
+      <div class="card rule-card">
+        <h2>1. League Format</h2>
+        <ul>
+          <li><strong>14 players</strong> compete across <strong>27 PGA Tour tournaments</strong></li>
+          <li>Season: The Sentry (Jan) through FedEx St. Jude Championship (Aug)</li>
+          <li>Winner determined by <strong>total accumulated PGA Tour earnings</strong> from picked golfers</li>
+          <li>Dollar-for-dollar scoring based on official PGA Tour prize money</li>
+        </ul>
+      </div>
+
+      <div class="card rule-card">
+        <h2>2. Weekly Lineups</h2>
+        <ul>
+          <li>Select <strong>5 golfers</strong> each week</li>
+          <li>Total salary must not exceed <strong>$100 salary cap</strong></li>
+          <li>Picks lock at the first tee time Thursday morning</li>
+          <li>No picks = $0 earnings for that week</li>
+          <li>No limit on how many times a golfer can be used per season</li>
+        </ul>
+      </div>
+
+      <div class="card rule-card">
+        <h2>3. Scoring</h2>
+        <ul>
+          <li>Your weekly score = <strong>sum of official PGA Tour earnings</strong> from your 5 golfers</li>
+          <li>Missed cut = $0 earnings for that golfer</li>
+          <li>WD mid-tournament = keeps earned money up to that point</li>
+          <li>All earnings are real PGA Tour purse distributions</li>
+        </ul>
+      </div>
+
+      <div class="card rule-card">
+        <h2>4. Season Prizes</h2>
+        <div class="prizes-grid">
+          <div class="prize-box first"><div class="prize-place">1st Place</div><div class="prize-amount">$500</div></div>
+          <div class="prize-box second"><div class="prize-place">2nd Place</div><div class="prize-amount">$250</div></div>
+          <div class="prize-box third"><div class="prize-place">3rd Place</div><div class="prize-amount">$100</div></div>
+          <div class="prize-box weekly"><div class="prize-place">Most Weekly Wins</div><div class="prize-amount">$50</div></div>
+        </div>
+        <p style="margin-top:1rem; color: var(--gray-600); font-size: 0.9rem;">Entry fee: $75 per player &bull; Total pot: $1,050</p>
+      </div>
+
+      <div class="card rule-card">
+        <h2>5. Commissioner</h2>
+        <ul>
+          <li>Commissioner enters tournament results each week via admin panel</li>
+          <li>Results are final once posted; standings auto-calculate</li>
+          <li>Commissioner has final say on disputes</li>
+          <li>Salary adjustments may occur mid-season based on OWGR changes</li>
+        </ul>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>&copy; 2003&ndash;2026 CVC Fantasy Golf League. All rights reserved.</p>
+    <p>Website designed and developed by Shawn Gidley. <span class="footer-separator">|</span> <a href="#" onclick="document.getElementById('termsModal').classList.add('open');return false;">Terms of Use</a></p>
+  </footer>
+
+  <div class="modal-overlay" id="termsModal" onclick="if(event.target===this)this.classList.remove('open')">
+    <div class="modal">
+      <button class="modal-close" onclick="document.getElementById('termsModal').classList.remove('open')">&times;</button>
+      <h2>TERMS OF USE</h2>
+      <p><strong>CVC Fantasy Golf League</strong> &bull; Effective February 1, 2026</p>
+      <h3>1. OWNERSHIP</h3>
+      <p>The CVC Fantasy Golf League system, including but not limited to its ruleset, scoring methodology, salary cap structure, golfer usage limits, playoff format, and all original content published at golf.cvcfantasysports.com, is the collective intellectual property of the CVC Fantasy Golf League, established in 2003 by the Chagrin Valley Conference. The league website has been designed and developed by Shawn Gidley (the &ldquo;Developer&rdquo;) and is maintained on behalf of the league. This system has been continuously developed and refined since 2003 through 2026.</p>
+      <h3>2. PERMITTED USE</h3>
+      <p>Access to this website is granted solely to members of the CVC Fantasy Golf League for personal, non-commercial use in connection with league participation.</p>
+      <h3>3. PROHIBITED USE</h3>
+      <p>No portion of this website, its design, ruleset, code, or content may be reproduced, copied, adapted, distributed, publicly displayed, sold, sublicensed, or used to create derivative works without the express prior written consent of the Developer.</p>
+      <h3>4. COMMERCIAL LICENSING</h3>
+      <p>Any party interested in licensing the CVC Fantasy Golf League system, ruleset, or website design for commercial purposes must contact the Developer directly at <a href="mailto:shawngidley@gmail.com">shawngidley@gmail.com</a> to discuss licensing terms.</p>
+      <h3>5. INTELLECTUAL PROPERTY NOTICE</h3>
+      <p>The league rules, scoring system, and operational design represented on this site constitute original creative and functional works protected under United States copyright law (17 U.S.C. &sect; 101 et seq.), with copyright originating in 2003. All rights reserved. Registration of copyright is pending with the U.S. Copyright Office (copyright.gov).</p>
+      <h3>6. COPYRIGHT REGISTRATION</h3>
+      <p>To learn more about U.S. copyright registration visit:</p>
+      <ul>
+        <li>Registration portal: <a href="https://copyright.gov/registration" target="_blank">copyright.gov/registration</a></li>
+        <li>Literary works guide: <a href="https://copyright.gov/registration/literary-works" target="_blank">copyright.gov/registration/literary-works</a></li>
+        <li>Computer program guide: <a href="https://copyright.gov/circs/circ61.pdf" target="_blank">copyright.gov/circs/circ61.pdf</a></li>
+        <li>File online (eCO): <a href="https://eco.copyright.gov" target="_blank">eco.copyright.gov</a></li>
+      </ul>
+      <h3>7. CHANGES</h3>
+      <p>The Developer reserves the right to update these Terms at any time. Continued use of the site constitutes acceptance of any revised Terms.</p>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script>
+    document.getElementById('navToggle')?.addEventListener('click', () => {
+      document.getElementById('navLinks').classList.toggle('open');
+    });
+  </script>
+</body>
+</html>
