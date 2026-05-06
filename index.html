@@ -5,39 +5,42 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CVC Fantasy Golf 2026</title>
   <link rel="icon" type="image/png" href="/CVC_Golf_Logo.png">
-  <style>
-    body { margin: 0; background: #fff; }
-  </style>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/CVC_Golf_Logo.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CVC Golf">
+  <meta name="theme-color" content="#1a4a1a">
+  <link rel="stylesheet" href="css/styles.css">
 </head>
-<body>
+<body class="login-page">
+  <div class="login-overlay">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="logo-badge">CVC</div>
+        <h1>Fantasy Golf</h1>
+        <p class="season-label">2026 Season</p>
+      </div>
+      <form id="loginForm" autocomplete="off">
+        <div class="form-group">
+          <label for="playerName">Player</label>
+          <select id="playerName" required>
+            <option value="">Select your name...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="Enter password" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full" id="loginBtn">Sign In</button>
+        <p class="login-error" id="loginError" style="display:none;"></p>
+      </form>
+      <p class="login-footer">14 Players &bull; 27 Tournaments &bull; $100 Salary Cap</p>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-    (async () => {
-      try {
-        const sb = window.supabase.createClient(
-          'https://iqahjyoytzhhkvwmujha.supabase.co',
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxYWhqeW95dHpoaGt2d211amhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1NjkwNTgsImV4cCI6MjA5MTE0NTA1OH0.kki64pr4YG3aQufc3n4nn2KDpmzURYDLx7_zYneoyKY'
-        );
-        const { data } = await sb
-          .from('tournaments')
-          .select('first_tee_time, picks_locked, is_complete, start_date')
-          .eq('is_current', true)
-          .limit(1)
-          .single();
-
-        let isLive = false;
-        if (data && !data.is_complete) {
-          const lockDate = data.first_tee_time
-            ? new Date(data.first_tee_time)
-            : new Date(data.start_date + 'T00:00:00');
-          isLive = data.picks_locked || new Date() >= lockDate;
-        }
-
-        window.location.replace(isLive ? 'live.html' : 'standings.html');
-      } catch (e) {
-        window.location.replace('standings.html');
-      }
-    })();
-  </script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/login.js"></script>
 </body>
 </html>
