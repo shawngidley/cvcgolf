@@ -244,28 +244,36 @@ exports.handler = async (event) => {
       }
     });
 
-    // Group active competitors by ESPN's own order field — same order = tied
-    const orderGroups = {};
-    competitors.forEach(c => {
+    // Group active competitors by score string — same score = tied
+    // CUT/WD correctly excluded via scoreboard status above
+    const sortedCompetitors = [...competitors].sort((a, b) => (a.order || 999) - (b.order || 999));
+    const scoreGroups = {};
+    sortedCompetitors.forEach(c => {
       if (cutWdIds.has(c.id)) return;
-      const order = c.order;
-      if (order == null) return;
-      if (!orderGroups[order]) orderGroups[order] = [];
-      orderGroups[order].push(c.id);
+      const score = c.score || 'X';
+      if (!scoreGroups[score]) scoreGroups[score] = [];
+      scoreGroups[score].push(c.id);
     });
 
-    // Build position map trusting ESPN's tie grouping
+    // Assign positions in leaderboard order, grouped score = tied
     const positionMap = {};
-    Object.entries(orderGroups).forEach(([order, ids]) => {
-      const posNum = parseInt(order);
+    let currentPos = 1;
+    const scoreOrder = Object.keys(scoreGroups).sort((a, b) => {
+      const aFirst = sortedCompetitors.find(c => scoreGroups[a].includes(c.id));
+      const bFirst = sortedCompetitors.find(c => scoreGroups[b].includes(c.id));
+      return (aFirst?.order || 999) - (bFirst?.order || 999);
+    });
+    scoreOrder.forEach(score => {
+      const ids = scoreGroups[score];
       const tiedCount = ids.length;
       ids.forEach(id => {
         positionMap[id] = {
-          position: tiedCount > 1 ? `T${posNum}` : `${posNum}`,
-          positionNum: posNum,
+          position: tiedCount > 1 ? `T${currentPos}` : `${currentPos}`,
+          positionNum: currentPos,
           tiedCount
         };
       });
+      currentPos += tiedCount;
     });
 
     // Build ESPN golfer data combining scoreboard + status API detail
