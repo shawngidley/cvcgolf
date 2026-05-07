@@ -311,6 +311,10 @@ exports.handler = async (event) => {
         }
       }
       const today = todayLinescore?.displayValue || '-';
+      // In Round 1 the total equals the round score — use the linescore value as it updates faster
+      // than c.score, and suppress the redundant (today) parenthetical in the UI
+      const effectiveScoreToPar = currentRound === 1 && today !== '-' ? today : scoreToPar;
+      const todayDisplay = currentRound > 1 ? today : '-';
 
       return {
         espnId: c.id,
@@ -318,8 +322,8 @@ exports.handler = async (event) => {
         position,
         positionNum,
         tiedCount,
-        scoreToPar,
-        today,
+        scoreToPar: effectiveScoreToPar,
+        today: todayDisplay,
         thru,
         teeTime,
         isCut,
