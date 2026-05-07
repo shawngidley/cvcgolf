@@ -235,60 +235,49 @@ exports.handler = async (event) => {
     });
     await Promise.all(statusFetches);
 
-    // Calculate positions and ties from the FULL competitor field using scores
-    // Sort all competitors by score (ESPN order field reflects leaderboard position)
-    const sortedCompetitors = [...competitors].sort((a, b) => (a.order || 999) - (b.order || 999));
-
-    // Determine positions and tie counts from full field using scores
-    // Group competitors by score to find ties
-    const scoreGroups = {};
+    // Use ESPN's scoreboard status to identify CUT/WD for the full field
     const cutWdIds = new Set();
-    sortedCompetitors.forEach(c => {
-      const st = statusMap[c.id];
-      const statusName = st?.type?.name || '';
-      if (statusName === 'STATUS_CUT' || statusName === 'STATUS_WITHDRAWN' || statusName === 'STATUS_DISQUALIFIED') {
+    competitors.forEach(c => {
+      const sn = c.status?.type?.name || '';
+      if (sn === 'STATUS_CUT' || sn === 'STATUS_WITHDRAWN' || sn === 'STATUS_DISQUALIFIED') {
         cutWdIds.add(c.id);
-        return;
       }
-      const score = c.score || 'X';
-      if (!scoreGroups[score]) scoreGroups[score] = [];
-      scoreGroups[score].push(c.id);
     });
 
-    // Assign positions based on sorted order
-    const positionMap = {}; // competitor id -> { position, positionNum, tiedCount }
-    let currentPos = 1;
-    const scoreOrder = Object.keys(scoreGroups).sort((a, b) => {
-      // Sort by order of first competitor in each group
-      const aFirst = sortedCompetitors.find(c => scoreGroups[a].includes(c.id));
-      const bFirst = sortedCompetitors.find(c => scoreGroups[b].includes(c.id));
-      return (aFirst?.order || 999) - (bFirst?.order || 999);
+    // Group active competitors by ESPN's own order field — same order = tied
+    const orderGroups = {};
+    competitors.forEach(c => {
+      if (cutWdIds.has(c.id)) return;
+      const order = c.order;
+      if (order == null) return;
+      if (!orderGroups[order]) orderGroups[order] = [];
+      orderGroups[order].push(c.id);
     });
 
-    scoreOrder.forEach(score => {
-      const ids = scoreGroups[score];
+    // Build position map trusting ESPN's tie grouping
+    const positionMap = {};
+    Object.entries(orderGroups).forEach(([order, ids]) => {
+      const posNum = parseInt(order);
       const tiedCount = ids.length;
-      const isTied = tiedCount > 1;
       ids.forEach(id => {
         positionMap[id] = {
-          position: isTied ? `T${currentPos}` : `${currentPos}`,
-          positionNum: currentPos,
+          position: tiedCount > 1 ? `T${posNum}` : `${posNum}`,
+          positionNum: posNum,
           tiedCount
         };
       });
-      currentPos += tiedCount;
     });
 
-    // Build ESPN golfer data combining scoreboard + status + calculated positions
+    // Build ESPN golfer data combining scoreboard + status API detail
     const espnGolfers = competitors.map(c => {
       const st = statusMap[c.id];
-      const statusName = st?.type?.name || '';
+      // Core API status takes precedence for picked golfers; fall back to scoreboard status
+      const statusName = st?.type?.name || c.status?.type?.name || '';
       const isCut = statusName === 'STATUS_CUT';
       const isWD = statusName === 'STATUS_WITHDRAWN' || statusName === 'STATUS_DISQUALIFIED';
 
       const posInfo = positionMap[c.id];
-      // Use status API position if available (more accurate), otherwise use calculated
-      const position = isCut ? 'CUT' : isWD ? 'WD' : (st?.position?.displayName || posInfo?.position || '-');
+      const position = isCut ? 'CUT' : isWD ? 'WD' : (posInfo?.position || '-');
       const positionNum = isCut || isWD ? 999 : (posInfo?.positionNum || 999);
       const tiedCount = posInfo?.tiedCount || 1;
 
