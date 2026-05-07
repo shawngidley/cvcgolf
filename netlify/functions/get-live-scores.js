@@ -319,9 +319,7 @@ exports.handler = async (event) => {
         }
       }
       const today = todayLinescore?.displayValue || '-';
-      // In Round 1 the total equals the round score — use the linescore value as it updates faster
-      // than c.score, and suppress the redundant (today) parenthetical in the UI
-      const effectiveScoreToPar = currentRound === 1 && today !== '-' ? today : scoreToPar;
+      // Suppress (today) parenthetical in Round 1 — total equals round score, showing both is redundant
       const todayDisplay = currentRound > 1 ? today : '-';
 
       return {
@@ -330,7 +328,7 @@ exports.handler = async (event) => {
         position,
         positionNum,
         tiedCount,
-        scoreToPar: effectiveScoreToPar,
+        scoreToPar,
         today: todayDisplay,
         thru,
         teeTime,
