@@ -193,7 +193,7 @@ exports.handler = async (event) => {
     const allPickedNames = new Set();
     Object.values(lineupMap).forEach(lineup => lineup.forEach(l => allPickedNames.add(l.name)));
 
-    const normalize = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
+    const normalize = (s) => s.replace(/[\u00f8\u00d8]/g, 'o').replace(/[\u00e6\u00c6]/g, 'ae').replace(/[\u00e5\u00c5]/g, 'a').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
 
     // Match our golfers to ESPN competitors (basic info from scoreboard)
     function findEspnCompetitor(dbName) {
