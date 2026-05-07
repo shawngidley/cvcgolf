@@ -276,6 +276,23 @@ exports.handler = async (event) => {
       currentPos += tiedCount;
     });
 
+    // Active competitors sorted by ESPN order — used for accurate tie count at a given position
+    const activeByOrder = sortedCompetitors
+      .filter(c => !cutWdIds.has(c.id) && c.order != null)
+      .sort((a, b) => a.order - b.order);
+
+    // Count consecutive same-score competitors starting at a given order position
+    function tieCountAtPosition(posNum, score) {
+      const start = activeByOrder.findIndex(c => c.order === posNum);
+      if (start === -1) return 1;
+      let count = 0;
+      for (let i = start; i < activeByOrder.length; i++) {
+        if (activeByOrder[i].score === score) count++;
+        else break;
+      }
+      return Math.max(1, count);
+    }
+
     // Build ESPN golfer data combining scoreboard + status API detail
     const espnGolfers = competitors.map(c => {
       const st = statusMap[c.id];
@@ -285,9 +302,17 @@ exports.handler = async (event) => {
       const isWD = statusName === 'STATUS_WITHDRAWN' || statusName === 'STATUS_DISQUALIFIED';
 
       const posInfo = positionMap[c.id];
-      const position = isCut ? 'CUT' : isWD ? 'WD' : (posInfo?.position || '-');
-      const positionNum = isCut || isWD ? 999 : (posInfo?.positionNum || 999);
-      const tiedCount = posInfo?.tiedCount || 1;
+
+      // For picked golfers, use status API position (authoritative — avoids mid-round false ties)
+      const apiPos = st?.position?.displayName;
+      const apiPosNum = apiPos ? parseInt(apiPos.replace(/\D/g, '')) : null;
+
+      const position = isCut ? 'CUT' : isWD ? 'WD' : (apiPos || posInfo?.position || '-');
+      const positionNum = isCut || isWD ? 999 : (apiPosNum || posInfo?.positionNum || 999);
+      // Derive tie count from adjacent same-score competitors at the authoritative position
+      const tiedCount = (apiPosNum && !isCut && !isWD)
+        ? tieCountAtPosition(apiPosNum, c.score)
+        : (posInfo?.tiedCount || 1);
 
       const scoreToPar = c.score || '-';
       const thruRaw = st?.thru;
