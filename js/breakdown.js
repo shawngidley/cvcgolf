@@ -55,7 +55,7 @@ async function loadBreakdown() {
   const [playersRes, lineupsRes, resultsRes] = await Promise.all([
     supabaseClient.from('players').select('id, name').order('name').neq('is_guest', true),
     supabaseClient.from('lineups').select('player_id, golfer_id, golfers(id, name)').eq('tournament_id', tournamentId),
-    supabaseClient.from('results').select('golfer_id, earnings').eq('tournament_id', tournamentId)
+    supabaseClient.from('golfer_earnings').select('golfer_id, earnings').eq('tournament_id', tournamentId)
   ]);
 
   const players = playersRes.data || [];
