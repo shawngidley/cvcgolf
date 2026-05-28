@@ -16,20 +16,21 @@ async function loadWeeklyGrid() {
     .select('id, week_number, short_name')
     .eq('is_complete', true)
     .order('sort_order');
-  const { data: lineups } = await supabaseClient.from('lineups').select('player_id, tournament_id, golfer_id');
-  const { data: golferEarnings } = await supabaseClient.from('golfer_earnings').select('golfer_id, tournament_id, earnings');
+  const tournamentIds = (tournaments || []).map(t => t.id);
+  const { data: lineups } = await supabaseClient.from('lineups').select('player_id, tournament_id, golfer_id').in('tournament_id', tournamentIds);
+  const { data: results } = await supabaseClient.from('results').select('golfer_id, tournament_id, earnings').in('tournament_id', tournamentIds);
 
   if (!players || !tournaments || tournaments.length === 0) return;
 
   // Build earnings lookup
   const earningsMap = {};
-  if (golferEarnings) {
-    golferEarnings.forEach(ge => {
-      earningsMap[`${ge.golfer_id}-${ge.tournament_id}`] = parseFloat(ge.earnings || 0);
+  if (results) {
+    results.forEach(r => {
+      earningsMap[`${r.golfer_id}-${r.tournament_id}`] = parseFloat(r.earnings || 0);
     });
   }
 
-  // Helper: get player's total for a tournament from golfer_earnings + lineups
+  // Helper: get player's total for a tournament from results + lineups
   function getPlayerWeekTotal(playerId, tournamentId) {
     const playerLineup = (lineups || []).filter(l => l.player_id === playerId && l.tournament_id === tournamentId);
     return playerLineup.reduce((sum, l) => sum + (earningsMap[`${l.golfer_id}-${l.tournament_id}`] || 0), 0);
@@ -143,8 +144,9 @@ async function loadEarningsChart() {
     .select('id, week_number, short_name')
     .eq('is_complete', true)
     .order('sort_order');
-  const { data: lineups } = await supabaseClient.from('lineups').select('player_id, tournament_id, golfer_id');
-  const { data: golferEarnings } = await supabaseClient.from('golfer_earnings').select('golfer_id, tournament_id, earnings');
+  const tIds = (tournaments || []).map(t => t.id);
+  const { data: lineups } = await supabaseClient.from('lineups').select('player_id, tournament_id, golfer_id').in('tournament_id', tIds);
+  const { data: results } = await supabaseClient.from('results').select('golfer_id, tournament_id, earnings').in('tournament_id', tIds);
 
   if (!players || !tournaments || tournaments.length === 0) {
     document.querySelector('.chart-container').innerHTML = '<p class="loading">No data for chart yet</p>';
@@ -153,9 +155,9 @@ async function loadEarningsChart() {
 
   // Build earnings lookup
   const earningsMap = {};
-  if (golferEarnings) {
-    golferEarnings.forEach(ge => {
-      earningsMap[`${ge.golfer_id}-${ge.tournament_id}`] = parseFloat(ge.earnings || 0);
+  if (results) {
+    results.forEach(r => {
+      earningsMap[`${r.golfer_id}-${r.tournament_id}`] = parseFloat(r.earnings || 0);
     });
   }
 

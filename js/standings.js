@@ -10,8 +10,9 @@ async function loadStandings() {
     .from('tournaments')
     .select('id, week_number')
     .eq('is_complete', true);
-  const { data: lineups } = await supabaseClient.from('lineups').select('player_id, tournament_id, golfer_id');
-  const { data: golferEarnings } = await supabaseClient.from('golfer_earnings').select('golfer_id, tournament_id, earnings');
+  const tournamentIds = (tournaments || []).map(t => t.id);
+  const { data: lineups } = await supabaseClient.from('lineups').select('player_id, tournament_id, golfer_id').in('tournament_id', tournamentIds);
+  const { data: results } = await supabaseClient.from('results').select('golfer_id, tournament_id, earnings').in('tournament_id', tournamentIds);
 
   if (!players || players.length === 0) {
     document.getElementById('standingsBody').innerHTML =
@@ -24,15 +25,13 @@ async function loadStandings() {
 
   // Build earnings lookup: (golfer_id, tournament_id) -> earnings
   const earningsMap = {};
-  if (golferEarnings) {
-    golferEarnings.forEach(ge => {
-      earningsMap[`${ge.golfer_id}-${ge.tournament_id}`] = parseFloat(ge.earnings || 0);
+  if (results) {
+    results.forEach(r => {
+      earningsMap[`${r.golfer_id}-${r.tournament_id}`] = parseFloat(r.earnings || 0);
     });
   }
 
-  const tournamentIds = (tournaments || []).map(t => t.id);
-
-  // Calculate each player's standings from golfer_earnings + lineups
+  // Calculate each player's standings from results + lineups
   const standings = players.map(p => {
     const weekTotals = tournamentIds.map(tid => {
       const playerLineup = (lineups || []).filter(l => l.player_id === p.id && l.tournament_id === tid);
