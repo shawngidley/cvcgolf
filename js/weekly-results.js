@@ -20,28 +20,22 @@ async function loadWeeklyGrid() {
     t.is_complete || t.picks_locked || (t.first_tee_time && new Date(t.first_tee_time) <= now)
   );
   const tournamentIds = (tournaments || []).map(t => t.id);
-  const { data: lineups } = await supabaseClient.from('lineups').select('player_id, tournament_id, golfer_id').in('tournament_id', tournamentIds).limit(5000);
+
+  // Paginate lineups to bypass Supabase's 1000-row server cap
+  let lineups = [];
+  for (let from = 0; ; from += 1000) {
+    const { data: batch } = await supabaseClient.from('lineups').select('player_id, tournament_id, golfer_id').in('tournament_id', tournamentIds).range(from, from + 999);
+    if (!batch || batch.length === 0) break;
+    lineups = lineups.concat(batch);
+    if (batch.length < 1000) break;
+  }
+
   const [{ data: geRows }, { data: resultRows }] = await Promise.all([
     supabaseClient.from('golfer_earnings').select('golfer_id, tournament_id, earnings').in('tournament_id', tournamentIds).limit(5000),
     supabaseClient.from('results').select('golfer_id, tournament_id, earnings').in('tournament_id', tournamentIds).limit(5000)
   ]);
 
   if (!players || !tournaments || tournaments.length === 0) return;
-
-  // TEMPORARY DEBUG
-  console.log('DEBUG tournaments:', tournaments.map(t => `W${t.week_number}(id:${t.id})`));
-  console.log('DEBUG lineups count:', (lineups || []).length);
-  console.log('DEBUG geRows count:', (geRows || []).length, '| resultRows count:', (resultRows || []).length);
-  console.log('DEBUG geRows sample:', (geRows || []).slice(0,3));
-  console.log('DEBUG resultRows sample:', (resultRows || []).slice(0,3));
-  const sampleLineup = (lineups || []).slice(0,3);
-  console.log('DEBUG lineups sample:', sampleLineup);
-  if (sampleLineup.length && geRows && geRows.length) {
-    const l = sampleLineup[0];
-    console.log('DEBUG key check — lineup key:', `${l.golfer_id}-${l.tournament_id}`, '| types:', typeof l.golfer_id, typeof l.tournament_id);
-    const geMatch = geRows.find(r => r.golfer_id === l.golfer_id && r.tournament_id === l.tournament_id);
-    console.log('DEBUG geRows match for that lineup entry:', geMatch);
-  }
 
   // Build earnings lookup — merge both tables, results (official) takes precedence
   const earningsMap = {};
@@ -172,7 +166,13 @@ async function loadEarningsChart() {
     t.is_complete || t.picks_locked || (t.first_tee_time && new Date(t.first_tee_time) <= nowChart)
   );
   const tIds = (tournaments || []).map(t => t.id);
-  const { data: lineups } = await supabaseClient.from('lineups').select('player_id, tournament_id, golfer_id').in('tournament_id', tIds).limit(5000);
+  let lineups = [];
+  for (let from = 0; ; from += 1000) {
+    const { data: batch } = await supabaseClient.from('lineups').select('player_id, tournament_id, golfer_id').in('tournament_id', tIds).range(from, from + 999);
+    if (!batch || batch.length === 0) break;
+    lineups = lineups.concat(batch);
+    if (batch.length < 1000) break;
+  }
   const [{ data: geRowsChart }, { data: resultRowsChart }] = await Promise.all([
     supabaseClient.from('golfer_earnings').select('golfer_id, tournament_id, earnings').in('tournament_id', tIds).limit(5000),
     supabaseClient.from('results').select('golfer_id, tournament_id, earnings').in('tournament_id', tIds).limit(5000)
