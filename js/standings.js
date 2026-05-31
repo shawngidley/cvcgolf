@@ -6,11 +6,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadStandings() {
   const { data: players } = await supabaseClient.from('players').select('id, name').order('name').neq('is_guest', true);
-  const now = new Date().toISOString();
-  const { data: tournaments } = await supabaseClient
+  const { data: allTournaments } = await supabaseClient
     .from('tournaments')
-    .select('id, week_number')
-    .or(`is_complete.eq.true,picks_locked.eq.true,first_tee_time.lte.${now}`);
+    .select('id, week_number, is_complete, picks_locked, first_tee_time');
+  const now = new Date();
+  const tournaments = (allTournaments || []).filter(t =>
+    t.is_complete || t.picks_locked || (t.first_tee_time && new Date(t.first_tee_time) <= now)
+  );
   const tournamentIds = (tournaments || []).map(t => t.id);
   const { data: lineups } = await supabaseClient.from('lineups').select('player_id, tournament_id, golfer_id').in('tournament_id', tournamentIds).limit(5000);
   const { data: results } = await supabaseClient.from('results').select('golfer_id, tournament_id, earnings').in('tournament_id', tournamentIds).limit(5000);
