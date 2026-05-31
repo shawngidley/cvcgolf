@@ -28,6 +28,21 @@ async function loadWeeklyGrid() {
 
   if (!players || !tournaments || tournaments.length === 0) return;
 
+  // TEMPORARY DEBUG
+  console.log('DEBUG tournaments:', tournaments.map(t => `W${t.week_number}(id:${t.id})`));
+  console.log('DEBUG lineups count:', (lineups || []).length);
+  console.log('DEBUG geRows count:', (geRows || []).length, '| resultRows count:', (resultRows || []).length);
+  console.log('DEBUG geRows sample:', (geRows || []).slice(0,3));
+  console.log('DEBUG resultRows sample:', (resultRows || []).slice(0,3));
+  const sampleLineup = (lineups || []).slice(0,3);
+  console.log('DEBUG lineups sample:', sampleLineup);
+  if (sampleLineup.length && geRows && geRows.length) {
+    const l = sampleLineup[0];
+    console.log('DEBUG key check — lineup key:', `${l.golfer_id}-${l.tournament_id}`, '| types:', typeof l.golfer_id, typeof l.tournament_id);
+    const geMatch = geRows.find(r => r.golfer_id === l.golfer_id && r.tournament_id === l.tournament_id);
+    console.log('DEBUG geRows match for that lineup entry:', geMatch);
+  }
+
   // Build earnings lookup — merge both tables, results (official) takes precedence
   const earningsMap = {};
   (geRows || []).forEach(r => {
