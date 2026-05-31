@@ -500,6 +500,9 @@ async function pullEarnings() {
       allGolfersCache = golfers || [];
     }
 
+    // Auto-check official box only when ESPN returned real earnings (not calculated estimates)
+    document.getElementById('officialEarningsCheck').checked = data.earnings_source === 'espn';
+
     document.getElementById('earningsEventName').textContent = `(ESPN: ${data.espn_event}${data.is_complete ? ' - Final' : ' - In Progress'})`;
 
     renderEarningsTable();
@@ -587,6 +590,7 @@ async function saveEarnings() {
   const tournamentId = document.getElementById('earningsWeekSelect').value;
   if (!tournamentId) return;
 
+  const isOfficial = document.getElementById('officialEarningsCheck').checked;
   const rows = document.querySelectorAll('#earningsBody tr');
   const updates = [];
 
@@ -612,7 +616,7 @@ async function saveEarnings() {
   document.getElementById('saveEarningsBtn').disabled = true;
 
   try {
-    // Save to golfer_earnings table
+    // Always save to golfer_earnings — drives live scoring
     for (const u of updates) {
       await supabaseClient.from('golfer_earnings').upsert({
         golfer_id: u.golfer_id,
@@ -624,22 +628,27 @@ async function saveEarnings() {
       }, { onConflict: 'golfer_id,tournament_id' });
     }
 
-    // Also update the results table (existing system)
-    for (const u of updates) {
-      await supabaseClient.from('results').upsert({
-        tournament_id: parseInt(tournamentId),
-        golfer_id: u.golfer_id,
-        finish_position: u.espnResult?.position || null,
-        score_to_par: u.espnResult?.score ? parseScoreToPar(u.espnResult.score) : 0,
-        earnings: u.earnings,
-        made_cut: u.earnings > 0 || (u.espnResult?.position && u.espnResult.position !== 'CUT')
-      }, { onConflict: 'tournament_id,golfer_id' });
+    // Only save to results when official — drives the Breakdown page
+    if (isOfficial) {
+      for (const u of updates) {
+        await supabaseClient.from('results').upsert({
+          tournament_id: parseInt(tournamentId),
+          golfer_id: u.golfer_id,
+          finish_position: u.espnResult?.position || null,
+          score_to_par: u.espnResult?.score ? parseScoreToPar(u.espnResult.score) : 0,
+          earnings: u.earnings,
+          made_cut: u.earnings > 0 || (u.espnResult?.position && u.espnResult.position !== 'CUT')
+        }, { onConflict: 'tournament_id,golfer_id' });
+      }
     }
 
     // Recalculate weekly scores and standings
     await recalcWeek(parseInt(tournamentId));
 
-    showMsg('saveEarningsMsg', `Saved ${updates.length} golfer earnings and recalculated standings!`, 'success');
+    const msg = isOfficial
+      ? `Saved ${updates.length} official earnings — Live Scores and Breakdown both updated!`
+      : `Updated ${updates.length} live score estimates — Breakdown page not changed.`;
+    showMsg('saveEarningsMsg', msg, 'success');
   } catch (err) {
     showMsg('saveEarningsMsg', 'Error saving: ' + err.message, 'error');
   }

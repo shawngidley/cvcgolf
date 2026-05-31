@@ -52,15 +52,17 @@ async function loadBreakdown() {
   }
 
   // Fetch all data in parallel
-  const [playersRes, lineupsRes, resultsRes] = await Promise.all([
+  const [playersRes, lineupsRes, resultsRes, tournamentRes] = await Promise.all([
     supabaseClient.from('players').select('id, name').order('name').neq('is_guest', true),
     supabaseClient.from('lineups').select('player_id, golfer_id, golfers(id, name)').eq('tournament_id', tournamentId),
-    supabaseClient.from('golfer_earnings').select('golfer_id, earnings').eq('tournament_id', tournamentId)
+    supabaseClient.from('results').select('golfer_id, earnings').eq('tournament_id', tournamentId),
+    supabaseClient.from('tournaments').select('is_complete').eq('id', tournamentId).single()
   ]);
 
   const players = playersRes.data || [];
   const lineups = lineupsRes.data || [];
   const results = resultsRes.data || [];
+  const isComplete = tournamentRes.data?.is_complete || false;
 
   if (lineups.length === 0) {
     container.style.display = 'none';
@@ -97,6 +99,7 @@ async function loadBreakdown() {
   });
 
   // Build golfer list
+  const hasAnyOfficialEarnings = results.some(r => parseFloat(r.earnings || 0) > 0);
   breakdownGolferList = Object.keys(golferPicks).map(gid => ({
     id: gid,
     name: golferNames[gid],
@@ -108,6 +111,12 @@ async function loadBreakdown() {
   // Reset to default sort
   breakdownSortCol = 'count';
   breakdownSortDir = 'desc';
+
+  // Show/hide pending banner
+  const pendingBanner = document.getElementById('earningsPendingBanner');
+  if (pendingBanner) {
+    pendingBanner.style.display = (isComplete && !hasAnyOfficialEarnings) ? 'block' : 'none';
+  }
 
   renderBreakdownTable();
   container.style.display = 'block';
@@ -171,7 +180,7 @@ function renderBreakdownTable() {
       <td class="breakdown-golfer-col"><strong>${g.name}</strong></td>
       ${cells}
       <td class="breakdown-total-cell">${g.count}</td>
-      <td class="breakdown-earnings-cell">${formatCurrency(g.earnings)}</td>
+      <td class="breakdown-earnings-cell">${g.earnings > 0 ? formatCurrency(g.earnings) : '<span style="color:var(--gray-400);">&mdash;</span>'}</td>
     </tr>`;
   }).join('');
 }

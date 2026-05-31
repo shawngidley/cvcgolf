@@ -293,7 +293,7 @@ exports.handler = async (event) => {
         earnings = calculateTiedEarnings(positionNum, tiedCount, purse, isMasters);
       }
 
-      // Save to golfer_earnings
+      // Always save to golfer_earnings — drives live scoring
       await supabase.from('golfer_earnings').upsert({
         golfer_id: pg.id,
         tournament_id: tournament.id,
@@ -303,21 +303,24 @@ exports.handler = async (event) => {
         updated_at: new Date().toISOString()
       }, { onConflict: 'golfer_id,tournament_id' });
 
-      // Save to results table
-      const scoreToPar = pg.espnMatch?.score ? parseScoreToPar(pg.espnMatch.score) : 0;
-      await supabase.from('results').upsert({
-        tournament_id: tournament.id,
-        golfer_id: pg.id,
-        finish_position: position,
-        score_to_par: scoreToPar,
-        earnings: earnings,
-        made_cut: !isCut
-      }, { onConflict: 'tournament_id,golfer_id' });
+      // Only save to results when ESPN returned real payouts — drives Breakdown page
+      // If only calculated estimates are available, sync-official-earnings will handle this later
+      if (hasEspnEarnings) {
+        const scoreToPar = pg.espnMatch?.score ? parseScoreToPar(pg.espnMatch.score) : 0;
+        await supabase.from('results').upsert({
+          tournament_id: tournament.id,
+          golfer_id: pg.id,
+          finish_position: position,
+          score_to_par: scoreToPar,
+          earnings: earnings,
+          made_cut: !isCut
+        }, { onConflict: 'tournament_id,golfer_id' });
+      }
 
       savedCount++;
     }
 
-    console.log(`[auto-finalize] Saved earnings for ${savedCount} golfers.`);
+    console.log(`[auto-finalize] Saved earnings for ${savedCount} golfers (source: ${earningsSource}). Results table updated: ${hasEspnEarnings}.`);
 
     // Step 10: Recalculate weekly scores
     for (const playerId of playerIds) {

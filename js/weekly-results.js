@@ -11,10 +11,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadWeeklyGrid() {
   const { data: players } = await supabaseClient.from('players').select('id, name').order('name').neq('is_guest', true);
+  const now = new Date().toISOString();
   const { data: tournaments } = await supabaseClient
     .from('tournaments')
     .select('id, week_number, short_name')
-    .eq('is_complete', true)
+    .or(`is_complete.eq.true,picks_locked.eq.true,first_tee_time.lte.${now}`)
     .order('sort_order');
   const tournamentIds = (tournaments || []).map(t => t.id);
   const { data: lineups } = await supabaseClient.from('lineups').select('player_id, tournament_id, golfer_id').in('tournament_id', tournamentIds);
@@ -139,10 +140,11 @@ function renderWeeklyGrid() {
 
 async function loadEarningsChart() {
   const { data: players } = await supabaseClient.from('players').select('id, name').order('name').neq('is_guest', true);
+  const now = new Date().toISOString();
   const { data: tournaments } = await supabaseClient
     .from('tournaments')
     .select('id, week_number, short_name')
-    .eq('is_complete', true)
+    .or(`is_complete.eq.true,picks_locked.eq.true,first_tee_time.lte.${now}`)
     .order('sort_order');
   const tIds = (tournaments || []).map(t => t.id);
   const { data: lineups } = await supabaseClient.from('lineups').select('player_id, tournament_id, golfer_id').in('tournament_id', tIds);

@@ -36,3 +36,10 @@
 # Skips automatically if no current tournament or already finalized
 [functions."auto-finalize"]
   schedule = "*/15 0-5,22-23 * * 0,1"
+
+# Sync official earnings: Mon + Tue at 1 PM ET (17:00 UTC)
+# ESPN posts official payout amounts 24-48 hours after tournament completion
+# Writes actual earnings to results table (which drives the Breakdown page)
+# Skips tournaments that already have official earnings recorded
+[functions."sync-official-earnings"]
+  schedule = "0 17 * * 1,2"

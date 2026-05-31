@@ -141,10 +141,17 @@
               <tbody id="earningsBody"></tbody>
             </table>
           </div>
-          <div style="margin-top:1rem; display:flex; gap:0.5rem;">
+          <div style="margin-top:1rem; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
             <button class="btn btn-primary" id="saveEarningsBtn">Save Earnings & Recalculate</button>
             <button class="btn btn-secondary" id="showAllEarningsBtn">Show All Golfers</button>
           </div>
+          <label id="officialEarningsLabel" style="display:flex; align-items:flex-start; gap:0.5rem; margin-top:0.85rem; cursor:pointer; font-size:0.9rem; line-height:1.4;">
+            <input type="checkbox" id="officialEarningsCheck" style="margin-top:0.2rem; flex-shrink:0;">
+            <span>
+              <strong>Save as official final earnings</strong> &mdash; updates the Breakdown page<br>
+              <span style="color:var(--gray-500); font-size:0.78rem;">Auto-checked when ESPN returns real numbers. Uncheck during the tournament to only update Live Scores.</span>
+            </span>
+          </label>
           <p class="admin-msg" id="saveEarningsMsg"></p>
         </div>
       </div>
