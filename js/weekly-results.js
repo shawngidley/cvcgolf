@@ -21,17 +21,23 @@ async function loadWeeklyGrid() {
   );
   const tournamentIds = (tournaments || []).map(t => t.id);
   const { data: lineups } = await supabaseClient.from('lineups').select('player_id, tournament_id, golfer_id').in('tournament_id', tournamentIds).limit(5000);
-  const { data: results } = await supabaseClient.from('results').select('golfer_id, tournament_id, earnings').in('tournament_id', tournamentIds).limit(5000);
+  const [{ data: geRows }, { data: resultRows }] = await Promise.all([
+    supabaseClient.from('golfer_earnings').select('golfer_id, tournament_id, earnings').in('tournament_id', tournamentIds).limit(5000),
+    supabaseClient.from('results').select('golfer_id, tournament_id, earnings').in('tournament_id', tournamentIds).limit(5000)
+  ]);
 
   if (!players || !tournaments || tournaments.length === 0) return;
 
-  // Build earnings lookup
+  // Build earnings lookup — merge both tables, results (official) takes precedence
   const earningsMap = {};
-  if (results) {
-    results.forEach(r => {
-      earningsMap[`${r.golfer_id}-${r.tournament_id}`] = parseFloat(r.earnings || 0);
-    });
-  }
+  (geRows || []).forEach(r => {
+    const e = parseFloat(r.earnings || 0);
+    if (e > 0) earningsMap[`${r.golfer_id}-${r.tournament_id}`] = e;
+  });
+  (resultRows || []).forEach(r => {
+    const e = parseFloat(r.earnings || 0);
+    if (e > 0) earningsMap[`${r.golfer_id}-${r.tournament_id}`] = e;
+  });
 
   // Helper: get player's total for a tournament from results + lineups
   function getPlayerWeekTotal(playerId, tournamentId) {
@@ -152,20 +158,26 @@ async function loadEarningsChart() {
   );
   const tIds = (tournaments || []).map(t => t.id);
   const { data: lineups } = await supabaseClient.from('lineups').select('player_id, tournament_id, golfer_id').in('tournament_id', tIds).limit(5000);
-  const { data: results } = await supabaseClient.from('results').select('golfer_id, tournament_id, earnings').in('tournament_id', tIds).limit(5000);
+  const [{ data: geRowsChart }, { data: resultRowsChart }] = await Promise.all([
+    supabaseClient.from('golfer_earnings').select('golfer_id, tournament_id, earnings').in('tournament_id', tIds).limit(5000),
+    supabaseClient.from('results').select('golfer_id, tournament_id, earnings').in('tournament_id', tIds).limit(5000)
+  ]);
 
   if (!players || !tournaments || tournaments.length === 0) {
     document.querySelector('.chart-container').innerHTML = '<p class="loading">No data for chart yet</p>';
     return;
   }
 
-  // Build earnings lookup
+  // Build earnings lookup — merge both tables, results (official) takes precedence
   const earningsMap = {};
-  if (results) {
-    results.forEach(r => {
-      earningsMap[`${r.golfer_id}-${r.tournament_id}`] = parseFloat(r.earnings || 0);
-    });
-  }
+  (geRowsChart || []).forEach(r => {
+    const e = parseFloat(r.earnings || 0);
+    if (e > 0) earningsMap[`${r.golfer_id}-${r.tournament_id}`] = e;
+  });
+  (resultRowsChart || []).forEach(r => {
+    const e = parseFloat(r.earnings || 0);
+    if (e > 0) earningsMap[`${r.golfer_id}-${r.tournament_id}`] = e;
+  });
 
   function getPlayerWeekTotal(playerId, tournamentId) {
     const playerLineup = (lineups || []).filter(l => l.player_id === playerId && l.tournament_id === tournamentId);

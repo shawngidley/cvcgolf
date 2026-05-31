@@ -15,7 +15,10 @@ async function loadStandings() {
   );
   const tournamentIds = (tournaments || []).map(t => t.id);
   const { data: lineups } = await supabaseClient.from('lineups').select('player_id, tournament_id, golfer_id').in('tournament_id', tournamentIds).limit(5000);
-  const { data: results } = await supabaseClient.from('results').select('golfer_id, tournament_id, earnings').in('tournament_id', tournamentIds).limit(5000);
+  const [{ data: geRows }, { data: resultRows }] = await Promise.all([
+    supabaseClient.from('golfer_earnings').select('golfer_id, tournament_id, earnings').in('tournament_id', tournamentIds).limit(5000),
+    supabaseClient.from('results').select('golfer_id, tournament_id, earnings').in('tournament_id', tournamentIds).limit(5000)
+  ]);
 
   if (!players || players.length === 0) {
     document.getElementById('standingsBody').innerHTML =
@@ -26,13 +29,16 @@ async function loadStandings() {
   const weeksPlayed = tournaments ? tournaments.length : 0;
   document.getElementById('weekInfo').textContent = `Through Week ${weeksPlayed} of 21`;
 
-  // Build earnings lookup: (golfer_id, tournament_id) -> earnings
+  // Build earnings lookup — merge both tables, results (official) takes precedence
   const earningsMap = {};
-  if (results) {
-    results.forEach(r => {
-      earningsMap[`${r.golfer_id}-${r.tournament_id}`] = parseFloat(r.earnings || 0);
-    });
-  }
+  (geRows || []).forEach(r => {
+    const e = parseFloat(r.earnings || 0);
+    if (e > 0) earningsMap[`${r.golfer_id}-${r.tournament_id}`] = e;
+  });
+  (resultRows || []).forEach(r => {
+    const e = parseFloat(r.earnings || 0);
+    if (e > 0) earningsMap[`${r.golfer_id}-${r.tournament_id}`] = e;
+  });
 
   // Calculate each player's standings from results + lineups
   const standings = players.map(p => {
