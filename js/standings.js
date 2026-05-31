@@ -13,7 +13,7 @@ async function loadStandings() {
     .or(`is_complete.eq.true,picks_locked.eq.true,first_tee_time.lte.${now}`);
   const tournamentIds = (tournaments || []).map(t => t.id);
   const { data: lineups } = await supabaseClient.from('lineups').select('player_id, tournament_id, golfer_id').in('tournament_id', tournamentIds).limit(5000);
-  const { data: results } = await supabaseClient.from('golfer_earnings').select('golfer_id, tournament_id, earnings').in('tournament_id', tournamentIds).limit(5000);
+  const { data: results } = await supabaseClient.from('results').select('golfer_id, tournament_id, earnings').in('tournament_id', tournamentIds).limit(5000);
 
   if (!players || players.length === 0) {
     document.getElementById('standingsBody').innerHTML =
