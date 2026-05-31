@@ -19,7 +19,7 @@ async function loadWeeklyGrid() {
     .order('sort_order');
   const tournamentIds = (tournaments || []).map(t => t.id);
   const { data: lineups } = await supabaseClient.from('lineups').select('player_id, tournament_id, golfer_id').in('tournament_id', tournamentIds).limit(5000);
-  const { data: results } = await supabaseClient.from('results').select('golfer_id, tournament_id, earnings').in('tournament_id', tournamentIds).limit(5000);
+  const { data: results } = await supabaseClient.from('golfer_earnings').select('golfer_id, tournament_id, earnings').in('tournament_id', tournamentIds).limit(5000);
 
   if (!players || !tournaments || tournaments.length === 0) return;
 
@@ -148,7 +148,7 @@ async function loadEarningsChart() {
     .order('sort_order');
   const tIds = (tournaments || []).map(t => t.id);
   const { data: lineups } = await supabaseClient.from('lineups').select('player_id, tournament_id, golfer_id').in('tournament_id', tIds).limit(5000);
-  const { data: results } = await supabaseClient.from('results').select('golfer_id, tournament_id, earnings').in('tournament_id', tIds).limit(5000);
+  const { data: results } = await supabaseClient.from('golfer_earnings').select('golfer_id, tournament_id, earnings').in('tournament_id', tIds).limit(5000);
 
   if (!players || !tournaments || tournaments.length === 0) {
     document.querySelector('.chart-container').innerHTML = '<p class="loading">No data for chart yet</p>';
