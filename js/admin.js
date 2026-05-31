@@ -182,14 +182,23 @@ async function saveResults() {
 
   for (const [golferId, data] of Object.entries(golferData)) {
     const earnings = parseFloat(data.earnings) || 0;
+    const tid = parseInt(tournamentId);
+    const gid = parseInt(golferId);
     await supabaseClient.from('results').upsert({
-      tournament_id: parseInt(tournamentId),
-      golfer_id: parseInt(golferId),
+      tournament_id: tid,
+      golfer_id: gid,
       finish_position: data.position || null,
       score_to_par: parseInt(data.score) || 0,
       earnings: earnings,
       made_cut: earnings > 0 || (data.position && !data.position.includes('CUT'))
     }, { onConflict: 'tournament_id,golfer_id' });
+    await supabaseClient.from('golfer_earnings').upsert({
+      tournament_id: tid,
+      golfer_id: gid,
+      earnings: earnings,
+      finish_position: data.position || null,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'golfer_id,tournament_id' });
   }
 
   // Recalculate weekly scores for this tournament
