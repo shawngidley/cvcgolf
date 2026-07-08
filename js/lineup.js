@@ -11,9 +11,7 @@ let currentTournament = null;
 let isLocked = false;
 let golferUsageMap = {};   // golfer_id -> { times_used, major_uses }
 let wdStatusMap = {};      // golfer name -> true if withdrawn
-let confirmedFieldMap = {}; // golfer name -> true if confirmed in field
 let teeTimeMap = {};        // golfer name -> Round 1 tee time string
-let fieldFilterActive = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   const player = getCurrentPlayer();
@@ -136,7 +134,6 @@ async function loadGolfers() {
   const { data } = await supabaseClient
     .from('golfers')
     .select('*')
-    .eq('is_active', true)
     .order('salary', { ascending: false })
     .order('owgr');
 
@@ -246,22 +243,11 @@ async function loadWDStatus() {
       if (match) wdStatusMap[match.name] = true;
     });
 
-    (data.fieldGolfers || []).forEach(espnName => {
-      const match = allGolfers.find(g => normalize(g.name) === normalize(espnName));
-      if (match) confirmedFieldMap[match.name] = true;
-    });
-
     const rawTeeTimeMap = data.teeTimeMap || {};
     Object.entries(rawTeeTimeMap).forEach(([espnName, teeTime]) => {
       const match = allGolfers.find(g => normalize(g.name) === normalize(espnName));
       if (match) teeTimeMap[match.name] = teeTime;
     });
-
-    // Show Field button only if we have field data
-    const fieldBtn = document.getElementById('fieldFilterBtn');
-    if (fieldBtn && Object.keys(confirmedFieldMap).length > 0) {
-      fieldBtn.style.display = '';
-    }
   } catch (e) { /* silently skip */ }
 }
 
@@ -269,12 +255,6 @@ function setupControls() {
   document.getElementById('golferSearch').addEventListener('input', renderGolferPool);
   document.getElementById('salaryFilter').addEventListener('change', renderGolferPool);
   document.getElementById('submitLineup').addEventListener('click', submitLineup);
-  document.getElementById('fieldFilterBtn').addEventListener('click', () => {
-    fieldFilterActive = !fieldFilterActive;
-    const btn = document.getElementById('fieldFilterBtn');
-    btn.classList.toggle('active', fieldFilterActive);
-    renderGolferPool();
-  });
 }
 
 function getSalaryUsed() {
@@ -350,7 +330,6 @@ function renderGolferPool() {
   let filtered = allGolfers;
   if (search) filtered = filtered.filter(g => g.name.toLowerCase().includes(search));
   if (salaryFilterVal) filtered = filtered.filter(g => g.salary === parseInt(salaryFilterVal));
-  if (fieldFilterActive) filtered = filtered.filter(g => confirmedFieldMap[g.name]);
 
   // Sort: available first, maxed out at bottom
   filtered = [...filtered].sort((a, b) => {
@@ -381,13 +360,11 @@ function renderGolferPool() {
     const full = selectedGolfers.length >= MAX_PICKS && !isSelected;
     const disabled = tooExpensive || full || isLocked || maxedOut || majorMaxed;
 
-    const usageClass = getUsageClass(usage.times_used);
-    const usageBadge = `<span class="g-usage ${usageClass}">${usage.times_used}/${MAX_USES}</span>`;
-    const livBadge = isLiv
-      ? (usage.times_used >= MAX_LIV_USES
-        ? '<span class="g-usage usage-liv-maxed">LIV 2/2</span>'
-        : `<span class="g-usage usage-liv">LIV ${usage.times_used}/2</span>`)
-      : '';
+    const usageClass = isLiv
+      ? (maxedOut ? 'usage-liv-maxed' : 'usage-liv')
+      : getUsageClass(usage.times_used);
+    const usageLabel = isLiv ? `LIV ${usage.times_used}/${maxUses}` : `${usage.times_used}/${maxUses}`;
+    const usageBadge = `<span class="g-usage ${usageClass}">${usageLabel}</span>`;
     let majorBadge = '';
     if (isMajorWeek || usage.major_uses > 0) {
       majorBadge = usage.major_uses >= MAX_MAJOR_USES
@@ -401,7 +378,6 @@ function renderGolferPool() {
       data-id="${g.id}" data-name="${g.name}" data-salary="${g.salary}">
       <span class="g-name">${g.name}${wdBadge}</span>
       ${teeTime}
-      ${livBadge}
       ${majorBadge}
       ${usageBadge}
       <span class="g-salary">$${g.salary}</span>
