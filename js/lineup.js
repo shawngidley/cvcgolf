@@ -138,13 +138,50 @@ async function loadGolfers() {
     .order('owgr');
 
   allGolfers = data || [];
+  rebuildSalaryFilter();
+}
 
-  // Build salary filter dynamically
+function rebuildSalaryFilter() {
   const salaryFilter = document.getElementById('salaryFilter');
+  const currentVal = salaryFilter.value;
   const salarySet = [...new Set(allGolfers.map(g => g.salary))].sort((a, b) => b - a);
   salaryFilter.innerHTML = '<option value="">All Salaries</option>' +
     salarySet.map(s => `<option value="${s}">$${s}</option>`).join('');
+  salaryFilter.value = currentVal;
+}
 
+function normalizeGolferName(s) {
+  return (s || '')
+    .replace(/[øØ]/g, 'o').replace(/[æÆ]/g, 'ae').replace(/[åÅ]/g, 'a')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+// Merge ESPN's current tournament field into allGolfers so golfers not yet
+// in the Supabase golfers table (e.g. new/replacement players) are still
+// pickable. get-wd-status auto-adds unmatched field golfers to the DB
+// server-side, so re-fetch to pick up their real rows (needed for the
+// lineups.golfer_id foreign key at submit time) and flag them isFieldOnly
+// for the "Field" badge.
+async function mergeEspnField(fieldNames) {
+  if (!fieldNames || fieldNames.length === 0) return;
+
+  const knownNames = new Set(allGolfers.map(g => normalizeGolferName(g.name)));
+  const missingNames = fieldNames.filter(n => !knownNames.has(normalizeGolferName(n)));
+  if (missingNames.length === 0) return;
+
+  const { data: refreshed } = await supabaseClient.from('golfers').select('*');
+  if (!refreshed) return;
+
+  const existingIds = new Set(allGolfers.map(g => g.id));
+  refreshed.forEach(g => {
+    if (!existingIds.has(g.id)) {
+      allGolfers.push({ ...g, isFieldOnly: true });
+      existingIds.add(g.id);
+    }
+  });
+
+  rebuildSalaryFilter();
 }
 
 async function loadGolferUsage() {
@@ -236,16 +273,17 @@ async function loadWDStatus() {
     if (!res.ok) return;
     const data = await res.json();
     if (!data.success) return;
-    const normalize = (s) => s.replace(/[øØ]/g, 'o').replace(/[æÆ]/g, 'ae').replace(/[åÅ]/g, 'a').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
+
+    await mergeEspnField(data.fieldGolfers);
 
     (data.wdGolfers || []).forEach(espnName => {
-      const match = allGolfers.find(g => normalize(g.name) === normalize(espnName));
+      const match = allGolfers.find(g => normalizeGolferName(g.name) === normalizeGolferName(espnName));
       if (match) wdStatusMap[match.name] = true;
     });
 
     const rawTeeTimeMap = data.teeTimeMap || {};
     Object.entries(rawTeeTimeMap).forEach(([espnName, teeTime]) => {
-      const match = allGolfers.find(g => normalize(g.name) === normalize(espnName));
+      const match = allGolfers.find(g => normalizeGolferName(g.name) === normalizeGolferName(espnName));
       if (match) teeTimeMap[match.name] = teeTime;
     });
   } catch (e) { /* silently skip */ }
@@ -374,10 +412,12 @@ function renderGolferPool() {
 
     const wdBadge = wdStatusMap[g.name] ? ' <span class="wd-badge">WD</span>' : '';
     const teeTime = teeTimeMap[g.name] ? `<span class="g-tee-time">${teeTimeMap[g.name]}</span>` : '';
+    const fieldBadge = g.isFieldOnly ? '<span class="g-field-badge">Field</span>' : '';
     return `<div class="golfer-row ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''} ${maxedOut ? 'maxed-out' : ''} ${majorMaxed && !maxedOut ? 'major-maxed' : ''}"
-      data-id="${g.id}" data-name="${g.name}" data-salary="${g.salary}">
+      data-id="${g.id}" data-name="${g.name}" data-salary="${g.salary}" data-field-only="${g.isFieldOnly ? '1' : ''}">
       <span class="g-name">${g.name}${wdBadge}</span>
       ${teeTime}
+      ${fieldBadge}
       ${majorBadge}
       ${usageBadge}
       <span class="g-salary">$${g.salary}</span>
@@ -391,7 +431,8 @@ function renderGolferPool() {
         addGolfer({
           id: parseInt(row.dataset.id),
           name: row.dataset.name,
-          salary: parseInt(row.dataset.salary)
+          salary: parseInt(row.dataset.salary),
+          isFieldOnly: row.dataset.fieldOnly === '1'
         });
       });
     });
