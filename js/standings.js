@@ -76,7 +76,7 @@ async function loadStandings() {
   standings.sort((a, b) => b.total - a.total);
 
   const player = getCurrentPlayer();
-  document.getElementById('standingsBody').innerHTML = standings.map((s, i) => `
+  const rows = standings.map((s, i) => `
     <tr class="${player && s.player_id === player.id ? 'my-row' : ''}">
       <td class="rank-cell">${i + 1}</td>
       <td><strong>${s.name}</strong></td>
@@ -86,5 +86,16 @@ async function loadStandings() {
       <td class="currency">${formatCurrency(s.worst)}</td>
       <td class="currency">${formatCurrency(s.avg)}</td>
     </tr>
-  `).join('');
+  `);
+
+  const CUTLINE_RANK = 6;
+  if (standings.length > CUTLINE_RANK) {
+    rows.splice(CUTLINE_RANK, 0, `
+    <tr class="cutline-row">
+      <td colspan="7">── PLAYOFF CUTLINE ──</td>
+    </tr>
+  `);
+  }
+
+  document.getElementById('standingsBody').innerHTML = rows.join('');
 }

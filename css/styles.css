@@ -364,6 +364,23 @@ body {
 .data-table tbody tr.my-row:hover { background: #d0ebd8; }
 .data-table tbody tr.winner-row { background: linear-gradient(90deg, var(--gold-light), var(--ivory)); font-weight: 600; }
 .rank-cell { font-weight: 700; color: var(--augusta); width: 45px; }
+
+/* Playoff cutline separator (standings page) */
+.data-table tbody tr.cutline-row,
+.data-table tbody tr.cutline-row:hover {
+  background: var(--augusta-bg);
+}
+.cutline-row td {
+  padding: 0.3rem 0.5rem;
+  text-align: center;
+  white-space: nowrap;
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  color: var(--gold-dark);
+  border-top: 2px dashed var(--augusta-dark);
+  border-bottom: 2px dashed var(--augusta-dark);
+}
 .loading { text-align: center; color: var(--gray-500); padding: 2rem; font-style: italic; font-family: var(--font-body); }
 
 /* ===== ALERTS ===== */
