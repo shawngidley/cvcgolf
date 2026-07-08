@@ -203,8 +203,10 @@ async function saveResults() {
 
   // Recalculate weekly scores for this tournament
   await recalcWeek(parseInt(tournamentId));
+  const bonusResult = await calculateAndSaveWeeklyBonus(parseInt(tournamentId));
+  const bonusMsg = bonusResult ? ` Week ${bonusResult.week} winner: ${bonusResult.name} — Bonus: $${bonusResult.bonus}` : '';
 
-  showMsg('resultsMsg', 'Results saved and scores recalculated!', 'success');
+  showMsg('resultsMsg', 'Results saved and scores recalculated!' + bonusMsg, 'success');
 }
 
 async function recalcWeek(tournamentId) {
@@ -308,6 +310,47 @@ async function recalcStandings() {
   }
 }
 
+// Identify the weekly high earner for a tournament and record their bonus
+// in weekly_bonuses. Returns { name, bonus, week } on success, or null if
+// there's no bonus for this week (outside the schedule) or no scores yet.
+async function calculateAndSaveWeeklyBonus(tournamentId) {
+  const { data: tournament } = await supabaseClient
+    .from('tournaments')
+    .select('week_number')
+    .eq('id', tournamentId)
+    .single();
+
+  const bonusInfo = tournament ? getWeeklyBonusInfo(tournament.week_number) : null;
+  if (!bonusInfo) return null;
+
+  const { data: scores } = await supabaseClient
+    .from('weekly_scores')
+    .select('player_id, total_earnings, players(name)')
+    .eq('tournament_id', tournamentId);
+
+  if (!scores || scores.length === 0) return null;
+
+  let winner = null;
+  scores.forEach(s => {
+    const earnings = parseFloat(s.total_earnings || 0);
+    if (earnings > 0 && (!winner || earnings > winner.earnings)) {
+      winner = { player_id: s.player_id, name: s.players?.name || 'Unknown', earnings };
+    }
+  });
+
+  if (!winner) return null;
+
+  await supabaseClient.from('weekly_bonuses').delete().eq('tournament_id', tournamentId);
+  await supabaseClient.from('weekly_bonuses').insert({
+    tournament_id: tournamentId,
+    player_id: winner.player_id,
+    bonus_amount: bonusInfo.amount,
+    bonus_type: bonusInfo.type
+  });
+
+  return { name: winner.name, bonus: bonusInfo.amount, week: tournament.week_number };
+}
+
 async function recalcEverything() {
   showMsg('recalcMsg', 'Recalculating...', 'success');
 
@@ -323,6 +366,7 @@ async function recalcEverything() {
   if (completedTournaments) {
     for (const t of completedTournaments) {
       await recalcWeek(t.id);
+      await calculateAndSaveWeeklyBonus(t.id);
     }
   }
 
@@ -653,11 +697,13 @@ async function saveEarnings() {
 
     // Recalculate weekly scores and standings
     await recalcWeek(parseInt(tournamentId));
+    const bonusResult = await calculateAndSaveWeeklyBonus(parseInt(tournamentId));
 
     const msg = isOfficial
       ? `Saved ${updates.length} official earnings — Live Scores and Breakdown both updated!`
       : `Updated ${updates.length} live score estimates — Breakdown page not changed.`;
-    showMsg('saveEarningsMsg', msg, 'success');
+    const bonusMsg = bonusResult ? ` Week ${bonusResult.week} winner: ${bonusResult.name} — Bonus: $${bonusResult.bonus}` : '';
+    showMsg('saveEarningsMsg', msg + bonusMsg, 'success');
   } catch (err) {
     showMsg('saveEarningsMsg', 'Error saving: ' + err.message, 'error');
   }

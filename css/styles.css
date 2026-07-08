@@ -437,6 +437,19 @@ body {
 .badge-complete { background: var(--augusta-pale); color: var(--augusta); }
 .badge-current { background: #fde8e8; color: var(--red); }
 
+/* Weekly high-earner badge (history page) */
+.week-winner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: var(--gold-light);
+  color: var(--gold-dark);
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
 /* ===== LINEUP PAGE ===== */
 .countdown-container {
   display: flex;

@@ -14,63 +14,54 @@ async function loadStandings() {
     t.is_complete || t.picks_locked || (t.first_tee_time && new Date(t.first_tee_time) <= now)
   );
   const tournamentIds = (tournaments || []).map(t => t.id);
-  let lineups = [];
+
+  // Weekly wins and totals are derived live from weekly_scores — never from
+  // the static standings.weekly_wins column, which can drift out of date.
+  let scores = [];
   for (let from = 0; ; from += 1000) {
-    const { data: batch } = await supabaseClient.from('lineups').select('player_id, tournament_id, golfer_id').in('tournament_id', tournamentIds).range(from, from + 999);
+    const { data: batch } = await supabaseClient
+      .from('weekly_scores')
+      .select('player_id, tournament_id, total_earnings')
+      .in('tournament_id', tournamentIds)
+      .range(from, from + 999);
     if (!batch || batch.length === 0) break;
-    lineups = lineups.concat(batch);
+    scores = scores.concat(batch);
     if (batch.length < 1000) break;
   }
-  const [{ data: geRows }, { data: resultRows }] = await Promise.all([
-    supabaseClient.from('golfer_earnings').select('golfer_id, tournament_id, earnings').in('tournament_id', tournamentIds).limit(5000),
-    supabaseClient.from('results').select('golfer_id, tournament_id, earnings').in('tournament_id', tournamentIds).limit(5000)
-  ]);
 
   if (!players || players.length === 0) {
     document.getElementById('standingsBody').innerHTML =
-      '<tr><td colspan="7" class="loading">No standings data yet.</td></tr>';
+      '<tr><td colspan="8" class="loading">No standings data yet.</td></tr>';
     return;
   }
 
   const weeksPlayed = tournaments ? tournaments.length : 0;
   document.getElementById('weekInfo').textContent = `Through Week ${weeksPlayed} of 21`;
 
-  // Build earnings lookup — merge both tables, results (official) takes precedence
-  const earningsMap = {};
-  (geRows || []).forEach(r => {
-    const e = parseFloat(r.earnings || 0);
-    if (e > 0) earningsMap[`${r.golfer_id}-${r.tournament_id}`] = e;
-  });
-  (resultRows || []).forEach(r => {
-    const e = parseFloat(r.earnings || 0);
-    if (e > 0) earningsMap[`${r.golfer_id}-${r.tournament_id}`] = e;
-  });
+  const scoreMap = {};
+  scores.forEach(s => { scoreMap[`${s.player_id}-${s.tournament_id}`] = parseFloat(s.total_earnings || 0); });
 
-  // Calculate each player's standings from results + lineups
   const standings = players.map(p => {
-    const weekTotals = tournamentIds.map(tid => {
-      const playerLineup = (lineups || []).filter(l => l.player_id === p.id && l.tournament_id === tid);
-      return playerLineup.reduce((sum, l) => sum + (earningsMap[`${l.golfer_id}-${l.tournament_id}`] || 0), 0);
-    });
-
-    const weeksWithData = weekTotals.filter(w => w > 0);
+    const weekTotals = tournamentIds.map(tid => scoreMap[`${p.id}-${tid}`] || 0);
     const total = weekTotals.reduce((a, b) => a + b, 0);
     const best = weekTotals.length > 0 ? Math.max(...weekTotals) : 0;
     const worst = weekTotals.length > 0 ? Math.min(...weekTotals) : 0;
     const avg = weekTotals.length > 0 ? total / weekTotals.length : 0;
 
-    return { player_id: p.id, name: p.name, total, best, worst, avg, weekTotals };
+    return { player_id: p.id, name: p.name, total, best, worst, avg, weekTotals, wins: 0, bonusTotal: 0 };
   });
 
-  // Count weekly wins
+  // For each completed/started tournament, the player with the highest
+  // total_earnings in weekly_scores is the weekly high earner.
   tournamentIds.forEach((tid, idx) => {
-    const maxEarnings = Math.max(...standings.map(s => s.weekTotals[idx]));
-    if (maxEarnings > 0) {
-      standings.forEach(s => {
-        if (!s.wins) s.wins = 0;
-        if (s.weekTotals[idx] === maxEarnings) s.wins++;
-      });
-    }
+    const maxEarnings = Math.max(0, ...standings.map(s => s.weekTotals[idx]));
+    if (maxEarnings <= 0) return;
+    const winner = standings.find(s => s.weekTotals[idx] === maxEarnings);
+    if (!winner) return;
+    winner.wins++;
+    const tournament = tournaments.find(t => t.id === tid);
+    const bonusInfo = getWeeklyBonusInfo(tournament?.week_number);
+    if (bonusInfo) winner.bonusTotal += bonusInfo.amount;
   });
 
   standings.sort((a, b) => b.total - a.total);
@@ -82,6 +73,7 @@ async function loadStandings() {
       <td><strong>${s.name}</strong></td>
       <td class="currency">${formatCurrency(s.total)}</td>
       <td style="text-align:center">${s.wins || 0}</td>
+      <td class="currency">${s.bonusTotal > 0 ? '$' + s.bonusTotal : '-'}</td>
       <td class="currency">${formatCurrency(s.best)}</td>
       <td class="currency">${formatCurrency(s.worst)}</td>
       <td class="currency">${formatCurrency(s.avg)}</td>
@@ -92,7 +84,7 @@ async function loadStandings() {
   if (standings.length > CUTLINE_RANK) {
     rows.splice(CUTLINE_RANK, 0, `
     <tr class="cutline-row">
-      <td colspan="7">── PLAYOFF CUTLINE ──</td>
+      <td colspan="8">── PLAYOFF CUTLINE ──</td>
     </tr>
   `);
   }

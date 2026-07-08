@@ -3,6 +3,7 @@
 let historySortCol = 2; // Weekly Earnings column index
 let historySortDir = 'desc';
 let historyRowData = [];
+let historyWinner = null; // { player_id, name } — this week's high earner
 
 document.addEventListener('DOMContentLoaded', async () => {
   await loadDropdowns();
@@ -58,12 +59,6 @@ async function loadWeekData() {
 
   document.getElementById('weekOverview').style.display = 'block';
   document.getElementById('weekTitle').textContent = `Week ${tournament.week_number}: ${tournament.name}`;
-  document.getElementById('weekMeta').innerHTML = `
-    <span>${tournament.course}</span>
-    <span>${formatDateRange(tournament.start_date, tournament.end_date)}</span>
-    <span>Purse: $${tournament.purse_millions}M</span>
-    ${tournament.is_major ? '<span class="t-badge badge-major">Major</span>' : ''}
-  `;
 
   // Get all players, lineups, and golfer_earnings for this tournament
   const { data: players } = await supabaseClient.from('players').select('id, name').order('name').neq('is_guest', true);
@@ -105,6 +100,19 @@ async function loadWeekData() {
 
     return { player_id: p.id, name: p.name, total_earnings: totalEarnings, total_salary: totalSalary, bestPick };
   });
+
+  // Determine this week's high earner and their bonus
+  const maxEarnings = Math.max(0, ...historyRowData.map(r => r.total_earnings));
+  historyWinner = maxEarnings > 0 ? historyRowData.find(r => r.total_earnings === maxEarnings) : null;
+  const bonusInfo = getWeeklyBonusInfo(tournament.week_number);
+
+  document.getElementById('weekMeta').innerHTML = `
+    <span>${tournament.course}</span>
+    <span>${formatDateRange(tournament.start_date, tournament.end_date)}</span>
+    <span>Purse: $${tournament.purse_millions}M</span>
+    ${tournament.is_major ? '<span class="t-badge badge-major">Major</span>' : ''}
+    ${historyWinner && bonusInfo ? `<span class="week-winner-badge">🏆 ${historyWinner.name} — $${bonusInfo.amount} Bonus</span>` : ''}
+  `;
 
   // Reset to default sort
   historySortCol = 2;
@@ -199,10 +207,11 @@ function renderHistoryTable(playerFilter) {
     const highlight = playerFilter && s.player_id === parseInt(playerFilter) ? 'highlight' : '';
     const isMe = me && s.player_id === me.id ? 'my-row' : '';
     const bestPickText = s.bestPick.earnings > 0 ? `${s.bestPick.name} (${formatCurrency(s.bestPick.earnings)})` : '-';
+    const trophy = historyWinner && s.player_id === historyWinner.player_id ? ' 🏆' : '';
     return `
       <tr class="${highlight} ${isMe}">
         <td class="rank-cell">${i + 1}</td>
-        <td><strong>${s.name}</strong></td>
+        <td><strong>${s.name}${trophy}</strong></td>
         <td class="currency">${formatCurrency(s.total_earnings)}</td>
         <td style="text-align:center">$${s.total_salary}</td>
         <td>${bestPickText}</td>
