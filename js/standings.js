@@ -51,17 +51,21 @@ async function loadStandings() {
     return { player_id: p.id, name: p.name, total, best, worst, avg, weekTotals, wins: 0, bonusTotal: 0 };
   });
 
-  // For each completed/started tournament, the player with the highest
-  // total_earnings in weekly_scores is the weekly high earner.
+  // For each completed/started tournament, the player(s) with the highest
+  // total_earnings in weekly_scores are the weekly high earner(s). Ties
+  // split the bonus evenly and each tied player is credited a win.
   tournamentIds.forEach((tid, idx) => {
     const maxEarnings = Math.max(0, ...standings.map(s => s.weekTotals[idx]));
     if (maxEarnings <= 0) return;
-    const winner = standings.find(s => s.weekTotals[idx] === maxEarnings);
-    if (!winner) return;
-    winner.wins++;
+    const winners = standings.filter(s => s.weekTotals[idx] === maxEarnings);
+    if (winners.length === 0) return;
     const tournament = tournaments.find(t => t.id === tid);
     const bonusInfo = getWeeklyBonusInfo(tournament?.week_number);
-    if (bonusInfo) winner.bonusTotal += bonusInfo.amount;
+    const share = bonusInfo ? bonusInfo.amount / winners.length : 0;
+    winners.forEach(winner => {
+      winner.wins++;
+      winner.bonusTotal += share;
+    });
   });
 
   standings.sort((a, b) => b.total - a.total);
@@ -73,7 +77,7 @@ async function loadStandings() {
       <td><strong>${s.name}</strong></td>
       <td class="currency">${formatCurrency(s.total)}</td>
       <td style="text-align:center">${s.wins || 0}</td>
-      <td class="currency">${s.bonusTotal > 0 ? '$' + s.bonusTotal : '-'}</td>
+      <td class="currency">${s.bonusTotal > 0 ? '$' + s.bonusTotal.toFixed(2).replace(/\.00$/, '') : '-'}</td>
       <td class="currency">${formatCurrency(s.best)}</td>
       <td class="currency">${formatCurrency(s.worst)}</td>
       <td class="currency">${formatCurrency(s.avg)}</td>

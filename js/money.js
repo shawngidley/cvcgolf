@@ -75,11 +75,12 @@ async function loadWeeklyBonuses() {
   }
 
   // Weekly bonus winners are pulled from the weekly_bonuses table, which the
-  // admin panel populates when a week's earnings are saved. As a fallback for
-  // completed weeks the admin hasn't (re)saved yet, compute the high earner
-  // live from weekly_scores so the page isn't blank.
+  // admin panel populates when a week's earnings are saved (ties get one row
+  // per tied player with the bonus split evenly). As a fallback for
+  // completed weeks the admin hasn't (re)saved yet, compute the high
+  // earner(s) live from weekly_scores so the page isn't blank.
   const bonusByTournament = {};
-  (bonusRows || []).forEach(b => { bonusByTournament[b.tournament_id] = b; });
+  (bonusRows || []).forEach(b => { (bonusByTournament[b.tournament_id] = bonusByTournament[b.tournament_id] || []).push(b); });
 
   const scoreMap = {};
   (scores || []).forEach(s => { scoreMap[`${s.player_id}-${s.tournament_id}`] = parseFloat(s.total_earnings || 0); });
@@ -91,41 +92,40 @@ async function loadWeeklyBonuses() {
     const scheduleInfo = getWeeklyBonusInfo(t.week_number);
     const saved = bonusByTournament[t.id];
 
-    let winnerId = null;
-    let winnerName = '-';
+    let winners = []; // [{ id, name, share }]
     let earnings = 0;
     let bonusType = scheduleInfo?.type || '-';
-    let bonusAmount = scheduleInfo?.amount || 0;
+    let totalBonus = scheduleInfo?.amount || 0;
 
-    if (saved) {
-      winnerId = saved.player_id;
-      winnerName = saved.players?.name || players.find(p => p.id === saved.player_id)?.name || '-';
-      bonusType = saved.bonus_type || bonusType;
-      bonusAmount = saved.bonus_amount || bonusAmount;
-      earnings = scoreMap[`${winnerId}-${t.id}`] || 0;
+    if (saved && saved.length > 0) {
+      winners = saved.map(b => ({
+        id: b.player_id,
+        name: b.players?.name || players.find(p => p.id === b.player_id)?.name || '-',
+        share: parseFloat(b.bonus_amount || 0)
+      }));
+      bonusType = saved[0].bonus_type || bonusType;
+      totalBonus = winners.reduce((sum, w) => sum + w.share, 0);
+      earnings = scoreMap[`${winners[0].id}-${t.id}`] || 0;
     } else {
-      let maxEarnings = 0;
-      players.forEach(p => {
-        const e = scoreMap[`${p.id}-${t.id}`] || 0;
-        if (e > maxEarnings) {
-          maxEarnings = e;
-          winnerId = p.id;
-          winnerName = p.name;
-        }
-      });
-      earnings = maxEarnings;
+      const maxEarnings = Math.max(0, ...players.map(p => scoreMap[`${p.id}-${t.id}`] || 0));
+      if (maxEarnings > 0) {
+        const tied = players.filter(p => (scoreMap[`${p.id}-${t.id}`] || 0) === maxEarnings);
+        const share = Math.round((totalBonus / tied.length) * 100) / 100;
+        winners = tied.map(p => ({ id: p.id, name: p.name, share }));
+        earnings = maxEarnings;
+      }
     }
 
-    if (winnerId && earnings > 0) {
-      playerBonuses[winnerId] = (playerBonuses[winnerId] || 0) + bonusAmount;
-    }
+    winners.forEach(w => {
+      playerBonuses[w.id] = (playerBonuses[w.id] || 0) + w.share;
+    });
 
     return {
       week: t.week_number,
       name: t.short_name,
       type: bonusType,
-      bonus: bonusAmount,
-      winner: earnings > 0 ? winnerName : '-',
+      bonus: totalBonus,
+      winner: winners.length > 0 ? winners.map(w => w.name).join(' & ') : '-',
       earnings
     };
   });
@@ -158,10 +158,11 @@ async function loadWeeklyBonuses() {
   })).sort((a, b) => b.bonuses - a.bonuses);
 
   document.getElementById('winningsBody').innerHTML = winningsData.map(w => {
+    const display = w.bonuses > 0 ? '$' + w.bonuses.toFixed(2).replace(/\.00$/, '') : '-';
     return `<tr>
       <td><strong>${w.name}</strong></td>
-      <td style="text-align:center">${w.bonuses > 0 ? '$' + w.bonuses : '-'}</td>
-      <td style="text-align:center; font-weight:600;">${w.bonuses > 0 ? '$' + w.bonuses : '-'}</td>
+      <td style="text-align:center">${display}</td>
+      <td style="text-align:center; font-weight:600;">${display}</td>
     </tr>`;
   }).join('');
 }

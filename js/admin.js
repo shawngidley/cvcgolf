@@ -204,9 +204,8 @@ async function saveResults() {
   // Recalculate weekly scores for this tournament
   await recalcWeek(parseInt(tournamentId));
   const bonusResult = await calculateAndSaveWeeklyBonus(parseInt(tournamentId));
-  const bonusMsg = bonusResult ? ` Week ${bonusResult.week} winner: ${bonusResult.name} — Bonus: $${bonusResult.bonus}` : '';
 
-  showMsg('resultsMsg', 'Results saved and scores recalculated!' + bonusMsg, 'success');
+  showMsg('resultsMsg', 'Results saved and scores recalculated!' + formatBonusMsg(bonusResult), 'success');
 }
 
 async function recalcWeek(tournamentId) {
@@ -310,9 +309,10 @@ async function recalcStandings() {
   }
 }
 
-// Identify the weekly high earner for a tournament and record their bonus
-// in weekly_bonuses. Returns { name, bonus, week } on success, or null if
-// there's no bonus for this week (outside the schedule) or no scores yet.
+// Identify the weekly high earner(s) for a tournament and record their
+// bonus in weekly_bonuses. Ties split the bonus evenly, one row per tied
+// player. Returns { names, share, week } on success, or null if there's no
+// bonus for this week (outside the schedule) or no scores yet.
 async function calculateAndSaveWeeklyBonus(tournamentId) {
   const { data: tournament } = await supabaseClient
     .from('tournaments')
@@ -330,25 +330,31 @@ async function calculateAndSaveWeeklyBonus(tournamentId) {
 
   if (!scores || scores.length === 0) return null;
 
-  let winner = null;
-  scores.forEach(s => {
-    const earnings = parseFloat(s.total_earnings || 0);
-    if (earnings > 0 && (!winner || earnings > winner.earnings)) {
-      winner = { player_id: s.player_id, name: s.players?.name || 'Unknown', earnings };
-    }
-  });
+  const maxEarnings = Math.max(0, ...scores.map(s => parseFloat(s.total_earnings || 0)));
+  if (maxEarnings <= 0) return null;
 
-  if (!winner) return null;
+  const winners = scores
+    .filter(s => parseFloat(s.total_earnings || 0) === maxEarnings)
+    .map(s => ({ player_id: s.player_id, name: s.players?.name || 'Unknown' }));
+
+  const share = Math.round((bonusInfo.amount / winners.length) * 100) / 100;
 
   await supabaseClient.from('weekly_bonuses').delete().eq('tournament_id', tournamentId);
-  await supabaseClient.from('weekly_bonuses').insert({
+  await supabaseClient.from('weekly_bonuses').insert(winners.map(w => ({
     tournament_id: tournamentId,
-    player_id: winner.player_id,
-    bonus_amount: bonusInfo.amount,
+    player_id: w.player_id,
+    bonus_amount: share,
     bonus_type: bonusInfo.type
-  });
+  })));
 
-  return { name: winner.name, bonus: bonusInfo.amount, week: tournament.week_number };
+  return { names: winners.map(w => w.name), share, week: tournament.week_number };
+}
+
+function formatBonusMsg(bonusResult) {
+  if (!bonusResult) return '';
+  const who = bonusResult.names.join(' & ');
+  const tie = bonusResult.names.length > 1 ? ` (split ${bonusResult.names.length} ways)` : '';
+  return ` Week ${bonusResult.week} winner: ${who} — Bonus: $${bonusResult.share}${tie}`;
 }
 
 async function recalcEverything() {
@@ -702,8 +708,7 @@ async function saveEarnings() {
     const msg = isOfficial
       ? `Saved ${updates.length} official earnings — Live Scores and Breakdown both updated!`
       : `Updated ${updates.length} live score estimates — Breakdown page not changed.`;
-    const bonusMsg = bonusResult ? ` Week ${bonusResult.week} winner: ${bonusResult.name} — Bonus: $${bonusResult.bonus}` : '';
-    showMsg('saveEarningsMsg', msg + bonusMsg, 'success');
+    showMsg('saveEarningsMsg', msg + formatBonusMsg(bonusResult), 'success');
   } catch (err) {
     showMsg('saveEarningsMsg', 'Error saving: ' + err.message, 'error');
   }
