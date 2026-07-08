@@ -12,6 +12,8 @@ let isLocked = false;
 let golferUsageMap = {};   // golfer_id -> { times_used, major_uses }
 let wdStatusMap = {};      // golfer name -> true if withdrawn
 let teeTimeMap = {};        // golfer name -> Round 1 tee time string
+let inFieldSet = null;      // Set of normalized names in this week's ESPN field, null until loaded
+let fieldFilterMode = 'field'; // 'field' = this week's field only, 'all' = every golfer
 
 document.addEventListener('DOMContentLoaded', async () => {
   const player = getCurrentPlayer();
@@ -275,6 +277,7 @@ async function loadWDStatus() {
     if (!data.success) return;
 
     await mergeEspnField(data.fieldGolfers);
+    inFieldSet = new Set((data.fieldGolfers || []).map(normalizeGolferName));
 
     (data.wdGolfers || []).forEach(espnName => {
       const match = allGolfers.find(g => normalizeGolferName(g.name) === normalizeGolferName(espnName));
@@ -293,6 +296,14 @@ function setupControls() {
   document.getElementById('golferSearch').addEventListener('input', renderGolferPool);
   document.getElementById('salaryFilter').addEventListener('change', renderGolferPool);
   document.getElementById('submitLineup').addEventListener('click', submitLineup);
+
+  document.querySelectorAll('#fieldToggle .filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      fieldFilterMode = btn.dataset.mode;
+      document.querySelectorAll('#fieldToggle .filter-btn').forEach(b => b.classList.toggle('active', b === btn));
+      renderGolferPool();
+    });
+  });
 }
 
 function getSalaryUsed() {
@@ -366,6 +377,9 @@ function renderGolferPool() {
   const isMajorWeek = currentTournament?.is_major || false;
 
   let filtered = allGolfers;
+  if (fieldFilterMode === 'field' && inFieldSet) {
+    filtered = filtered.filter(g => inFieldSet.has(normalizeGolferName(g.name)));
+  }
   if (search) filtered = filtered.filter(g => g.name.toLowerCase().includes(search));
   if (salaryFilterVal) filtered = filtered.filter(g => g.salary === parseInt(salaryFilterVal));
 
