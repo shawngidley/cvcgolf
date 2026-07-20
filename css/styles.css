@@ -1044,11 +1044,10 @@ thead .breakdown-golfer-col { background: var(--augusta) !important; color: var(
 .currency { font-variant-numeric: tabular-nums; }
 
 /* ===== PLAYOFFS PAGE ===== */
-.bonus-tracker-grid { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.5rem; }
-.bonus-stat { text-align: center; min-width: 130px; }
-.bonus-stat-label { font-size: 0.7rem; text-transform: uppercase; color: var(--gray-500); letter-spacing: 0.05em; font-family: var(--font-body); }
-.bonus-stat-value { font-size: 1.3rem; font-weight: 700; color: var(--augusta-dark); font-family: var(--font-body); }
-.bonus-stat-value.gold { color: var(--gold-dark); }
+/* Tournament-name captions inside card <h2> titles - deliberately NOT using
+   .subtitle, which is white text meant for the dark hero background and is
+   unreadable on a white card. */
+.tournament-caption { color: #000000; font-size: 0.85rem; font-weight: 500; font-family: var(--font-body); text-shadow: none; }
 
 .playoff-bracket { display: flex; gap: 1.25rem; align-items: flex-start; overflow-x: auto; padding-bottom: 0.5rem; }
 .bracket-round { flex: 1; min-width: 190px; }

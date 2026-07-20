@@ -75,9 +75,6 @@ async function loadPlayoffs() {
     return { player_id: p.id, name: p.name, total };
   }).sort((a, b) => b.total - a.total);
 
-  renderBonusTracker(regStandings);
-
-  const weeksRemaining = regSeasonT.length - regStartedT.length;
   const semifinalStarted = semiT.some(started);
 
   // ----- Semifinal field: top 6 of regular season -----
@@ -162,7 +159,7 @@ async function loadPlayoffs() {
 
   const champion = champResults && champResults.find(r => r.status === 'WINNER');
   const subtitleMap = {
-    'pre-playoffs': `Regular season in progress — ${weeksRemaining} week${weeksRemaining === 1 ? '' : 's'} remaining before the playoff field is set`,
+    'pre-playoffs': '',
     semifinal: semiComplete ? 'Semifinal complete — top 3 advance to the Finals' : 'Semifinal round in progress (Weeks 22-24)',
     'finals-elimination': 'Finals — Elimination Round in progress (Week 25)',
     'finals-championship': champion ? `${champion.name} wins the 2026 Championship!` : 'Finals — Championship round in progress (Weeks 26-27)'
@@ -174,37 +171,6 @@ function regSeasonBonus(regStandings) {
   if (regStandings.length < 2) return 0;
   const diff = regStandings[0].total - regStandings[1].total;
   return Math.max(0, Math.min(REG_SEASON_BONUS_CAP, diff));
-}
-
-function renderBonusTracker(regStandings) {
-  const grid = document.getElementById('bonusTrackerGrid');
-  if (regStandings.length < 2) {
-    grid.innerHTML = '<div class="bonus-stat"><div class="bonus-stat-label">No standings data yet</div></div>';
-    return;
-  }
-  const leader = regStandings[0];
-  const second = regStandings[1];
-  const diff = leader.total - second.total;
-  const bonus = regSeasonBonus(regStandings);
-
-  grid.innerHTML = `
-    <div class="bonus-stat">
-      <div class="bonus-stat-label">#1 &mdash; ${leader.name}</div>
-      <div class="bonus-stat-value">${formatCurrency(leader.total)}</div>
-    </div>
-    <div class="bonus-stat">
-      <div class="bonus-stat-label">#2 &mdash; ${second.name}</div>
-      <div class="bonus-stat-value">${formatCurrency(second.total)}</div>
-    </div>
-    <div class="bonus-stat">
-      <div class="bonus-stat-label">Current Lead</div>
-      <div class="bonus-stat-value">${formatCurrency(diff)}</div>
-    </div>
-    <div class="bonus-stat">
-      <div class="bonus-stat-label">${leader.name}'s Semifinal Starting Bonus</div>
-      <div class="bonus-stat-value gold">${formatCurrency(bonus)}</div>
-    </div>
-  `;
 }
 
 function statusPill(status) {
