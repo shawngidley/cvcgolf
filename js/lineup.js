@@ -18,7 +18,7 @@ let golferUsageMap = {};   // golfer_id -> { times_used, major_uses }
 let wdStatusMap = {};      // golfer name -> true if withdrawn
 let teeTimeMap = {};        // golfer name -> Round 1 tee time string
 let inFieldSet = null;      // Set of normalized names in this week's ESPN field, null until loaded
-let fieldFilterMode = 'field'; // 'field' = this week's field only, 'all' = every golfer
+let fieldFilterMode = 'all'; // 'field' = this week's field only, 'all' = every golfer
 
 document.addEventListener('DOMContentLoaded', async () => {
   const player = getCurrentPlayer();
