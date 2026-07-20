@@ -79,7 +79,6 @@ async function loadPlayoffs() {
 
   const weeksRemaining = regSeasonT.length - regStartedT.length;
   const semifinalStarted = semiT.some(started);
-  renderProjectedField(regStandings, weeksRemaining, semifinalStarted);
 
   // ----- Semifinal field: top 6 of regular season -----
   const semifinalists = regStandings.slice(0, PLAYOFF_FIELD_SIZE);
@@ -208,37 +207,6 @@ function renderBonusTracker(regStandings) {
   `;
 }
 
-function renderProjectedField(regStandings, weeksRemaining, isLocked) {
-  document.getElementById('fieldCardTitle').textContent = isLocked ? 'Playoff Field' : 'Projected Playoff Field';
-  const seventh = regStandings[PLAYOFF_FIELD_SIZE];
-  const subtitle = isLocked
-    ? 'Field is locked in for the Semifinal round.'
-    : seventh
-      ? `Currently ${formatCurrency(regStandings[PLAYOFF_FIELD_SIZE - 1].total - seventh.total)} separates 6th from 7th place. ${weeksRemaining} week${weeksRemaining === 1 ? '' : 's'} remain in the regular season.`
-      : '';
-  document.getElementById('fieldCardSubtitle').textContent = subtitle;
-
-  const tbody = document.getElementById('fieldBody');
-  if (regStandings.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="3" class="loading">No standings data yet.</td></tr>';
-    return;
-  }
-
-  const rows = regStandings.map((s, i) => `
-    <tr>
-      <td class="rank-cell">${i + 1}</td>
-      <td><strong>${s.name}</strong></td>
-      <td class="currency">${formatCurrency(s.total)}</td>
-    </tr>
-  `);
-  if (regStandings.length > PLAYOFF_FIELD_SIZE) {
-    rows.splice(PLAYOFF_FIELD_SIZE, 0, `
-      <tr class="cutline-row"><td colspan="3">── PLAYOFF CUTLINE ──</td></tr>
-    `);
-  }
-  tbody.innerHTML = rows.join('');
-}
-
 function statusPill(status) {
   const map = {
     'ADVANCED': 'status-advanced',
@@ -323,10 +291,11 @@ function renderBracket(semifinalists, semiResults, finalists, elimResults, champ
 
   const semiSlots = (semiResults || semifinalists.map(s => ({ ...s, status: null }))).map(s => {
     const cls = s.status === 'ADVANCED' ? 'advanced' : s.status === 'ELIMINATED' ? 'eliminated' : semiResults ? '' : 'projected';
+    const earningsLine = semiResults ? `<div class="bracket-slot-earnings">${formatCurrency(s.total)}</div>` : '';
     return `
       <div class="bracket-slot ${cls}">
         <div class="bracket-slot-name">${s.name}</div>
-        <div class="bracket-slot-earnings">${formatCurrency(s.total)}${semiResults ? '' : ' (projected)'}</div>
+        ${earningsLine}
       </div>`;
   }).join('');
 
