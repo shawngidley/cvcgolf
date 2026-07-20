@@ -1043,6 +1043,45 @@ thead .breakdown-golfer-col { background: var(--augusta) !important; color: var(
 /* ===== CURRENCY ===== */
 .currency { font-variant-numeric: tabular-nums; }
 
+/* ===== PLAYOFFS PAGE ===== */
+.bonus-tracker-grid { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.5rem; }
+.bonus-stat { text-align: center; min-width: 130px; }
+.bonus-stat-label { font-size: 0.7rem; text-transform: uppercase; color: var(--gray-500); letter-spacing: 0.05em; font-family: var(--font-body); }
+.bonus-stat-value { font-size: 1.3rem; font-weight: 700; color: var(--augusta-dark); font-family: var(--font-body); }
+.bonus-stat-value.gold { color: var(--gold-dark); }
+
+.playoff-bracket { display: flex; gap: 1.25rem; align-items: flex-start; overflow-x: auto; padding-bottom: 0.5rem; }
+.bracket-round { flex: 1; min-width: 190px; }
+.bracket-round-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gray-500); font-family: var(--font-body); font-weight: 700; margin-bottom: 0.6rem; text-align: center; }
+.bracket-slots { display: flex; flex-direction: column; gap: 0.6rem; justify-content: center; height: 100%; }
+.bracket-slot {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-left: 4px solid var(--gray-300);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.7rem;
+  box-shadow: var(--shadow-sm);
+  font-family: var(--font-body);
+}
+.bracket-slot-name { font-weight: 600; font-size: 0.85rem; color: var(--gray-800); }
+.bracket-slot-earnings { font-size: 0.72rem; color: var(--gray-500); margin-top: 0.1rem; }
+.bracket-slot.tbd { color: var(--gray-400); font-style: italic; text-align: center; border-left-color: var(--gray-200); }
+.bracket-slot.projected { border-left-color: var(--gray-300); opacity: 0.85; }
+.bracket-slot.advanced { border-left-color: var(--augusta); background: var(--augusta-pale); }
+.bracket-slot.eliminated { border-left-color: var(--red); background: #fdecea; opacity: 0.75; }
+.bracket-slot.champion { border-left-color: var(--gold); border: 2px solid var(--gold); background: linear-gradient(135deg, #f7f0d8, #f5ecc0); }
+
+.playoff-status-pill { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; font-family: var(--font-body); white-space: nowrap; }
+.status-advanced { background: var(--augusta-pale); color: var(--augusta); }
+.status-eliminated { background: #fdecea; color: var(--red); }
+.status-progress { background: var(--gray-100); color: var(--gray-600); }
+.status-winner { background: var(--gold-light); color: var(--gold-dark); }
+
+.data-table tbody tr.row-advanced { background: var(--augusta-pale); }
+.data-table tbody tr.row-advanced:hover { background: #d0ebd8; }
+.data-table tbody tr.row-eliminated { background: #fdecea; color: var(--gray-500); }
+.data-table tbody tr.row-eliminated:hover { background: #fbdcd9; }
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
   .nav-toggle { display: flex; }
@@ -1091,4 +1130,8 @@ thead .breakdown-golfer-col { background: var(--augusta) !important; color: var(
   .results-entry-grid { grid-template-columns: 1fr 80px 60px 80px; font-size: 0.8rem; }
 
   .form-row { flex-direction: column; gap: 0; }
+
+  .playoff-bracket { flex-direction: column; overflow-x: visible; }
+  .bracket-round { min-width: 100%; }
+  .bonus-tracker-grid { gap: 1rem; }
 }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Breakdown - CVC Fantasy Golf 2026</title>
+  <title>Playoffs - CVC Fantasy Golf 2026</title>
   <link rel="icon" type="image/png" href="/CVC_Golf_Logo.png">
   <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" href="/CVC_Golf_Logo.png">
@@ -28,14 +28,14 @@
         <li><a href="standings.html">Standings</a></li>
         <li><a href="live.html"><span class="nav-live-dot"></span>Live</a></li>
         <li><a href="lineup.html">Lineup</a></li>
-        <li><a href="breakdown.html" class="active">Breakdown</a></li>
+        <li><a href="breakdown.html">Breakdown</a></li>
         <li><a href="weekly-results.html">Weekly Results</a></li>
         <li><a href="history.html">History</a></li>
         <li><a href="usage.html">Usage</a></li>
         <li><a href="schedule.html">Schedule</a></li>
         <li><a href="salaries.html">Salaries</a></li>
         <li><a href="money.html">Money</a></li>
-        <li><a href="playoffs.html">Playoffs</a></li>
+        <li><a href="playoffs.html" class="active">Playoffs</a></li>
         <li><a href="rules.html">Rules</a></li>
         <li><a href="account.html" id="accountLink">Account</a></li>
         <li><a href="admin.html" class="nav-admin" id="adminLink" style="display:none;">Admin</a></li>
@@ -46,41 +46,95 @@
 
   <main class="container">
     <header class="page-header">
-      <h1>Breakdown</h1>
-      <p class="subtitle">Weekly lineup breakdown matrix</p>
+      <h1>2026 Playoffs</h1>
+      <p class="subtitle" id="playoffSubtitle">Loading playoff status...</p>
     </header>
 
-    <div class="alert alert-info" style="background: var(--augusta-pale); border-left: 4px solid var(--augusta); padding: 0.75rem 1rem; border-radius: var(--radius); margin-bottom: 1.5rem;">
-      Lineup breakdown is available after lineups lock for each tournament.
-    </div>
-
+    <!-- Regular Season Winner Bonus Tracker -->
     <div class="card">
-      <div class="select-group" style="margin-bottom: 1rem;">
-        <label for="tournamentSelect">Tournament:</label>
-        <select id="tournamentSelect">
-          <option value="">Select a tournament...</option>
-        </select>
-      </div>
-
-      <div id="earningsPendingBanner" style="display:none; background:var(--gold-light); border-left:4px solid var(--gold); padding:0.75rem 1rem; border-radius:var(--radius); margin-bottom:1rem; font-size:0.9rem;">
-        Official earnings have not been recorded yet for this tournament. The commissioner will update the Breakdown page once final payouts are confirmed.
-      </div>
-
-      <div id="breakdownContainer" style="display:none;">
-        <div class="table-responsive">
-          <table class="data-table breakdown-table" id="breakdownTable">
-            <thead>
-              <tr id="breakdownHead"></tr>
-            </thead>
-            <tbody id="breakdownBody">
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div id="noData" style="display:none; text-align:center; padding:2rem; color:var(--gray-500);">
-        No lineup data available for this tournament.
+      <h2>Regular Season Winner Bonus Tracker</h2>
+      <p style="margin-bottom:0.75rem; color:var(--gray-600);">The regular season points leader carries a starting-earnings bonus into the Semifinal round &mdash; the lesser of $400,000 or their lead over 2nd place.</p>
+      <div class="bonus-tracker-grid" id="bonusTrackerGrid">
+        <div class="bonus-stat"><div class="bonus-stat-label">Loading&hellip;</div></div>
       </div>
     </div>
+
+    <!-- Projected / Locked Playoff Field -->
+    <div class="card">
+      <h2 id="fieldCardTitle">Projected Playoff Field</h2>
+      <p class="subtitle" id="fieldCardSubtitle" style="margin-bottom:0.75rem;"></p>
+      <div class="table-responsive">
+        <table class="data-table" id="fieldTable">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Player</th>
+              <th class="currency">Regular Season Earnings</th>
+            </tr>
+          </thead>
+          <tbody id="fieldBody">
+            <tr><td colspan="3" class="loading">Loading standings...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Playoff Bracket -->
+    <div class="card">
+      <h2>Playoff Bracket</h2>
+      <div class="playoff-bracket" id="playoffBracket">
+        <div class="loading">Loading bracket...</div>
+      </div>
+    </div>
+
+    <!-- Semifinal Standings -->
+    <div class="card">
+      <h2>Semifinal Standings <span class="subtitle">(3M Open &middot; Rocket Mortgage &middot; Wyndham)</span></h2>
+      <div class="table-responsive">
+        <table class="data-table" id="semifinalTable">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Player</th>
+              <th class="currency">Wk1</th>
+              <th class="currency">Wk2</th>
+              <th class="currency">Wk3</th>
+              <th class="currency">Total</th>
+              <th class="currency">Tiebreaker</th>
+              <th style="text-align:center">Status</th>
+            </tr>
+          </thead>
+          <tbody id="semifinalBody">
+            <tr><td colspan="8" class="loading">Semifinal round has not started yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Finals Standings -->
+    <div class="card">
+      <h2>Finals Standings <span class="subtitle">(FedEx St. Jude &middot; BMW Championship &middot; TOUR Championship)</span></h2>
+      <div class="table-responsive">
+        <table class="data-table" id="finalsTable">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Player</th>
+              <th class="currency">Wk1</th>
+              <th class="currency">Wk2</th>
+              <th class="currency">Wk3</th>
+              <th class="currency">Total</th>
+              <th class="currency">Tiebreaker</th>
+              <th style="text-align:center">Status</th>
+            </tr>
+          </thead>
+          <tbody id="finalsBody">
+            <tr><td colspan="8" class="loading">Finals round has not started yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </main>
 
   <footer class="footer">
@@ -118,6 +172,7 @@
 
   <script src="js/supabase-client.js"></script>
   <script src="js/auth.js"></script>
-  <script src="js/breakdown.js"></script>
+  <script src="js/weekly-bonus-config.js"></script>
+  <script src="js/playoffs.js"></script>
 </body>
 </html>
