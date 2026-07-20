@@ -5,10 +5,15 @@ const MAX_PICKS = 5;
 const MAX_USES = 5;
 const MAX_LIV_USES = 2;
 const MAX_MAJOR_USES = 2;
+const TIEBREAKER_MAX_USES = 4; // must be used 4 or fewer times - never at the normal 5-use limit
+const PLAYOFF_WEEK_START = 22;
+const PLAYOFF_WEEK_END = 27;
 let selectedGolfers = [];
 let allGolfers = [];
 let currentTournament = null;
 let isLocked = false;
+let isPlayoffWeek = false;
+let selectedTiebreaker = null; // { id, name } or null
 let golferUsageMap = {};   // golfer_id -> { times_used, major_uses }
 let wdStatusMap = {};      // golfer name -> true if withdrawn
 let teeTimeMap = {};        // golfer name -> Round 1 tee time string
@@ -24,6 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderGolferPool();
   await loadExistingLineup();
   await loadWDStatus();
+  if (isPlayoffWeek) await loadExistingTiebreaker();
   updateUI();
   setupControls();
 });
@@ -46,6 +52,10 @@ async function loadCurrentTournament() {
 
   const info = document.getElementById('tournamentInfo');
   info.innerHTML = `<strong>Week ${currentTournament.week_number}: ${currentTournament.name}</strong> &mdash; ${currentTournament.course} &mdash; ${formatDateRange(currentTournament.start_date, currentTournament.end_date)}`;
+
+  isPlayoffWeek = currentTournament.week_number >= PLAYOFF_WEEK_START && currentTournament.week_number <= PLAYOFF_WEEK_END;
+  const tiebreakerCard = document.getElementById('tiebreakerCard');
+  if (tiebreakerCard) tiebreakerCard.style.display = isPlayoffWeek ? '' : 'none';
 
   // Determine lock time: use first_tee_time if available, else midnight on start_date
   let lockDate;
@@ -269,6 +279,23 @@ async function loadExistingLineup() {
   }
 }
 
+async function loadExistingTiebreaker() {
+  if (!currentTournament) return;
+  const player = getCurrentPlayer();
+
+  const { data } = await supabaseClient
+    .from('playoff_lineups')
+    .select('tiebreaker_golfer_id')
+    .eq('player_id', player.id)
+    .eq('tournament_id', currentTournament.id)
+    .maybeSingle();
+
+  if (data?.tiebreaker_golfer_id) {
+    const golfer = allGolfers.find(g => g.id === data.tiebreaker_golfer_id);
+    if (golfer) selectedTiebreaker = { id: golfer.id, name: golfer.name };
+  }
+}
+
 async function loadWDStatus() {
   try {
     const res = await fetch('/.netlify/functions/get-wd-status');
@@ -296,6 +323,7 @@ function setupControls() {
   document.getElementById('golferSearch').addEventListener('input', renderGolferPool);
   document.getElementById('salaryFilter').addEventListener('change', renderGolferPool);
   document.getElementById('submitLineup').addEventListener('click', submitLineup);
+  document.getElementById('tiebreakerSearch').addEventListener('input', renderTiebreakerList);
 
   document.querySelectorAll('#fieldToggle .filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -356,6 +384,10 @@ function updateUI() {
   }
 
   renderGolferPool();
+  if (isPlayoffWeek) {
+    renderTiebreakerSlot();
+    renderTiebreakerList();
+  }
 }
 
 function getUsageInfo(golferId) {
@@ -453,6 +485,68 @@ function renderGolferPool() {
   }
 }
 
+function isTiebreakerEligible(golferId) {
+  return getUsageInfo(golferId).times_used <= TIEBREAKER_MAX_USES;
+}
+
+function renderTiebreakerSlot() {
+  const slot = document.getElementById('tiebreakerSlot');
+  if (!slot) return;
+
+  if (selectedTiebreaker) {
+    slot.classList.remove('empty');
+    slot.classList.add('filled');
+    slot.innerHTML = `<span class="slot-name">${selectedTiebreaker.name}</span><span class="slot-salary">Tiebreaker</span>`;
+    slot.onclick = isLocked ? null : () => {
+      selectedTiebreaker = null;
+      renderTiebreakerSlot();
+      renderTiebreakerList();
+    };
+  } else {
+    slot.classList.add('empty');
+    slot.classList.remove('filled');
+    slot.innerHTML = '<span class="slot-name">No tiebreaker selected</span>';
+    slot.onclick = null;
+  }
+}
+
+function renderTiebreakerList() {
+  const list = document.getElementById('tiebreakerList');
+  if (!list) return;
+  const search = (document.getElementById('tiebreakerSearch')?.value || '').toLowerCase();
+
+  let filtered = allGolfers.filter(g => isTiebreakerEligible(g.id));
+  if (search) filtered = filtered.filter(g => g.name.toLowerCase().includes(search));
+  filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<p class="loading">No eligible golfers match your search</p>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(g => {
+    const usage = getUsageInfo(g.id);
+    const isLiv = g.is_liv || false;
+    const maxUses = isLiv ? MAX_LIV_USES : MAX_USES;
+    const usageLabel = isLiv ? `LIV ${usage.times_used}/${maxUses}` : `${usage.times_used}/${maxUses}`;
+    const isSelected = selectedTiebreaker?.id === g.id;
+    return `<div class="golfer-row ${isSelected ? 'selected' : ''}" data-id="${g.id}" data-name="${g.name}">
+      <span class="g-name">${g.name}</span>
+      <span class="g-usage ${getUsageClass(usage.times_used)}">${usageLabel}</span>
+    </div>`;
+  }).join('');
+
+  if (!isLocked) {
+    list.querySelectorAll('.golfer-row:not(.selected)').forEach(row => {
+      row.addEventListener('click', () => {
+        selectedTiebreaker = { id: parseInt(row.dataset.id), name: row.dataset.name };
+        renderTiebreakerSlot();
+        renderTiebreakerList();
+      });
+    });
+  }
+}
+
 function addGolfer(golfer) {
   if (selectedGolfers.length >= MAX_PICKS) return;
   if (getSalaryUsed() + golfer.salary > SALARY_CAP) return;
@@ -491,6 +585,12 @@ async function submitLineup() {
     return;
   }
 
+  if (isPlayoffWeek && !selectedTiebreaker) {
+    msg.textContent = 'Select a tiebreaker golfer before submitting - required during playoff weeks.';
+    msg.className = 'lineup-msg error';
+    return;
+  }
+
   // Delete existing lineup
   await supabaseClient
     .from('lineups')
@@ -511,8 +611,29 @@ async function submitLineup() {
   if (error) {
     msg.textContent = 'Error saving lineup: ' + error.message;
     msg.className = 'lineup-msg error';
-  } else {
-    msg.textContent = 'Lineup saved successfully!';
-    msg.className = 'lineup-msg success';
+    return;
   }
+
+  if (isPlayoffWeek && selectedTiebreaker) {
+    const { error: tbError } = await supabaseClient
+      .from('playoff_lineups')
+      .upsert({
+        player_id: player.id,
+        tournament_id: currentTournament.id,
+        tiebreaker_golfer_id: selectedTiebreaker.id
+      }, { onConflict: 'player_id,tournament_id' });
+
+    if (tbError) {
+      msg.textContent = 'Lineup saved, but the tiebreaker failed to save: ' + tbError.message;
+      msg.className = 'lineup-msg error';
+      return;
+    }
+
+    msg.textContent = `Lineup saved successfully! Tiebreaker: ${selectedTiebreaker.name}`;
+    msg.className = 'lineup-msg success';
+    return;
+  }
+
+  msg.textContent = 'Lineup saved successfully!';
+  msg.className = 'lineup-msg success';
 }

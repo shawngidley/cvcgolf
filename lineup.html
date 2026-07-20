@@ -102,6 +102,17 @@
         </div>
       </div>
     </div>
+
+    <!-- Tiebreaker Golfer - playoff weeks (22-27) only -->
+    <div class="card" id="tiebreakerCard" style="display:none;">
+      <h2>Tiebreaker Golfer <span class="tournament-caption">(Playoff Only)</span></h2>
+      <p style="margin-bottom:0.75rem; color:var(--gray-600);">Tiebreaker only counts if there is a tie at the end of the round. It does not count against the $100 cap or your golfer usage totals, and can change week to week. Only golfers used 4 or fewer times are eligible.</p>
+      <div class="lineup-slot empty" id="tiebreakerSlot">
+        <span class="slot-name">No tiebreaker selected</span>
+      </div>
+      <input type="text" id="tiebreakerSearch" class="search-input" placeholder="Search golfers for tiebreaker..." style="margin-top:0.75rem;">
+      <div class="golfer-list" id="tiebreakerList" style="margin-top:0.5rem; max-height:240px; overflow-y:auto;"></div>
+    </div>
   </main>
 
   <footer class="footer">
