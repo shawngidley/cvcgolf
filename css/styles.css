@@ -512,6 +512,9 @@ body {
 
 .lineup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
 
+.lineup-column { display: flex; flex-direction: column; }
+.lineup-column .lineup-card { margin-bottom: 0.75rem; }
+
 .lineup-slots { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
 
 .lineup-slot {

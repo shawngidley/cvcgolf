@@ -320,16 +320,22 @@ async function loadWDStatus() {
 }
 
 function setupControls() {
-  document.getElementById('golferSearch').addEventListener('input', renderGolferPool);
-  document.getElementById('salaryFilter').addEventListener('change', renderGolferPool);
+  document.getElementById('golferSearch').addEventListener('input', () => {
+    renderGolferPool();
+    if (isPlayoffWeek) renderTiebreakerList();
+  });
+  document.getElementById('salaryFilter').addEventListener('change', () => {
+    renderGolferPool();
+    if (isPlayoffWeek) renderTiebreakerList();
+  });
   document.getElementById('submitLineup').addEventListener('click', submitLineup);
-  document.getElementById('tiebreakerSearch').addEventListener('input', renderTiebreakerList);
 
   document.querySelectorAll('#fieldToggle .filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       fieldFilterMode = btn.dataset.mode;
       document.querySelectorAll('#fieldToggle .filter-btn').forEach(b => b.classList.toggle('active', b === btn));
       renderGolferPool();
+      if (isPlayoffWeek) renderTiebreakerList();
     });
   });
 }
@@ -510,14 +516,24 @@ function renderTiebreakerSlot() {
   }
 }
 
+// Mirrors renderGolferPool()'s combined list, field toggle, search, and
+// salary filter exactly - just narrowed to tiebreaker-eligible golfers and
+// sorted the same way (salary desc, then owgr asc).
 function renderTiebreakerList() {
   const list = document.getElementById('tiebreakerList');
   if (!list) return;
-  const search = (document.getElementById('tiebreakerSearch')?.value || '').toLowerCase();
+
+  const search = (document.getElementById('golferSearch')?.value || '').toLowerCase();
+  const salaryFilterVal = document.getElementById('salaryFilter')?.value || '';
 
   let filtered = allGolfers.filter(g => isTiebreakerEligible(g.id));
+  if (fieldFilterMode === 'field' && inFieldSet) {
+    filtered = filtered.filter(g => inFieldSet.has(normalizeGolferName(g.name)));
+  }
   if (search) filtered = filtered.filter(g => g.name.toLowerCase().includes(search));
-  filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+  if (salaryFilterVal) filtered = filtered.filter(g => g.salary === parseInt(salaryFilterVal));
+
+  filtered = [...filtered].sort((a, b) => b.salary - a.salary || a.owgr - b.owgr);
 
   if (filtered.length === 0) {
     list.innerHTML = '<p class="loading">No eligible golfers match your search</p>';
@@ -530,9 +546,13 @@ function renderTiebreakerList() {
     const maxUses = isLiv ? MAX_LIV_USES : MAX_USES;
     const usageLabel = isLiv ? `LIV ${usage.times_used}/${maxUses}` : `${usage.times_used}/${maxUses}`;
     const isSelected = selectedTiebreaker?.id === g.id;
+    const wdBadge = wdStatusMap[g.name] ? ' <span class="wd-badge">WD</span>' : '';
+    const fieldBadge = g.isFieldOnly ? '<span class="g-field-badge">Field</span>' : '';
     return `<div class="golfer-row ${isSelected ? 'selected' : ''}" data-id="${g.id}" data-name="${g.name}">
-      <span class="g-name">${g.name}</span>
+      <span class="g-name">${g.name}${wdBadge}</span>
+      ${fieldBadge}
       <span class="g-usage ${getUsageClass(usage.times_used)}">${usageLabel}</span>
+      <span class="g-salary">$${g.salary}</span>
     </div>`;
   }).join('');
 
