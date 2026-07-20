@@ -84,30 +84,29 @@ async function loadPlayoffs() {
 
   const semiComplete = semiT.length === SEMIFINAL_WEEKS.length && semiT.every(t => t.is_complete);
 
-  let semiResults = null;
-  if (semifinalStarted) {
-    semiResults = semifinalists.map(sf => {
-      const weekTotals = semiT.map(t => started(t) ? (scoreMap[`${sf.player_id}-${t.id}`] || 0) : null);
-      const isSeed1 = sf.player_id === seed1Id && seed1Bonus > 0;
-      // The starting bonus is applied once, folded into Week 1 - it is never
-      // re-added for Week 2 or Week 3.
-      if (isSeed1) weekTotals[0] = (weekTotals[0] || 0) + seed1Bonus;
-      const total = weekTotals.reduce((sum, v) => sum + (v || 0), 0);
-      return {
-        player_id: sf.player_id, name: sf.name, weekTotals, total,
-        seedBonus: isSeed1 ? seed1Bonus : 0,
-        tiebreaker: tiebreakerFor(sf.player_id, ['semifinal'])
-      };
-    });
-    semiResults.sort((a, b) => (b.total - a.total) || (b.tiebreaker - a.tiebreaker));
-    semiResults.forEach((r, i) => {
-      r.status = semiComplete ? (i < 3 ? 'ADVANCED' : 'ELIMINATED') : 'IN PROGRESS';
-    });
-  }
+  // Built unconditionally (even before Week 22 starts) so the #1 seed's
+  // bonus shows as their pre-populated Week 1 / starting total right away.
+  const semiResults = semifinalists.map(sf => {
+    const weekTotals = semiT.map(t => started(t) ? (scoreMap[`${sf.player_id}-${t.id}`] || 0) : null);
+    const isSeed1 = sf.player_id === seed1Id && seed1Bonus > 0;
+    // The starting bonus is applied once, folded into Week 1 - it is never
+    // re-added for Week 2 or Week 3.
+    if (isSeed1) weekTotals[0] = (weekTotals[0] || 0) + seed1Bonus;
+    const total = weekTotals.reduce((sum, v) => sum + (v || 0), 0);
+    return {
+      player_id: sf.player_id, name: sf.name, weekTotals, total,
+      seedBonus: isSeed1 ? seed1Bonus : 0,
+      tiebreaker: tiebreakerFor(sf.player_id, ['semifinal'])
+    };
+  });
+  semiResults.sort((a, b) => (b.total - a.total) || (b.tiebreaker - a.tiebreaker));
+  semiResults.forEach((r, i) => {
+    r.status = semiComplete ? (i < 3 ? 'ADVANCED' : 'ELIMINATED') : (semifinalStarted ? 'IN PROGRESS' : 'PENDING');
+  });
   renderSemifinalTable(semiResults);
 
   // ----- Finals field: top 3 of the completed semifinal -----
-  const finalists = (semiComplete && semiResults) ? semiResults.slice(0, 3).map(r => ({ player_id: r.player_id, name: r.name })) : [];
+  const finalists = semiComplete ? semiResults.slice(0, 3).map(r => ({ player_id: r.player_id, name: r.name })) : [];
 
   // Phase 1: Week 25 alone decides who's eliminated.
   let elimResults = null;
@@ -150,7 +149,7 @@ async function loadPlayoffs() {
   }
   renderChampionshipTable(champResults);
 
-  renderBracket(semifinalists, semiResults, finalists, elimResults, champResults);
+  renderBracket(semiResults, finalists, elimResults, champResults);
 
   let stage = 'pre-playoffs';
   if (semifinalStarted) stage = 'semifinal';
@@ -252,16 +251,19 @@ function renderChampionshipTable(results) {
   `).join('');
 }
 
-function renderBracket(semifinalists, semiResults, finalists, elimResults, champResults) {
+function renderBracket(semiResults, finalists, elimResults, champResults) {
   const bracket = document.getElementById('playoffBracket');
 
-  const semiSlots = (semiResults || semifinalists.map(s => ({ ...s, status: null }))).map(s => {
-    const cls = s.status === 'ADVANCED' ? 'advanced' : s.status === 'ELIMINATED' ? 'eliminated' : semiResults ? '' : 'projected';
-    const earningsLine = semiResults ? `<div class="bracket-slot-earnings">${formatCurrency(s.total)}</div>` : '';
+  // Each participant's card shows just their name - except the #1 seed,
+  // who shows their one-time starting bonus in gold. No other earnings
+  // are shown here; the Semifinal Standings table below has the detail.
+  const semiSlots = semiResults.map(s => {
+    const cls = s.status === 'ADVANCED' ? 'advanced' : s.status === 'ELIMINATED' ? 'eliminated' : s.status === 'PENDING' ? 'projected' : '';
+    const bonusLine = s.seedBonus ? `<div class="bracket-slot-bonus">Bonus: ${formatCurrency(s.seedBonus)}</div>` : '';
     return `
       <div class="bracket-slot ${cls}">
         <div class="bracket-slot-name">${s.name}</div>
-        ${earningsLine}
+        ${bonusLine}
       </div>`;
   }).join('');
 

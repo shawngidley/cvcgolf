@@ -1067,6 +1067,7 @@ thead .breakdown-golfer-col { background: var(--augusta) !important; color: var(
 }
 .bracket-slot-name { font-weight: 600; font-size: 0.85rem; color: var(--gray-800); }
 .bracket-slot-earnings { font-size: 0.72rem; color: var(--gray-500); margin-top: 0.1rem; }
+.bracket-slot-bonus { font-size: 0.72rem; color: var(--gold-dark); font-weight: 700; margin-top: 0.1rem; }
 .bracket-slot.tbd { color: var(--gray-400); font-style: italic; text-align: center; border-left-color: var(--gray-200); }
 .bracket-slot.projected { border-left-color: var(--gray-300); opacity: 0.85; }
 .bracket-slot.advanced { border-left-color: var(--augusta); background: var(--augusta-pale); }
