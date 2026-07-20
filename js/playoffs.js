@@ -1,9 +1,15 @@
 // CVC Fantasy Golf 2026 - Playoffs Page
-// 14 players, top 6 regular-season earners (weeks 1-21) make the playoffs.
-// Semifinal (weeks 22-24) earnings do NOT carry over from the regular season.
-// Finals (weeks 25-27) earnings ARE cumulative across those 3 weeks; week 25's
-// low earner of the 3 semifinal survivors is eliminated, the remaining 2 play
-// on through weeks 26-27 and the higher cumulative Finals total wins it all.
+//
+// Semifinal (weeks 22-24): all 6 qualifiers start at $0, EXCEPT the regular
+// season #1 seed, who starts with a one-time bonus (lesser of $400,000 or
+// their lead over 2nd place in the final regular-season standings). That
+// bonus is applied once - folded into their Week 1 number - not re-applied
+// each week. Top 3 combined (bonus + 3 weeks) earners advance to the Finals.
+//
+// Finals (weeks 25-27) run as TWO separate scoring periods:
+//   1. Week 25 alone decides who's eliminated (lowest of the 3 finalists).
+//   2. Weeks 26+27 combined decide the champion between the 2 survivors -
+//      Week 25 earnings do NOT carry into the championship total.
 
 const SEMIFINAL_WEEKS = [22, 23, 24];
 const FINALS_WEEKS = [25, 26, 27];
@@ -30,6 +36,7 @@ async function loadPlayoffs() {
   const regStartedT = regSeasonT.filter(started);
   const semiT = tournaments.filter(t => SEMIFINAL_WEEKS.includes(t.week_number)).sort((a, b) => a.week_number - b.week_number);
   const finalsT = tournaments.filter(t => FINALS_WEEKS.includes(t.week_number)).sort((a, b) => a.week_number - b.week_number);
+  const [week25, week26, week27] = finalsT;
 
   const relevantIds = [...regStartedT, ...semiT, ...finalsT].map(t => t.id);
 
@@ -74,25 +81,25 @@ async function loadPlayoffs() {
   const semifinalStarted = semiT.some(started);
   renderProjectedField(regStandings, weeksRemaining, semifinalStarted);
 
-  // ----- Determine stage -----
-  const semiComplete = semiT.length === SEMIFINAL_WEEKS.length && semiT.every(t => t.is_complete);
-  let stage = 'pre-playoffs';
-  if (semifinalStarted) stage = 'semifinal';
-
-  // ----- Semifinal field: top 6 of regular season, with the #1 seed's bonus -----
+  // ----- Semifinal field: top 6 of regular season -----
   const semifinalists = regStandings.slice(0, PLAYOFF_FIELD_SIZE);
-  const bonus = regSeasonBonus(regStandings);
+  const seed1Id = regStandings[0]?.player_id;
+  const seed1Bonus = regSeasonBonus(regStandings);
+
+  const semiComplete = semiT.length === SEMIFINAL_WEEKS.length && semiT.every(t => t.is_complete);
 
   let semiResults = null;
   if (semifinalStarted) {
     semiResults = semifinalists.map(sf => {
       const weekTotals = semiT.map(t => started(t) ? (scoreMap[`${sf.player_id}-${t.id}`] || 0) : null);
-      let total = weekTotals.reduce((sum, v) => sum + (v || 0), 0);
-      const isSeed1 = sf.player_id === regStandings[0]?.player_id && bonus > 0;
-      if (isSeed1) total += bonus;
+      const isSeed1 = sf.player_id === seed1Id && seed1Bonus > 0;
+      // The starting bonus is applied once, folded into Week 1 - it is never
+      // re-added for Week 2 or Week 3.
+      if (isSeed1) weekTotals[0] = (weekTotals[0] || 0) + seed1Bonus;
+      const total = weekTotals.reduce((sum, v) => sum + (v || 0), 0);
       return {
         player_id: sf.player_id, name: sf.name, weekTotals, total,
-        seedBonus: isSeed1 ? bonus : 0,
+        seedBonus: isSeed1 ? seed1Bonus : 0,
         tiebreaker: tiebreakerFor(sf.player_id, ['semifinal'])
       };
     });
@@ -101,68 +108,65 @@ async function loadPlayoffs() {
       r.status = semiComplete ? (i < 3 ? 'ADVANCED' : 'ELIMINATED') : 'IN PROGRESS';
     });
   }
-  renderRoundTable('semifinalBody', semiT, semiResults, 8, 'The Semifinal round has not started yet.');
+  renderSemifinalTable(semiResults);
 
   // ----- Finals field: top 3 of the completed semifinal -----
   const finalists = (semiComplete && semiResults) ? semiResults.slice(0, 3).map(r => ({ player_id: r.player_id, name: r.name })) : [];
-  const finalsStarted = finalsT.some(started);
-  if (finalsStarted) stage = 'finals';
 
-  let finalsResults = null;
-  if (finalists.length === 3 && finalsStarted) {
-    const [week25, week26, week27] = finalsT;
-
-    finalsResults = finalists.map(f => ({
+  // Phase 1: Week 25 alone decides who's eliminated.
+  let elimResults = null;
+  if (finalists.length === 3 && week25 && started(week25)) {
+    elimResults = finalists.map(f => ({
       player_id: f.player_id,
       name: f.name,
-      wk1: week25 && started(week25) ? (scoreMap[`${f.player_id}-${week25.id}`] || 0) : null,
-      wk2: null,
-      wk3: null,
-      total: 0,
-      eliminated: false
+      wk1: scoreMap[`${f.player_id}-${week25.id}`] || 0,
+      tiebreaker: tiebreakerFor(f.player_id, ['finals_w1'])
     }));
-
-    if (week25 && week25.is_complete) {
-      const byWeek1 = [...finalsResults].sort((a, b) =>
-        (a.wk1 - b.wk1) || (tiebreakerFor(a.player_id, ['finals_w1']) - tiebreakerFor(b.player_id, ['finals_w1']))
-      );
-      const lowest = byWeek1[0];
-      finalsResults.forEach(f => { f.eliminated = f.player_id === lowest.player_id; });
+    elimResults.sort((a, b) => (b.wk1 - a.wk1) || (b.tiebreaker - a.tiebreaker));
+    if (week25.is_complete) {
+      elimResults.forEach((r, i) => { r.status = i < 2 ? 'ADVANCED' : 'ELIMINATED'; });
+    } else {
+      elimResults.forEach(r => { r.status = 'IN PROGRESS'; });
     }
+  }
+  renderEliminationTable(elimResults);
 
-    finalsResults.forEach(f => {
-      if (f.eliminated) { f.total = f.wk1 || 0; return; }
-      f.wk2 = week26 && started(week26) ? (scoreMap[`${f.player_id}-${week26.id}`] || 0) : null;
-      f.wk3 = week27 && started(week27) ? (scoreMap[`${f.player_id}-${week27.id}`] || 0) : null;
-      f.total = (f.wk1 || 0) + (f.wk2 || 0) + (f.wk3 || 0);
-      f.tiebreaker = tiebreakerFor(f.player_id, ['finals_w1', 'finals_w2', 'finals_w3']);
+  // Phase 2: Weeks 26+27 combined decide the champion between the 2 survivors.
+  const week25Complete = week25 && week25.is_complete;
+  const survivors = week25Complete && elimResults ? elimResults.filter(r => r.status !== 'ELIMINATED') : [];
+
+  let champResults = null;
+  if (survivors.length === 2 && ((week26 && started(week26)) || (week27 && started(week27)))) {
+    champResults = survivors.map(s => {
+      const wk2 = week26 && started(week26) ? (scoreMap[`${s.player_id}-${week26.id}`] || 0) : null;
+      const wk3 = week27 && started(week27) ? (scoreMap[`${s.player_id}-${week27.id}`] || 0) : null;
+      const total = (wk2 || 0) + (wk3 || 0);
+      return {
+        player_id: s.player_id, name: s.name, wk2, wk3, total,
+        tiebreaker: tiebreakerFor(s.player_id, ['finals_w2', 'finals_w3'])
+      };
     });
-
-    const active = finalsResults.filter(f => !f.eliminated);
-    active.sort((a, b) => (b.total - a.total) || ((b.tiebreaker || 0) - (a.tiebreaker || 0)));
+    champResults.sort((a, b) => (b.total - a.total) || (b.tiebreaker - a.tiebreaker));
     const week27Complete = week27 && week27.is_complete;
-
-    finalsResults.sort((a, b) => {
-      if (a.eliminated !== b.eliminated) return a.eliminated ? 1 : -1;
-      return (b.total - a.total) || ((b.tiebreaker || 0) - (a.tiebreaker || 0));
-    });
-    finalsResults.forEach(f => {
-      if (f.eliminated) { f.status = 'ELIMINATED'; return; }
-      if (week27Complete) {
-        f.status = active[0] && f.player_id === active[0].player_id ? 'WINNER' : 'RUNNER-UP';
-      } else {
-        f.status = 'IN PROGRESS';
-      }
+    champResults.forEach((r, i) => {
+      r.status = week27Complete ? (i === 0 ? 'WINNER' : 'RUNNER-UP') : 'IN PROGRESS';
     });
   }
-  renderRoundTable('finalsBody', finalsT, finalsResults, 8, 'The Finals round has not started yet.');
+  renderChampionshipTable(champResults);
 
-  renderBracket(stage, semifinalists, semiResults, finalists, finalsResults);
+  renderBracket(semifinalists, semiResults, finalists, elimResults, champResults);
 
+  let stage = 'pre-playoffs';
+  if (semifinalStarted) stage = 'semifinal';
+  if (elimResults) stage = 'finals-elimination';
+  if (champResults) stage = 'finals-championship';
+
+  const champion = champResults && champResults.find(r => r.status === 'WINNER');
   const subtitleMap = {
     'pre-playoffs': `Regular season in progress — ${weeksRemaining} week${weeksRemaining === 1 ? '' : 's'} remaining before the playoff field is set`,
     semifinal: semiComplete ? 'Semifinal complete — top 3 advance to the Finals' : 'Semifinal round in progress (Weeks 22-24)',
-    finals: 'Finals round in progress (Weeks 25-27)'
+    'finals-elimination': 'Finals — Elimination Round in progress (Week 25)',
+    'finals-championship': champion ? `${champion.name} wins the 2026 Championship!` : 'Finals — Championship round in progress (Weeks 26-27)'
   };
   document.getElementById('playoffSubtitle').textContent = subtitleMap[stage];
 }
@@ -198,7 +202,7 @@ function renderBonusTracker(regStandings) {
       <div class="bonus-stat-value">${formatCurrency(diff)}</div>
     </div>
     <div class="bonus-stat">
-      <div class="bonus-stat-label">Current Bonus (capped at $400,000)</div>
+      <div class="bonus-stat-label">${leader.name}'s Semifinal Starting Bonus</div>
       <div class="bonus-stat-value gold">${formatCurrency(bonus)}</div>
     </div>
   `;
@@ -246,24 +250,27 @@ function statusPill(status) {
   return `<span class="playoff-status-pill ${map[status] || 'status-progress'}">${status}</span>`;
 }
 
-function renderRoundTable(bodyId, roundTournaments, results, colspan, emptyMessage) {
-  const tbody = document.getElementById(bodyId);
+function rowClassFor(status) {
+  if (status === 'ADVANCED' || status === 'WINNER' || status === 'RUNNER-UP') return 'row-advanced';
+  if (status === 'ELIMINATED') return 'row-eliminated';
+  return '';
+}
+
+function renderSemifinalTable(results) {
+  const tbody = document.getElementById('semifinalBody');
   if (!results) {
-    tbody.innerHTML = `<tr><td colspan="${colspan}" class="loading">${emptyMessage}</td></tr>`;
+    tbody.innerHTML = '<tr><td colspan="8" class="loading">Semifinal round has not started yet.</td></tr>';
     return;
   }
 
   tbody.innerHTML = results.map((r, i) => {
-    const weeks = r.weekTotals || [r.wk1, r.wk2, r.wk3];
     const weekCells = [0, 1, 2].map(idx => {
-      const v = weeks[idx];
+      const v = r.weekTotals[idx];
       return `<td class="currency">${v === null || v === undefined ? '-' : formatCurrency(v)}</td>`;
     }).join('');
-    const rowClass = r.status === 'ADVANCED' || r.status === 'WINNER' || r.status === 'RUNNER-UP' ? 'row-advanced'
-      : r.status === 'ELIMINATED' ? 'row-eliminated' : '';
-    const bonusNote = r.seedBonus ? ` <span class="bracket-slot-earnings">(incl. ${formatCurrency(r.seedBonus)} seed bonus)</span>` : '';
+    const bonusNote = r.seedBonus ? ` <span class="bracket-slot-earnings">(Wk1 incl. ${formatCurrency(r.seedBonus)} seed bonus)</span>` : '';
     return `
-      <tr class="${rowClass}">
+      <tr class="${rowClassFor(r.status)}">
         <td class="rank-cell">${i + 1}</td>
         <td><strong>${r.name}</strong>${bonusNote}</td>
         ${weekCells}
@@ -275,7 +282,43 @@ function renderRoundTable(bodyId, roundTournaments, results, colspan, emptyMessa
   }).join('');
 }
 
-function renderBracket(stage, semifinalists, semiResults, finalists, finalsResults) {
+function renderEliminationTable(results) {
+  const tbody = document.getElementById('finalsEliminationBody');
+  if (!results) {
+    tbody.innerHTML = '<tr><td colspan="5" class="loading">Finals Week 1 has not started yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = results.map((r, i) => `
+    <tr class="${rowClassFor(r.status)}">
+      <td class="rank-cell">${i + 1}</td>
+      <td><strong>${r.name}</strong></td>
+      <td class="currency"><strong>${formatCurrency(r.wk1)}</strong></td>
+      <td class="currency">${r.tiebreaker ? formatCurrency(r.tiebreaker) : '-'}</td>
+      <td style="text-align:center">${statusPill(r.status)}</td>
+    </tr>
+  `).join('');
+}
+
+function renderChampionshipTable(results) {
+  const tbody = document.getElementById('finalsChampionshipBody');
+  if (!results) {
+    tbody.innerHTML = '<tr><td colspan="7" class="loading">Championship round has not started yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = results.map((r, i) => `
+    <tr class="${rowClassFor(r.status)}">
+      <td class="rank-cell">${i + 1}</td>
+      <td><strong>${r.name}</strong></td>
+      <td class="currency">${r.wk2 === null ? '-' : formatCurrency(r.wk2)}</td>
+      <td class="currency">${r.wk3 === null ? '-' : formatCurrency(r.wk3)}</td>
+      <td class="currency"><strong>${formatCurrency(r.total)}</strong></td>
+      <td class="currency">${r.tiebreaker ? formatCurrency(r.tiebreaker) : '-'}</td>
+      <td style="text-align:center">${statusPill(r.status)}</td>
+    </tr>
+  `).join('');
+}
+
+function renderBracket(semifinalists, semiResults, finalists, elimResults, champResults) {
   const bracket = document.getElementById('playoffBracket');
 
   const semiSlots = (semiResults || semifinalists.map(s => ({ ...s, status: null }))).map(s => {
@@ -287,26 +330,25 @@ function renderBracket(stage, semifinalists, semiResults, finalists, finalsResul
       </div>`;
   }).join('');
 
-  const finalsW1Slots = finalists.length === 3
-    ? (finalsResults || finalists.map(f => ({ ...f }))).map(f => {
+  const elimSlots = finalists.length === 3
+    ? (elimResults || finalists.map(f => ({ ...f }))).map(f => {
         const cls = f.status === 'ELIMINATED' ? 'eliminated' : (f.status ? 'advanced' : '');
-        const earnings = f.total !== undefined ? formatCurrency(f.total) : 'TBD';
+        const earnings = f.wk1 !== undefined ? formatCurrency(f.wk1) : 'TBD';
         return `<div class="bracket-slot ${cls}"><div class="bracket-slot-name">${f.name}</div><div class="bracket-slot-earnings">${earnings}</div></div>`;
       }).join('')
     : '<div class="bracket-slot tbd">TBD</div>';
 
   let championSlot = '<div class="bracket-slot tbd">TBD</div>';
-  if (finalsResults) {
-    const champion = finalsResults.find(f => f.status === 'WINNER');
-    const runnerUp = finalsResults.find(f => f.status === 'RUNNER-UP');
+  if (champResults) {
+    const champion = champResults.find(r => r.status === 'WINNER');
+    const runnerUp = champResults.find(r => r.status === 'RUNNER-UP');
     if (champion) {
       championSlot = `<div class="bracket-slot champion"><div class="bracket-slot-name">🏆 ${champion.name}</div><div class="bracket-slot-earnings">${formatCurrency(champion.total)}</div></div>`;
+      if (runnerUp) {
+        championSlot += `<div class="bracket-slot eliminated"><div class="bracket-slot-name">${runnerUp.name}</div><div class="bracket-slot-earnings">${formatCurrency(runnerUp.total)}</div></div>`;
+      }
     } else {
-      const active = finalsResults.filter(f => !f.eliminated);
-      championSlot = active.map(f => `<div class="bracket-slot advanced"><div class="bracket-slot-name">${f.name}</div><div class="bracket-slot-earnings">${formatCurrency(f.total)}</div></div>`).join('');
-    }
-    if (!champion && runnerUp) {
-      championSlot += `<div class="bracket-slot eliminated"><div class="bracket-slot-name">${runnerUp.name}</div><div class="bracket-slot-earnings">${formatCurrency(runnerUp.total)}</div></div>`;
+      championSlot = champResults.map(r => `<div class="bracket-slot advanced"><div class="bracket-slot-name">${r.name}</div><div class="bracket-slot-earnings">${formatCurrency(r.total)}</div></div>`).join('');
     }
   }
 
@@ -316,11 +358,11 @@ function renderBracket(stage, semifinalists, semiResults, finalists, finalsResul
       <div class="bracket-slots">${semiSlots}</div>
     </div>
     <div class="bracket-round">
-      <div class="bracket-round-title">Finals Wk1 (3)</div>
-      <div class="bracket-slots">${finalsW1Slots}</div>
+      <div class="bracket-round-title">Elimination Rd &mdash; Wk25 (3)</div>
+      <div class="bracket-slots">${elimSlots}</div>
     </div>
     <div class="bracket-round">
-      <div class="bracket-round-title">Champion (2 &rarr; 1)</div>
+      <div class="bracket-round-title">Champion &mdash; Wk26+27 (2 &rarr; 1)</div>
       <div class="bracket-slots">${championSlot}</div>
     </div>
   `;

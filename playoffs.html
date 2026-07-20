@@ -53,7 +53,7 @@
     <!-- Regular Season Winner Bonus Tracker -->
     <div class="card">
       <h2>Regular Season Winner Bonus Tracker</h2>
-      <p style="margin-bottom:0.75rem; color:var(--gray-600);">The regular season points leader carries a starting-earnings bonus into the Semifinal round &mdash; the lesser of $400,000 or their lead over 2nd place.</p>
+      <p style="margin-bottom:0.75rem; color:var(--gray-600);">All 6 Semifinal qualifiers start the round at $0, except the regular season #1 seed &mdash; they start with a one-time bonus equal to the lesser of $400,000 or their earnings lead over 2nd place. The bonus is added once, not re-applied each week.</p>
       <div class="bonus-tracker-grid" id="bonusTrackerGrid">
         <div class="bonus-stat"><div class="bonus-stat-label">Loading&hellip;</div></div>
       </div>
@@ -90,6 +90,7 @@
     <!-- Semifinal Standings -->
     <div class="card">
       <h2>Semifinal Standings <span class="subtitle">(3M Open &middot; Rocket Mortgage &middot; Wyndham)</span></h2>
+      <p style="margin-bottom:0.75rem; color:var(--gray-600);">Wk1 includes the #1 seed's one-time starting bonus, if any. Top 3 combined earners after Week 24 advance to the Finals.</p>
       <div class="table-responsive">
         <table class="data-table" id="semifinalTable">
           <thead>
@@ -111,25 +112,47 @@
       </div>
     </div>
 
-    <!-- Finals Standings -->
+    <!-- Finals: Elimination Round -->
     <div class="card">
-      <h2>Finals Standings <span class="subtitle">(FedEx St. Jude &middot; BMW Championship &middot; TOUR Championship)</span></h2>
+      <h2>Finals &mdash; Elimination Round <span class="subtitle">(FedEx St. Jude, Week 25 only)</span></h2>
+      <p style="margin-bottom:0.75rem; color:var(--gray-600);">Week 25 earnings stand alone. The lowest of the 3 Semifinal advancers is eliminated; the other 2 move on to the Championship.</p>
       <div class="table-responsive">
-        <table class="data-table" id="finalsTable">
+        <table class="data-table" id="finalsEliminationTable">
           <thead>
             <tr>
               <th>Rank</th>
               <th>Player</th>
-              <th class="currency">Wk1</th>
-              <th class="currency">Wk2</th>
-              <th class="currency">Wk3</th>
-              <th class="currency">Total</th>
+              <th class="currency">Week 25 Earnings</th>
               <th class="currency">Tiebreaker</th>
               <th style="text-align:center">Status</th>
             </tr>
           </thead>
-          <tbody id="finalsBody">
-            <tr><td colspan="8" class="loading">Finals round has not started yet.</td></tr>
+          <tbody id="finalsEliminationBody">
+            <tr><td colspan="5" class="loading">Finals Week 1 has not started yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Finals: Championship -->
+    <div class="card">
+      <h2>Finals &mdash; Championship <span class="subtitle">(BMW Championship + TOUR Championship, Weeks 26-27 combined)</span></h2>
+      <p style="margin-bottom:0.75rem; color:var(--gray-600);">Weeks 26 and 27 earnings are added together for the 2 surviving finalists. Whoever has the higher combined total wins the championship.</p>
+      <div class="table-responsive">
+        <table class="data-table" id="finalsChampionshipTable">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Player</th>
+              <th class="currency">Wk 26 (BMW)</th>
+              <th class="currency">Wk 27 (TOUR Champ.)</th>
+              <th class="currency">Combined Total</th>
+              <th class="currency">Tiebreaker</th>
+              <th style="text-align:center">Status</th>
+            </tr>
+          </thead>
+          <tbody id="finalsChampionshipBody">
+            <tr><td colspan="7" class="loading">Championship round has not started yet.</td></tr>
           </tbody>
         </table>
       </div>
