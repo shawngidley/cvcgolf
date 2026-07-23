@@ -8,6 +8,11 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 let supabaseClient = null;
 
+// Weeks 22-27 are the playoffs; only these 6 qualifiers play, so league-wide
+// usage counts (salaries, breakdown) must exclude everyone else during those weeks.
+const PLAYOFF_WEEK_START = 22;
+const PLAYOFF_QUALIFIER_NAMES = ['Steve Walker', 'David Sotka', 'Dave Sutton', 'Scott Nelson', 'Joe Cas', 'Shawn Gidley'];
+
 function showConnectionBanner(message) {
   let banner = document.getElementById('supabaseErrorBanner');
   if (!banner) {

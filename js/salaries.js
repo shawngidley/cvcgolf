@@ -17,10 +17,19 @@ async function loadSalaries() {
     .order('salary', { ascending: false })
     .order('owgr');
 
-  // Get pick counts from lineups
-  const { data: lineups } = await supabaseClient.from('lineups').select('golfer_id');
+  // Get pick counts from lineups. During playoff weeks (22-27) only the 6
+  // qualifiers are still competing, so their picks are the only ones counted
+  // for those weeks; regular season weeks still count all players.
+  const { data: players } = await supabaseClient.from('players').select('id, name');
+  const playoffPlayerIds = new Set((players || []).filter(p => PLAYOFF_QUALIFIER_NAMES.includes(p.name)).map(p => p.id));
+
+  const { data: lineups } = await supabaseClient.from('lineups').select('golfer_id, player_id, tournaments(week_number)');
   const pickCounts = {};
-  if (lineups) lineups.forEach(l => { pickCounts[l.golfer_id] = (pickCounts[l.golfer_id] || 0) + 1; });
+  if (lineups) lineups.forEach(l => {
+    const isPlayoffWeek = (l.tournaments?.week_number || 0) >= PLAYOFF_WEEK_START;
+    if (isPlayoffWeek && !playoffPlayerIds.has(l.player_id)) return;
+    pickCounts[l.golfer_id] = (pickCounts[l.golfer_id] || 0) + 1;
+  });
 
   // Get total earnings from results
   const { data: results } = await supabaseClient.from('results').select('golfer_id, earnings');

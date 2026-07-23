@@ -56,13 +56,22 @@ async function loadBreakdown() {
     supabaseClient.from('players').select('id, name').order('name').neq('is_guest', true),
     supabaseClient.from('lineups').select('player_id, golfer_id, golfers(id, name)').eq('tournament_id', tournamentId),
     supabaseClient.from('results').select('golfer_id, earnings').eq('tournament_id', tournamentId),
-    supabaseClient.from('tournaments').select('is_complete').eq('id', tournamentId).single()
+    supabaseClient.from('tournaments').select('is_complete, week_number').eq('id', tournamentId).single()
   ]);
 
-  const players = playersRes.data || [];
-  const lineups = lineupsRes.data || [];
-  const results = resultsRes.data || [];
   const isComplete = tournamentRes.data?.is_complete || false;
+  const isPlayoffWeek = (tournamentRes.data?.week_number || 0) >= PLAYOFF_WEEK_START;
+
+  // During playoff weeks (22-27) only the 6 qualifiers are still competing,
+  // so both the player columns and the pick counts are limited to them.
+  let players = playersRes.data || [];
+  if (isPlayoffWeek) players = players.filter(p => PLAYOFF_QUALIFIER_NAMES.includes(p.name));
+  const playoffPlayerIds = new Set(players.map(p => p.id));
+
+  let lineups = lineupsRes.data || [];
+  if (isPlayoffWeek) lineups = lineups.filter(l => playoffPlayerIds.has(l.player_id));
+
+  const results = resultsRes.data || [];
 
   if (lineups.length === 0) {
     container.style.display = 'none';
