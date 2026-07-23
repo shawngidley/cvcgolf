@@ -13,6 +13,99 @@ let supabaseClient = null;
 const PLAYOFF_WEEK_START = 22;
 const PLAYOFF_QUALIFIER_NAMES = ['Steve Walker', 'David Sotka', 'Dave Sutton', 'Scott Nelson', 'Joe Cas', 'Shawn Gidley'];
 
+// Determines who is still contesting the playoffs for a given tournament
+// week: all 6 qualifiers during the semifinal (22-24), the top 3 semifinal
+// finishers during the Week 25 elimination round, and the 2 elimination-round
+// survivors during the championship (26-27). Mirrors the bracket math in
+// playoffs.js - kept separate (rather than shared) since that page has its
+// own rendering needs. Returns a Set of player_ids, or null outside the
+// playoffs. Local consts are function-scoped so they don't clash with
+// playoffs.js's own top-level SEMIFINAL_WEEKS/REG_SEASON_BONUS_CAP when both
+// scripts share a page.
+async function computePlayoffField(weekNumber) {
+  if (weekNumber < PLAYOFF_WEEK_START) return null;
+
+  const { data: players } = await supabaseClient.from('players').select('id, name').neq('is_guest', true);
+  const qualifiers = (players || []).filter(p => PLAYOFF_QUALIFIER_NAMES.includes(p.name));
+  const qualifierIds = new Set(qualifiers.map(p => p.id));
+
+  if (weekNumber <= 24) return qualifierIds;
+
+  const SEMIFINAL_WEEKS = [22, 23, 24];
+  const REG_SEASON_BONUS_CAP = 400000;
+
+  const { data: tournaments } = await supabaseClient
+    .from('tournaments')
+    .select('id, week_number, is_complete, picks_locked, first_tee_time')
+    .order('week_number');
+  const now = new Date();
+  const started = t => t.is_complete || t.picks_locked || (t.first_tee_time && new Date(t.first_tee_time) <= now);
+
+  const regSeasonT = (tournaments || []).filter(t => t.week_number <= 21);
+  const regStartedT = regSeasonT.filter(started);
+  const semiT = (tournaments || []).filter(t => SEMIFINAL_WEEKS.includes(t.week_number));
+  const week25T = (tournaments || []).find(t => t.week_number === 25);
+
+  const relevantIds = [...regStartedT, ...semiT, ...(week25T ? [week25T] : [])].map(t => t.id);
+
+  let scores = [];
+  for (let from = 0; ; from += 1000) {
+    const { data: batch } = await supabaseClient
+      .from('weekly_scores')
+      .select('player_id, tournament_id, total_earnings')
+      .in('tournament_id', relevantIds)
+      .range(from, from + 999);
+    if (!batch || batch.length === 0) break;
+    scores = scores.concat(batch);
+    if (batch.length < 1000) break;
+  }
+  const scoreMap = {};
+  scores.forEach(s => { scoreMap[`${s.player_id}-${s.tournament_id}`] = parseFloat(s.total_earnings || 0); });
+
+  const { data: playoffResults } = await supabaseClient.from('playoff_results').select('player_id, round, tiebreaker_earnings');
+  const tiebreakerMap = {};
+  (playoffResults || []).forEach(r => { tiebreakerMap[`${r.player_id}-${r.round}`] = parseFloat(r.tiebreaker_earnings || 0); });
+  const tiebreakerFor = (playerId, rounds) => rounds.reduce((sum, round) => sum + (tiebreakerMap[`${playerId}-${round}`] || 0), 0);
+
+  const regStandings = (players || []).map(p => {
+    const total = regStartedT.reduce((sum, t) => sum + (scoreMap[`${p.id}-${t.id}`] || 0), 0);
+    return { player_id: p.id, total };
+  }).sort((a, b) => b.total - a.total);
+
+  const seed1Id = regStandings[0]?.player_id;
+  const seed1Bonus = Math.max(0, Math.min(REG_SEASON_BONUS_CAP, (regStandings[0]?.total || 0) - (regStandings[1]?.total || 0)));
+
+  const semiComplete = semiT.length === SEMIFINAL_WEEKS.length && semiT.every(t => t.is_complete);
+
+  const semiResults = qualifiers.map(sf => {
+    const weekTotals = semiT.map(t => started(t) ? (scoreMap[`${sf.id}-${t.id}`] || 0) : null);
+    const isSeed1 = sf.id === seed1Id && seed1Bonus > 0;
+    if (isSeed1) weekTotals[0] = (weekTotals[0] || 0) + seed1Bonus;
+    const total = weekTotals.reduce((sum, v) => sum + (v || 0), 0);
+    return { player_id: sf.id, total, tiebreaker: tiebreakerFor(sf.id, ['semifinal']) };
+  });
+  semiResults.sort((a, b) => (b.total - a.total) || (b.tiebreaker - a.tiebreaker));
+
+  // Semifinal not finished yet - can't know the top 3, fall back to all 6.
+  if (!semiComplete) return qualifierIds;
+
+  const finalistIds = new Set(semiResults.slice(0, 3).map(r => r.player_id));
+
+  if (weekNumber === 25) return finalistIds;
+
+  // Week 25 not finished yet - can't know the 2 survivors, fall back to the 3 finalists.
+  if (!week25T || !week25T.is_complete) return finalistIds;
+
+  const elimResults = [...finalistIds].map(pid => ({
+    player_id: pid,
+    wk1: scoreMap[`${pid}-${week25T.id}`] || 0,
+    tiebreaker: tiebreakerFor(pid, ['finals_w1'])
+  }));
+  elimResults.sort((a, b) => (b.wk1 - a.wk1) || (b.tiebreaker - a.tiebreaker));
+
+  return new Set(elimResults.slice(0, 2).map(r => r.player_id));
+}
+
 function showConnectionBanner(message) {
   let banner = document.getElementById('supabaseErrorBanner');
   if (!banner) {

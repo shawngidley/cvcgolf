@@ -6,7 +6,7 @@ const MAX_USES = 5;
 const MAX_LIV_USES = 2;
 const MAX_MAJOR_USES = 2;
 const TIEBREAKER_MAX_USES = 4; // must be used 4 or fewer times - never at the normal 5-use limit
-const PLAYOFF_WEEK_START = 22;
+// PLAYOFF_WEEK_START comes from supabase-client.js (loaded before this script on every page).
 const PLAYOFF_WEEK_END = 27;
 let selectedGolfers = [];
 let allGolfers = [];

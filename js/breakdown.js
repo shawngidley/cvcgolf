@@ -60,16 +60,18 @@ async function loadBreakdown() {
   ]);
 
   const isComplete = tournamentRes.data?.is_complete || false;
-  const isPlayoffWeek = (tournamentRes.data?.week_number || 0) >= PLAYOFF_WEEK_START;
 
-  // During playoff weeks (22-27) only the 6 qualifiers are still competing,
-  // so both the player columns and the pick counts are limited to them.
+  // During playoff weeks (22-27) only the remaining playoff participants are
+  // still competing - narrows from all 6 qualifiers down to 3, then 2, as the
+  // bracket plays out - so both the player columns and the pick counts are
+  // limited to them.
+  const playoffFieldIds = await computePlayoffField(tournamentRes.data?.week_number || 0);
+
   let players = playersRes.data || [];
-  if (isPlayoffWeek) players = players.filter(p => PLAYOFF_QUALIFIER_NAMES.includes(p.name));
-  const playoffPlayerIds = new Set(players.map(p => p.id));
+  if (playoffFieldIds) players = players.filter(p => playoffFieldIds.has(p.id));
 
   let lineups = lineupsRes.data || [];
-  if (isPlayoffWeek) lineups = lineups.filter(l => playoffPlayerIds.has(l.player_id));
+  if (playoffFieldIds) lineups = lineups.filter(l => playoffFieldIds.has(l.player_id));
 
   const results = resultsRes.data || [];
 
