@@ -16,8 +16,11 @@ async function loadWeeklyGrid() {
     .select('id, week_number, short_name, is_complete, picks_locked, first_tee_time')
     .order('sort_order');
   const now = new Date();
+  // Weekly results are frozen to the regular season (weeks 1-21); playoff
+  // weeks (22-27) are scored separately on the Playoffs page.
   const tournaments = (allTournaments || []).filter(t =>
-    t.is_complete || t.picks_locked || (t.first_tee_time && new Date(t.first_tee_time) <= now)
+    t.week_number <= 21 &&
+    (t.is_complete || t.picks_locked || (t.first_tee_time && new Date(t.first_tee_time) <= now))
   );
   const tournamentIds = (tournaments || []).map(t => t.id);
 
@@ -163,7 +166,8 @@ async function loadEarningsChart() {
     .order('sort_order');
   const nowChart = new Date();
   const tournaments = (allTournamentsChart || []).filter(t =>
-    t.is_complete || t.picks_locked || (t.first_tee_time && new Date(t.first_tee_time) <= nowChart)
+    t.week_number <= 21 &&
+    (t.is_complete || t.picks_locked || (t.first_tee_time && new Date(t.first_tee_time) <= nowChart))
   );
   const tIds = (tournaments || []).map(t => t.id);
   let lineups = [];
