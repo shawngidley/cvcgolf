@@ -10,8 +10,12 @@ async function loadStandings() {
     .from('tournaments')
     .select('id, week_number, is_complete, picks_locked, first_tee_time');
   const now = new Date();
+  // Regular season standings are frozen to weeks 1-21; playoff weeks
+  // (22-27) are scored separately on the Playoffs page and must never
+  // factor into these totals.
   const tournaments = (allTournaments || []).filter(t =>
-    t.is_complete || t.picks_locked || (t.first_tee_time && new Date(t.first_tee_time) <= now)
+    t.week_number <= 21 &&
+    (t.is_complete || t.picks_locked || (t.first_tee_time && new Date(t.first_tee_time) <= now))
   );
   const tournamentIds = (tournaments || []).map(t => t.id);
 
@@ -36,7 +40,9 @@ async function loadStandings() {
   }
 
   const weeksPlayed = tournaments ? tournaments.length : 0;
-  document.getElementById('weekInfo').textContent = `Through Week ${weeksPlayed} of 21`;
+  document.getElementById('weekInfo').textContent = weeksPlayed >= 21
+    ? 'Regular Season Final — Through Week 21'
+    : `Through Week ${weeksPlayed} of 21`;
 
   const scoreMap = {};
   scores.forEach(s => { scoreMap[`${s.player_id}-${s.tournament_id}`] = parseFloat(s.total_earnings || 0); });
