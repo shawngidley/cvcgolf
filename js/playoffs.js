@@ -149,8 +149,6 @@ async function loadPlayoffs() {
   }
   renderChampionshipTable(champResults);
 
-  renderBracket(semiResults, finalists, elimResults, champResults);
-
   let stage = 'pre-playoffs';
   if (semifinalStarted) stage = 'semifinal';
   if (elimResults) stage = 'finals-elimination';
@@ -201,7 +199,7 @@ function renderSemifinalTable(results) {
       const v = r.weekTotals[idx];
       return `<td class="currency">${v === null || v === undefined ? '-' : formatCurrency(v)}</td>`;
     }).join('');
-    const bonusNote = r.seedBonus ? ` <span class="bracket-slot-earnings">(Wk1 incl. ${formatCurrency(r.seedBonus)} seed bonus)</span>` : '';
+    const bonusNote = r.seedBonus ? ` <span class="bracket-slot-earnings">(includes $400K Bonus)</span>` : '';
     return `
       <tr class="${rowClassFor(r.status)}">
         <td class="rank-cell">${i + 1}</td>
@@ -251,56 +249,3 @@ function renderChampionshipTable(results) {
   `).join('');
 }
 
-function renderBracket(semiResults, finalists, elimResults, champResults) {
-  const bracket = document.getElementById('playoffBracket');
-
-  // Each participant's card shows just their name - except the #1 seed,
-  // who shows their one-time starting bonus in gold. No other earnings
-  // are shown here; the Semifinal Standings table below has the detail.
-  const semiSlots = semiResults.map(s => {
-    const cls = s.status === 'ADVANCED' ? 'advanced' : s.status === 'ELIMINATED' ? 'eliminated' : s.status === 'PENDING' ? 'projected' : '';
-    const bonusLine = s.seedBonus ? `<div class="bracket-slot-bonus">Bonus: ${formatCurrency(s.seedBonus)}</div>` : '';
-    return `
-      <div class="bracket-slot ${cls}">
-        <div class="bracket-slot-name">${s.name}</div>
-        ${bonusLine}
-      </div>`;
-  }).join('');
-
-  const elimSlots = finalists.length === 3
-    ? (elimResults || finalists.map(f => ({ ...f }))).map(f => {
-        const cls = f.status === 'ELIMINATED' ? 'eliminated' : (f.status ? 'advanced' : '');
-        const earnings = f.wk1 !== undefined ? formatCurrency(f.wk1) : 'TBD';
-        return `<div class="bracket-slot ${cls}"><div class="bracket-slot-name">${f.name}</div><div class="bracket-slot-earnings">${earnings}</div></div>`;
-      }).join('')
-    : '<div class="bracket-slot tbd">TBD</div>';
-
-  let championSlot = '<div class="bracket-slot tbd">TBD</div>';
-  if (champResults) {
-    const champion = champResults.find(r => r.status === 'WINNER');
-    const runnerUp = champResults.find(r => r.status === 'RUNNER-UP');
-    if (champion) {
-      championSlot = `<div class="bracket-slot champion"><div class="bracket-slot-name">🏆 ${champion.name}</div><div class="bracket-slot-earnings">${formatCurrency(champion.total)}</div></div>`;
-      if (runnerUp) {
-        championSlot += `<div class="bracket-slot eliminated"><div class="bracket-slot-name">${runnerUp.name}</div><div class="bracket-slot-earnings">${formatCurrency(runnerUp.total)}</div></div>`;
-      }
-    } else {
-      championSlot = champResults.map(r => `<div class="bracket-slot advanced"><div class="bracket-slot-name">${r.name}</div><div class="bracket-slot-earnings">${formatCurrency(r.total)}</div></div>`).join('');
-    }
-  }
-
-  bracket.innerHTML = `
-    <div class="bracket-round">
-      <div class="bracket-round-title">Semifinal (6)</div>
-      <div class="bracket-slots">${semiSlots}</div>
-    </div>
-    <div class="bracket-round">
-      <div class="bracket-round-title">Elimination Rd &mdash; Wk25 (3)</div>
-      <div class="bracket-slots">${elimSlots}</div>
-    </div>
-    <div class="bracket-round">
-      <div class="bracket-round-title">Champion &mdash; Wk26+27 (2 &rarr; 1)</div>
-      <div class="bracket-slots">${championSlot}</div>
-    </div>
-  `;
-}
