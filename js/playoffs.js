@@ -199,13 +199,12 @@ function renderSemifinalTable(results) {
       const v = r.weekTotals[idx];
       return `<td class="currency">${v === null || v === undefined ? '-' : formatCurrency(v)}</td>`;
     }).join('');
-    const bonusNote = r.seedBonus ? ` <span class="bracket-slot-earnings">(includes $400K Bonus)</span>` : '';
     return `
       <tr class="${rowClassFor(r.status)}">
         <td class="rank-cell">${i + 1}</td>
-        <td><strong>${r.name}</strong>${bonusNote}</td>
-        ${weekCells}
+        <td><strong>${r.name}</strong></td>
         <td class="currency"><strong>${formatCurrency(r.total)}</strong></td>
+        ${weekCells}
         <td class="currency">${r.tiebreaker ? formatCurrency(r.tiebreaker) : '-'}</td>
         <td style="text-align:center">${statusPill(r.status)}</td>
       </tr>
