@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cvc-golf-v6';
+const CACHE_NAME = 'cvc-golf-v7';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
