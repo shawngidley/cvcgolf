@@ -95,6 +95,9 @@ exports.handler = async (event) => {
     let espnEvent = null;
     let allEvents = [];
     const startDate = new Date(tournament.start_date + 'T00:00:00Z');
+    // TEMP diagnostics surfaced in the response body itself, since Netlify
+    // function console.log output isn't otherwise reachable from here.
+    const debug = { tier1: null, tier2: null };
     try {
       const fmt = (d) => d.toISOString().slice(0, 10).replace(/-/g, '');
       const windowStart = fmt(new Date(startDate.getTime() - 7 * 86400000));
@@ -102,9 +105,11 @@ exports.handler = async (event) => {
       const rangeUrl = `https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=${windowStart}-${windowEnd}`;
       console.log(`[get-wd-status] Tier 1 (+/-7 day window): GET ${rangeUrl}`);
       const rangeRes = await espnFetch(rangeUrl);
+      debug.tier1 = { url: rangeUrl, status: rangeRes.status };
       if (rangeRes.ok) {
         const rangeData = await rangeRes.json();
         allEvents = rangeData.events || [];
+        debug.tier1.eventCount = allEvents.length;
         console.log(`[get-wd-status] Tier 1 returned ${allEvents.length} event(s): ${allEvents.map(e => `${e.name} (${e.id})`).join(', ')}`);
 
         if (overrideEventId) espnEvent = allEvents.find(e => String(e.id) === String(overrideEventId)) || null;
@@ -117,6 +122,7 @@ exports.handler = async (event) => {
         console.log(`[get-wd-status] Tier 1 request failed with status ${rangeRes.status}`);
       }
     } catch (e) {
+      debug.tier1 = { threw: e.message };
       console.log(`[get-wd-status] Tier 1 threw: ${e.message}`);
     }
 
@@ -127,9 +133,11 @@ exports.handler = async (event) => {
         const scheduleUrl = 'https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard';
         console.log(`[get-wd-status] Tier 2 (default schedule): GET ${scheduleUrl}`);
         const scheduleRes = await espnFetch(scheduleUrl);
+        debug.tier2 = { url: scheduleUrl, status: scheduleRes.status };
         if (scheduleRes.ok) {
           const scheduleData = await scheduleRes.json();
           allEvents = scheduleData.events || [];
+          debug.tier2.eventCount = allEvents.length;
           console.log(`[get-wd-status] Tier 2 returned ${allEvents.length} event(s): ${allEvents.map(e => `${e.name} (${e.id})`).join(', ')}`);
 
           if (overrideEventId) espnEvent = allEvents.find(e => String(e.id) === String(overrideEventId)) || null;
@@ -139,6 +147,7 @@ exports.handler = async (event) => {
           console.log(`[get-wd-status] Tier 2 request failed with status ${scheduleRes.status}`);
         }
       } catch (e) {
+        debug.tier2 = { threw: e.message };
         console.log(`[get-wd-status] Tier 2 threw: ${e.message}`);
       }
     }
@@ -151,7 +160,7 @@ exports.handler = async (event) => {
       return {
         statusCode: 200,
         headers: HEADERS,
-        body: JSON.stringify({ success: true, wdGolfers: [], fieldGolfers: dbNames, teeTimeMap: {}, tournament: tournament.name, fallback: 'no_espn_event' })
+        body: JSON.stringify({ success: true, wdGolfers: [], fieldGolfers: dbNames, teeTimeMap: {}, tournament: tournament.name, fallback: 'no_espn_event', debug })
       };
     }
 
