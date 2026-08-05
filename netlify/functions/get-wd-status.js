@@ -22,6 +22,15 @@ const WEEK_EVENT_ID_OVERRIDES = {
   24: '401811961' // Wyndham Championship 2026
 };
 
+// Node's default fetch sends "User-Agent: node", which some CDN/WAF layers
+// (Netlify's serverless IPs included) silently filter, returning empty
+// results instead of an error. A browser-like UA avoids that.
+const ESPN_FETCH_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Accept': 'application/json'
+};
+const espnFetch = (url) => fetch(url, { headers: ESPN_FETCH_HEADERS });
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: HEADERS, body: '' };
 
@@ -92,7 +101,7 @@ exports.handler = async (event) => {
       const windowEnd = fmt(new Date(startDate.getTime() + 7 * 86400000));
       const rangeUrl = `https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=${windowStart}-${windowEnd}`;
       console.log(`[get-wd-status] Tier 1 (+/-7 day window): GET ${rangeUrl}`);
-      const rangeRes = await fetch(rangeUrl);
+      const rangeRes = await espnFetch(rangeUrl);
       if (rangeRes.ok) {
         const rangeData = await rangeRes.json();
         allEvents = rangeData.events || [];
@@ -117,7 +126,7 @@ exports.handler = async (event) => {
       try {
         const scheduleUrl = 'https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard';
         console.log(`[get-wd-status] Tier 2 (default schedule): GET ${scheduleUrl}`);
-        const scheduleRes = await fetch(scheduleUrl);
+        const scheduleRes = await espnFetch(scheduleUrl);
         if (scheduleRes.ok) {
           const scheduleData = await scheduleRes.json();
           allEvents = scheduleData.events || [];
@@ -162,7 +171,7 @@ exports.handler = async (event) => {
 
     if (competitorIds.length < 30) {
       try {
-        const coreRes = await fetch(
+        const coreRes = await espnFetch(
           `https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/events/${eventId}/competitions/${eventId}/competitors?limit=200`
         );
         if (coreRes.ok) {
@@ -193,15 +202,16 @@ exports.handler = async (event) => {
     const fieldNames = [];
     const espnTeeTimeMap = {}; // ESPN name -> tee time string ET
     const batchSize = 25;
+    let statusFailCount = 0;
 
     for (let i = 0; i < competitorIds.length; i += batchSize) {
       const batch = competitorIds.slice(i, i + batchSize);
       await Promise.all(batch.map(async (cId) => {
         try {
-          const res = await fetch(
+          const res = await espnFetch(
             `https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/events/${eventId}/competitions/${eventId}/competitors/${cId}/status`
           );
-          if (!res.ok) return;
+          if (!res.ok) { statusFailCount++; return; }
           const statusData = await res.json();
           const statusName = statusData?.type?.name || '';
           const isWD = statusName === 'STATUS_WITHDRAWN' || statusName === 'STATUS_DISQUALIFIED';
@@ -210,13 +220,13 @@ exports.handler = async (event) => {
           let name = nameMap[cId];
           if (!name) {
             try {
-              const compRes = await fetch(
+              const compRes = await espnFetch(
                 `https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/events/${eventId}/competitions/${eventId}/competitors/${cId}`
               );
               if (compRes.ok) {
                 const compData = await compRes.json();
                 if (compData.athlete?.$ref) {
-                  const athleteRes = await fetch(compData.athlete.$ref);
+                  const athleteRes = await espnFetch(compData.athlete.$ref);
                   if (athleteRes.ok) {
                     const athleteData = await athleteRes.json();
                     name = athleteData.displayName || athleteData.fullName || '';
@@ -245,8 +255,12 @@ exports.handler = async (event) => {
               } catch (e) { /* ignore */ }
             }
           }
-        } catch (e) { /* ignore individual failures */ }
+        } catch (e) { statusFailCount++; }
       }));
+    }
+
+    if (statusFailCount > 0) {
+      console.log(`[get-wd-status] ${statusFailCount} of ${competitorIds.length} competitor status request(s) failed`);
     }
 
     console.log(`[get-wd-status] ESPN field resolved: ${fieldNames.length} active, ${wdNames.length} withdrawn`);
