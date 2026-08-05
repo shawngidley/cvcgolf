@@ -16,6 +16,12 @@ const HEADERS = {
 
 const EMPTY = { statusCode: 200, headers: HEADERS, body: JSON.stringify({ success: true, wdGolfers: [], fieldGolfers: [], teeTimeMap: {} }) };
 
+// Known ESPN event ID overrides for specific weeks, keyed by tournaments.week_number.
+// Used when fuzzy date/name matching against ESPN's schedule can't be trusted.
+const WEEK_EVENT_ID_OVERRIDES = {
+  24: '401811961' // Wyndham Championship 2026
+};
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: HEADERS, body: '' };
 
@@ -26,7 +32,7 @@ exports.handler = async (event) => {
     let tournament = null;
     const { data: currentRows } = await supabase
       .from('tournaments')
-      .select('id, name, short_name, start_date')
+      .select('id, name, short_name, start_date, week_number')
       .eq('is_current', true)
       .eq('is_complete', false)
       .limit(1);
@@ -36,7 +42,7 @@ exports.handler = async (event) => {
     } else {
       const { data: upcomingRows } = await supabase
         .from('tournaments')
-        .select('id, name, short_name, start_date')
+        .select('id, name, short_name, start_date, week_number')
         .gte('start_date', today)
         .eq('is_complete', false)
         .order('start_date', { ascending: true })
@@ -63,37 +69,63 @@ exports.handler = async (event) => {
       return en.includes(shortNorm) || es.includes(shortNorm) || shortNorm.includes(en) || en.includes(fullNorm);
     };
 
-    // Tier 1: match the current tournament by date against the ESPN scoreboard
-    const dateStr = tournament.start_date.replace(/-/g, '');
+    const overrideEventId = WEEK_EVENT_ID_OVERRIDES[tournament.week_number];
+    if (overrideEventId) {
+      console.log(`[get-wd-status] Week ${tournament.week_number} has a hardcoded ESPN event id override: ${overrideEventId}`);
+    }
+
+    const closestByDate = (events, target) => events.reduce((closest, e) => {
+      const diff = Math.abs(new Date(e.date) - target);
+      const closestDiff = closest ? Math.abs(new Date(closest.date) - target) : Infinity;
+      return diff < closestDiff ? e : closest;
+    }, null);
+
+    // Tier 1: search a +/-7 day window around the tournament's start date - wide
+    // enough to tolerate schedule slip, and lenient enough to accept the nearest
+    // event by date even if the name doesn't match cleanly.
     let espnEvent = null;
     let allEvents = [];
+    const startDate = new Date(tournament.start_date + 'T00:00:00Z');
     try {
-      const dateUrl = `https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=${dateStr}`;
-      console.log(`[get-wd-status] Tier 1 (date match): GET ${dateUrl}`);
-      const dateRes = await fetch(dateUrl);
-      if (dateRes.ok) {
-        const dateData = await dateRes.json();
-        allEvents = dateData.events || [];
-        console.log(`[get-wd-status] Tier 1 returned ${allEvents.length} event(s): ${allEvents.map(e => e.name).join(', ')}`);
-        espnEvent = allEvents.find(matchesTournament) || allEvents[0] || null;
+      const fmt = (d) => d.toISOString().slice(0, 10).replace(/-/g, '');
+      const windowStart = fmt(new Date(startDate.getTime() - 7 * 86400000));
+      const windowEnd = fmt(new Date(startDate.getTime() + 7 * 86400000));
+      const rangeUrl = `https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=${windowStart}-${windowEnd}`;
+      console.log(`[get-wd-status] Tier 1 (+/-7 day window): GET ${rangeUrl}`);
+      const rangeRes = await fetch(rangeUrl);
+      if (rangeRes.ok) {
+        const rangeData = await rangeRes.json();
+        allEvents = rangeData.events || [];
+        console.log(`[get-wd-status] Tier 1 returned ${allEvents.length} event(s): ${allEvents.map(e => `${e.name} (${e.id})`).join(', ')}`);
+
+        if (overrideEventId) espnEvent = allEvents.find(e => String(e.id) === String(overrideEventId)) || null;
+        if (!espnEvent) espnEvent = allEvents.find(matchesTournament) || null;
+        if (!espnEvent && allEvents.length > 0) {
+          espnEvent = closestByDate(allEvents, startDate);
+          if (espnEvent) console.log(`[get-wd-status] No name match - using closest-by-date event: "${espnEvent.name}" (id: ${espnEvent.id})`);
+        }
       } else {
-        console.log(`[get-wd-status] Tier 1 request failed with status ${dateRes.status}`);
+        console.log(`[get-wd-status] Tier 1 request failed with status ${rangeRes.status}`);
       }
     } catch (e) {
       console.log(`[get-wd-status] Tier 1 threw: ${e.message}`);
     }
 
-    // Tier 2: fall back to searching the full ESPN schedule by tournament name
+    // Tier 2: fall back to ESPN's default "current event" schedule endpoint,
+    // in case the tournament's start_date has drifted outside the search window.
     if (!espnEvent) {
       try {
         const scheduleUrl = 'https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard';
-        console.log(`[get-wd-status] Tier 2 (name search "${tournament.short_name}"): GET ${scheduleUrl}`);
+        console.log(`[get-wd-status] Tier 2 (default schedule): GET ${scheduleUrl}`);
         const scheduleRes = await fetch(scheduleUrl);
         if (scheduleRes.ok) {
           const scheduleData = await scheduleRes.json();
           allEvents = scheduleData.events || [];
-          console.log(`[get-wd-status] Tier 2 returned ${allEvents.length} event(s): ${allEvents.map(e => e.name).join(', ')}`);
-          espnEvent = allEvents.find(matchesTournament) || null;
+          console.log(`[get-wd-status] Tier 2 returned ${allEvents.length} event(s): ${allEvents.map(e => `${e.name} (${e.id})`).join(', ')}`);
+
+          if (overrideEventId) espnEvent = allEvents.find(e => String(e.id) === String(overrideEventId)) || null;
+          if (!espnEvent) espnEvent = allEvents.find(matchesTournament) || null;
+          if (!espnEvent && allEvents.length > 0) espnEvent = closestByDate(allEvents, startDate);
         } else {
           console.log(`[get-wd-status] Tier 2 request failed with status ${scheduleRes.status}`);
         }
@@ -102,8 +134,11 @@ exports.handler = async (event) => {
       }
     }
 
+    // Only give up on ESPN entirely (and fall back to the full Supabase golfer
+    // list) when no event at all could be found anywhere in ESPN's schedule -
+    // a failed/narrow date or name match on its own is no longer disqualifying.
     if (!espnEvent) {
-      console.log('[get-wd-status] No ESPN event found via date or name match - falling back to full Supabase golfer list');
+      console.log('[get-wd-status] No ESPN event found anywhere in the schedule - falling back to full Supabase golfer list');
       return {
         statusCode: 200,
         headers: HEADERS,
