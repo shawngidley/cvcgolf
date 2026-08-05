@@ -46,33 +46,72 @@ exports.handler = async (event) => {
 
     if (!tournament) return EMPTY;
 
+    console.log(`[get-wd-status] Target tournament: "${tournament.name}" (short: "${tournament.short_name}"), start_date: ${tournament.start_date}`);
+
     // Load all active golfer names from DB for field matching
     const { data: dbGolfers } = await supabase.from('golfers').select('name').eq('is_active', true);
     const dbNames = (dbGolfers || []).map(g => g.name);
     const normName = (s) => s.replace(/[øØ]/g, 'o').replace(/[æÆ]/g, 'ae').replace(/[åÅ]/g, 'a').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
     const dbNormed = dbNames.map(n => ({ original: n, norm: normName(n) }));
 
-    // Fetch ESPN scoreboard for the tournament's start date
-    const dateStr = tournament.start_date.replace(/-/g, '');
-    const scoreboardRes = await fetch(
-      `https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=${dateStr}`
-    );
-    if (!scoreboardRes.ok) return EMPTY;
-
-    const scoreboardData = await scoreboardRes.json();
-    const allEvents = scoreboardData.events || [];
-
-    // Match ESPN event to our tournament by name
     const norm = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     const shortNorm = norm(tournament.short_name);
     const fullNorm = norm(tournament.name);
-    const espnEvent = allEvents.find(e => {
+    const matchesTournament = (e) => {
       const en = norm(e.name);
       const es = norm(e.shortName || '');
       return en.includes(shortNorm) || es.includes(shortNorm) || shortNorm.includes(en) || en.includes(fullNorm);
-    }) || allEvents[0];
+    };
 
-    if (!espnEvent) return EMPTY;
+    // Tier 1: match the current tournament by date against the ESPN scoreboard
+    const dateStr = tournament.start_date.replace(/-/g, '');
+    let espnEvent = null;
+    let allEvents = [];
+    try {
+      const dateUrl = `https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=${dateStr}`;
+      console.log(`[get-wd-status] Tier 1 (date match): GET ${dateUrl}`);
+      const dateRes = await fetch(dateUrl);
+      if (dateRes.ok) {
+        const dateData = await dateRes.json();
+        allEvents = dateData.events || [];
+        console.log(`[get-wd-status] Tier 1 returned ${allEvents.length} event(s): ${allEvents.map(e => e.name).join(', ')}`);
+        espnEvent = allEvents.find(matchesTournament) || allEvents[0] || null;
+      } else {
+        console.log(`[get-wd-status] Tier 1 request failed with status ${dateRes.status}`);
+      }
+    } catch (e) {
+      console.log(`[get-wd-status] Tier 1 threw: ${e.message}`);
+    }
+
+    // Tier 2: fall back to searching the full ESPN schedule by tournament name
+    if (!espnEvent) {
+      try {
+        const scheduleUrl = 'https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard';
+        console.log(`[get-wd-status] Tier 2 (name search "${tournament.short_name}"): GET ${scheduleUrl}`);
+        const scheduleRes = await fetch(scheduleUrl);
+        if (scheduleRes.ok) {
+          const scheduleData = await scheduleRes.json();
+          allEvents = scheduleData.events || [];
+          console.log(`[get-wd-status] Tier 2 returned ${allEvents.length} event(s): ${allEvents.map(e => e.name).join(', ')}`);
+          espnEvent = allEvents.find(matchesTournament) || null;
+        } else {
+          console.log(`[get-wd-status] Tier 2 request failed with status ${scheduleRes.status}`);
+        }
+      } catch (e) {
+        console.log(`[get-wd-status] Tier 2 threw: ${e.message}`);
+      }
+    }
+
+    if (!espnEvent) {
+      console.log('[get-wd-status] No ESPN event found via date or name match - falling back to full Supabase golfer list');
+      return {
+        statusCode: 200,
+        headers: HEADERS,
+        body: JSON.stringify({ success: true, wdGolfers: [], fieldGolfers: dbNames, teeTimeMap: {}, tournament: tournament.name, fallback: 'no_espn_event' })
+      };
+    }
+
+    console.log(`[get-wd-status] Matched ESPN event: "${espnEvent.name}" (id: ${espnEvent.id})`);
 
     const eventId = espnEvent.id;
 
@@ -103,7 +142,16 @@ exports.handler = async (event) => {
       } catch (e) { /* use scoreboard list */ }
     }
 
-    if (competitorIds.length === 0) return EMPTY;
+    console.log(`[get-wd-status] Resolved ${competitorIds.length} competitor id(s) for event ${eventId}`);
+
+    if (competitorIds.length === 0) {
+      console.log('[get-wd-status] ESPN returned no competitors - falling back to full Supabase golfer list');
+      return {
+        statusCode: 200,
+        headers: HEADERS,
+        body: JSON.stringify({ success: true, wdGolfers: [], fieldGolfers: dbNames, teeTimeMap: {}, tournament: tournament.name, fallback: 'no_competitors' })
+      };
+    }
 
     // Batch-fetch all competitor statuses — collect WD names, confirmed field, and tee times
     const wdNames = [];
@@ -166,6 +214,19 @@ exports.handler = async (event) => {
       }));
     }
 
+    console.log(`[get-wd-status] ESPN field resolved: ${fieldNames.length} active, ${wdNames.length} withdrawn`);
+
+    // ESPN gave us an event but no usable field data (e.g. tee times not posted
+    // yet) - fall back to every active golfer so owners can still build lineups.
+    if (fieldNames.length === 0) {
+      console.log('[get-wd-status] ESPN field came back empty - falling back to full Supabase golfer list');
+      return {
+        statusCode: 200,
+        headers: HEADERS,
+        body: JSON.stringify({ success: true, wdGolfers: wdNames, fieldGolfers: dbNames, teeTimeMap: {}, tournament: tournament.name, fallback: 'empty_field' })
+      };
+    }
+
     // Auto-add field golfers not in DB at $15
     const newGolfers = [];
     for (const espnName of fieldNames) {
@@ -195,6 +256,7 @@ exports.handler = async (event) => {
     };
 
   } catch (err) {
+    console.log(`[get-wd-status] Unhandled error: ${err.message}`);
     return EMPTY;
   }
 };

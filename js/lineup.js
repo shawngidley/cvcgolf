@@ -299,8 +299,17 @@ async function loadExistingTiebreaker() {
 async function loadWDStatus() {
   try {
     const res = await fetch('/.netlify/functions/get-wd-status');
-    if (!res.ok) return;
+    if (!res.ok) {
+      console.log('[lineup] get-wd-status request failed:', res.status);
+      return;
+    }
     const data = await res.json();
+    console.log('[lineup] get-wd-status response:', {
+      tournament: data.tournament,
+      fieldCount: (data.fieldGolfers || []).length,
+      wdCount: (data.wdGolfers || []).length,
+      fallback: data.fallback || null
+    });
     if (!data.success) return;
 
     await mergeEspnField(data.fieldGolfers);

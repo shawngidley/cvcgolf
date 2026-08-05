@@ -252,30 +252,57 @@ exports.handler = async (event) => {
       lineupMap[l.player_id].push({ golfer_id: l.golfer_id, name: l.golfers?.name || 'Unknown', slot: l.slot });
     });
 
-    // Fetch ESPN scoreboard to find current event
-    const scoreboardUrl = 'https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard';
-    const scoreboardRes = await fetch(scoreboardUrl);
+    console.log(`[get-live-scores] Target tournament: "${tournament.name}" (short: "${tournament.short_name}"), start_date: ${tournament.start_date}`);
 
-    if (!scoreboardRes.ok) {
-      return { statusCode: 502, headers: HEADERS, body: JSON.stringify({ success: false, error: 'Failed to fetch ESPN scoreboard' }) };
-    }
-
-    const data = await scoreboardRes.json();
-
-    // Try to match ESPN event to our tournament by name, fall back to events[0]
-    const allEvents = data.events || [];
     const normalizeEvt = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     const shortNorm = normalizeEvt(tournament.short_name);
     const fullNorm = normalizeEvt(tournament.name);
-    let espnEvent = allEvents.find(e => {
+    const matchesTournament = (e) => {
       const en = normalizeEvt(e.name);
       const es = normalizeEvt(e.shortName || '');
       return en.includes(shortNorm) || es.includes(shortNorm) || shortNorm.includes(en) || en.includes(fullNorm);
-    }) || allEvents[0];
+    };
+
+    // Tier 1: match the current tournament by date against the ESPN scoreboard
+    let espnEvent = null;
+    let allEvents = [];
+    if (tournament.start_date) {
+      const dateStr = tournament.start_date.replace(/-/g, '');
+      const dateUrl = `https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=${dateStr}`;
+      console.log(`[get-live-scores] Tier 1 (date match): GET ${dateUrl}`);
+      const dateRes = await fetch(dateUrl);
+      if (dateRes.ok) {
+        const dateData = await dateRes.json();
+        allEvents = dateData.events || [];
+        console.log(`[get-live-scores] Tier 1 returned ${allEvents.length} event(s): ${allEvents.map(e => e.name).join(', ')}`);
+        espnEvent = allEvents.find(matchesTournament) || allEvents[0] || null;
+      } else {
+        console.log(`[get-live-scores] Tier 1 request failed with status ${dateRes.status}`);
+      }
+    }
+
+    // Tier 2: fall back to searching the full ESPN schedule by tournament name
+    if (!espnEvent) {
+      const scoreboardUrl = 'https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard';
+      console.log(`[get-live-scores] Tier 2 (name search "${tournament.short_name}"): GET ${scoreboardUrl}`);
+      const scoreboardRes = await fetch(scoreboardUrl);
+
+      if (!scoreboardRes.ok) {
+        return { statusCode: 502, headers: HEADERS, body: JSON.stringify({ success: false, error: 'Failed to fetch ESPN scoreboard' }) };
+      }
+
+      const data = await scoreboardRes.json();
+      allEvents = data.events || [];
+      console.log(`[get-live-scores] Tier 2 returned ${allEvents.length} event(s): ${allEvents.map(e => e.name).join(', ')}`);
+      espnEvent = allEvents.find(matchesTournament) || allEvents[0] || null;
+    }
 
     if (!espnEvent) {
+      console.log('[get-live-scores] No ESPN event found via date or name match');
       return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ success: false, error: 'No ESPN event found', available_events: allEvents.map(e => e.name) }) };
     }
+
+    console.log(`[get-live-scores] Matched ESPN event: "${espnEvent.name}" (id: ${espnEvent.id})`);
 
     const eventId = espnEvent.id;
     const eventStatus = espnEvent.status?.type?.name || '';
