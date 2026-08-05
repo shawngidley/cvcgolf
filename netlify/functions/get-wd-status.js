@@ -31,6 +31,18 @@ const ESPN_FETCH_HEADERS = {
 };
 const espnFetch = (url) => fetch(url, { headers: ESPN_FETCH_HEADERS });
 
+// A single lineup-page load fans out to ~150 ESPN requests (1 scoreboard +
+// one per competitor). Doing that on every page view is what triggers
+// Akamai's bot-mitigation "Access Denied" block on ESPN's side - it reads as
+// abuse regardless of source IP. Cache results across warm function
+// invocations so ESPN only gets hit occasionally, not once per page load.
+// Success is cached longer than a failure so a transient/rate-limited miss
+// retries again soon instead of being stuck for the full TTL.
+let cache = { tournamentId: null, fetchedAt: 0, isFallback: false, body: null };
+const SUCCESS_CACHE_TTL_MS = 5 * 60 * 1000;
+const FALLBACK_CACHE_TTL_MS = 90 * 1000;
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: HEADERS, body: '' };
 
@@ -62,6 +74,15 @@ exports.handler = async (event) => {
     if (!tournament) return EMPTY;
 
     console.log(`[get-wd-status] Target tournament: "${tournament.name}" (short: "${tournament.short_name}"), start_date: ${tournament.start_date}`);
+
+    if (cache.tournamentId === tournament.id) {
+      const ttl = cache.isFallback ? FALLBACK_CACHE_TTL_MS : SUCCESS_CACHE_TTL_MS;
+      const age = Date.now() - cache.fetchedAt;
+      if (age < ttl) {
+        console.log(`[get-wd-status] Serving cached result (${cache.isFallback ? 'fallback' : 'success'}, ${Math.round(age / 1000)}s old)`);
+        return { statusCode: 200, headers: HEADERS, body: cache.body };
+      }
+    }
 
     // Load all active golfer names from DB for field matching
     const { data: dbGolfers } = await supabase.from('golfers').select('name').eq('is_active', true);
@@ -95,9 +116,6 @@ exports.handler = async (event) => {
     let espnEvent = null;
     let allEvents = [];
     const startDate = new Date(tournament.start_date + 'T00:00:00Z');
-    // TEMP diagnostics surfaced in the response body itself, since Netlify
-    // function console.log output isn't otherwise reachable from here.
-    const debug = { tier1: null, tier2: null };
     try {
       const fmt = (d) => d.toISOString().slice(0, 10).replace(/-/g, '');
       const windowStart = fmt(new Date(startDate.getTime() - 7 * 86400000));
@@ -105,11 +123,9 @@ exports.handler = async (event) => {
       const rangeUrl = `https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=${windowStart}-${windowEnd}`;
       console.log(`[get-wd-status] Tier 1 (+/-7 day window): GET ${rangeUrl}`);
       const rangeRes = await espnFetch(rangeUrl);
-      debug.tier1 = { url: rangeUrl, status: rangeRes.status };
       if (rangeRes.ok) {
         const rangeData = await rangeRes.json();
         allEvents = rangeData.events || [];
-        debug.tier1.eventCount = allEvents.length;
         console.log(`[get-wd-status] Tier 1 returned ${allEvents.length} event(s): ${allEvents.map(e => `${e.name} (${e.id})`).join(', ')}`);
 
         if (overrideEventId) espnEvent = allEvents.find(e => String(e.id) === String(overrideEventId)) || null;
@@ -122,7 +138,6 @@ exports.handler = async (event) => {
         console.log(`[get-wd-status] Tier 1 request failed with status ${rangeRes.status}`);
       }
     } catch (e) {
-      debug.tier1 = { threw: e.message };
       console.log(`[get-wd-status] Tier 1 threw: ${e.message}`);
     }
 
@@ -133,11 +148,9 @@ exports.handler = async (event) => {
         const scheduleUrl = 'https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard';
         console.log(`[get-wd-status] Tier 2 (default schedule): GET ${scheduleUrl}`);
         const scheduleRes = await espnFetch(scheduleUrl);
-        debug.tier2 = { url: scheduleUrl, status: scheduleRes.status };
         if (scheduleRes.ok) {
           const scheduleData = await scheduleRes.json();
           allEvents = scheduleData.events || [];
-          debug.tier2.eventCount = allEvents.length;
           console.log(`[get-wd-status] Tier 2 returned ${allEvents.length} event(s): ${allEvents.map(e => `${e.name} (${e.id})`).join(', ')}`);
 
           if (overrideEventId) espnEvent = allEvents.find(e => String(e.id) === String(overrideEventId)) || null;
@@ -147,7 +160,6 @@ exports.handler = async (event) => {
           console.log(`[get-wd-status] Tier 2 request failed with status ${scheduleRes.status}`);
         }
       } catch (e) {
-        debug.tier2 = { threw: e.message };
         console.log(`[get-wd-status] Tier 2 threw: ${e.message}`);
       }
     }
@@ -157,11 +169,9 @@ exports.handler = async (event) => {
     // a failed/narrow date or name match on its own is no longer disqualifying.
     if (!espnEvent) {
       console.log('[get-wd-status] No ESPN event found anywhere in the schedule - falling back to full Supabase golfer list');
-      return {
-        statusCode: 200,
-        headers: HEADERS,
-        body: JSON.stringify({ success: true, wdGolfers: [], fieldGolfers: dbNames, teeTimeMap: {}, tournament: tournament.name, fallback: 'no_espn_event', debug })
-      };
+      const body = JSON.stringify({ success: true, wdGolfers: [], fieldGolfers: dbNames, teeTimeMap: {}, tournament: tournament.name, fallback: 'no_espn_event' });
+      cache = { tournamentId: tournament.id, fetchedAt: Date.now(), isFallback: true, body };
+      return { statusCode: 200, headers: HEADERS, body };
     }
 
     console.log(`[get-wd-status] Matched ESPN event: "${espnEvent.name}" (id: ${espnEvent.id})`);
@@ -199,21 +209,23 @@ exports.handler = async (event) => {
 
     if (competitorIds.length === 0) {
       console.log('[get-wd-status] ESPN returned no competitors - falling back to full Supabase golfer list');
-      return {
-        statusCode: 200,
-        headers: HEADERS,
-        body: JSON.stringify({ success: true, wdGolfers: [], fieldGolfers: dbNames, teeTimeMap: {}, tournament: tournament.name, fallback: 'no_competitors' })
-      };
+      const body = JSON.stringify({ success: true, wdGolfers: [], fieldGolfers: dbNames, teeTimeMap: {}, tournament: tournament.name, fallback: 'no_competitors' });
+      cache = { tournamentId: tournament.id, fetchedAt: Date.now(), isFallback: true, body };
+      return { statusCode: 200, headers: HEADERS, body };
     }
 
-    // Batch-fetch all competitor statuses — collect WD names, confirmed field, and tee times
+    // Batch-fetch all competitor statuses — collect WD names, confirmed field, and tee times.
+    // Kept small with a pause between batches so this doesn't look like a burst
+    // of bot traffic to ESPN's edge (Akamai) - see the cache comment above.
     const wdNames = [];
     const fieldNames = [];
     const espnTeeTimeMap = {}; // ESPN name -> tee time string ET
-    const batchSize = 25;
+    const batchSize = 15;
+    const batchDelayMs = 200;
     let statusFailCount = 0;
 
     for (let i = 0; i < competitorIds.length; i += batchSize) {
+      if (i > 0) await sleep(batchDelayMs);
       const batch = competitorIds.slice(i, i + batchSize);
       await Promise.all(batch.map(async (cId) => {
         try {
@@ -278,11 +290,9 @@ exports.handler = async (event) => {
     // yet) - fall back to every active golfer so owners can still build lineups.
     if (fieldNames.length === 0) {
       console.log('[get-wd-status] ESPN field came back empty - falling back to full Supabase golfer list');
-      return {
-        statusCode: 200,
-        headers: HEADERS,
-        body: JSON.stringify({ success: true, wdGolfers: wdNames, fieldGolfers: dbNames, teeTimeMap: {}, tournament: tournament.name, fallback: 'empty_field' })
-      };
+      const body = JSON.stringify({ success: true, wdGolfers: wdNames, fieldGolfers: dbNames, teeTimeMap: {}, tournament: tournament.name, fallback: 'empty_field' });
+      cache = { tournamentId: tournament.id, fetchedAt: Date.now(), isFallback: true, body };
+      return { statusCode: 200, headers: HEADERS, body };
     }
 
     // Auto-add field golfers not in DB at $15
@@ -300,18 +310,16 @@ exports.handler = async (event) => {
       console.log(`[get-wd-status] Added ${newGolfers.length} new golfer(s): ${newGolfers.map(g => g.name).join(', ')}`);
     }
 
-    return {
-      statusCode: 200,
-      headers: HEADERS,
-      body: JSON.stringify({
-        success: true,
-        wdGolfers: wdNames,
-        fieldGolfers: fieldNames,
-        teeTimeMap: espnTeeTimeMap,
-        tournament: tournament.name,
-        newGolfers: newGolfers.map(g => g.name)
-      })
-    };
+    const body = JSON.stringify({
+      success: true,
+      wdGolfers: wdNames,
+      fieldGolfers: fieldNames,
+      teeTimeMap: espnTeeTimeMap,
+      tournament: tournament.name,
+      newGolfers: newGolfers.map(g => g.name)
+    });
+    cache = { tournamentId: tournament.id, fetchedAt: Date.now(), isFallback: false, body };
+    return { statusCode: 200, headers: HEADERS, body };
 
   } catch (err) {
     console.log(`[get-wd-status] Unhandled error: ${err.message}`);
