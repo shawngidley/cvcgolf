@@ -12,6 +12,25 @@ const HEADERS = {
   'Content-Type': 'application/json'
 };
 
+// Node's default fetch sends "User-Agent: node", which some CDN/WAF layers
+// (Netlify's serverless IPs included) silently filter, returning empty
+// results instead of an error. A browser-like UA avoids that.
+const ESPN_FETCH_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Accept': 'application/json'
+};
+const espnFetch = (url) => fetch(url, { headers: ESPN_FETCH_HEADERS });
+
+// Live scoring polls ESPN every 5 min per open browser tab (js/live.js), and
+// fans out to one status request per picked golfer on top of the scoreboard
+// fetch. Cache results across warm function invocations so concurrent
+// viewers share one ESPN round-trip instead of each triggering their own -
+// see the matching comment in get-wd-status.js for the Akamai context.
+let cache = { tournamentId: null, fetchedAt: 0, isFallback: false, body: null };
+const SUCCESS_CACHE_TTL_MS = 60 * 1000;
+const FALLBACK_CACHE_TTL_MS = 20 * 1000;
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 // Weeks 22-27 are the playoffs. Kept in sync with the same names in
 // js/supabase-client.js - duplicated here since this Node function can't
 // share a browser <script>.
@@ -231,6 +250,15 @@ exports.handler = async (event) => {
       };
     }
 
+    if (cache.tournamentId === tournament.id) {
+      const ttl = cache.isFallback ? FALLBACK_CACHE_TTL_MS : SUCCESS_CACHE_TTL_MS;
+      const age = Date.now() - cache.fetchedAt;
+      if (age < ttl) {
+        console.log(`[get-live-scores] Serving cached result (${cache.isFallback ? 'fallback' : 'success'}, ${Math.round(age / 1000)}s old)`);
+        return { statusCode: 200, headers: HEADERS, body: cache.body };
+      }
+    }
+
     // Get all players and their lineups for this tournament
     const [playersRes, lineupsRes] = await Promise.all([
       supabase.from('players').select('id, name').neq('is_guest', true).order('name'),
@@ -270,7 +298,7 @@ exports.handler = async (event) => {
       const dateStr = tournament.start_date.replace(/-/g, '');
       const dateUrl = `https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=${dateStr}`;
       console.log(`[get-live-scores] Tier 1 (date match): GET ${dateUrl}`);
-      const dateRes = await fetch(dateUrl);
+      const dateRes = await espnFetch(dateUrl);
       if (dateRes.ok) {
         const dateData = await dateRes.json();
         allEvents = dateData.events || [];
@@ -285,10 +313,12 @@ exports.handler = async (event) => {
     if (!espnEvent) {
       const scoreboardUrl = 'https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard';
       console.log(`[get-live-scores] Tier 2 (name search "${tournament.short_name}"): GET ${scoreboardUrl}`);
-      const scoreboardRes = await fetch(scoreboardUrl);
+      const scoreboardRes = await espnFetch(scoreboardUrl);
 
       if (!scoreboardRes.ok) {
-        return { statusCode: 502, headers: HEADERS, body: JSON.stringify({ success: false, error: 'Failed to fetch ESPN scoreboard' }) };
+        const body = JSON.stringify({ success: false, error: 'Failed to fetch ESPN scoreboard' });
+        cache = { tournamentId: tournament.id, fetchedAt: Date.now(), isFallback: true, body };
+        return { statusCode: 502, headers: HEADERS, body };
       }
 
       const data = await scoreboardRes.json();
@@ -299,7 +329,9 @@ exports.handler = async (event) => {
 
     if (!espnEvent) {
       console.log('[get-live-scores] No ESPN event found via date or name match');
-      return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ success: false, error: 'No ESPN event found', available_events: allEvents.map(e => e.name) }) };
+      const body = JSON.stringify({ success: false, error: 'No ESPN event found', available_events: allEvents.map(e => e.name) });
+      cache = { tournamentId: tournament.id, fetchedAt: Date.now(), isFallback: true, body };
+      return { statusCode: 200, headers: HEADERS, body };
     }
 
     console.log(`[get-live-scores] Matched ESPN event: "${espnEvent.name}" (id: ${espnEvent.id})`);
@@ -349,18 +381,26 @@ exports.handler = async (event) => {
       }
     });
 
-    // Batch fetch status for all picked competitors from core API
+    // Batch-fetch status for all picked competitors from core API - kept small
+    // with a pause between batches so this doesn't look like a burst of bot
+    // traffic to ESPN's edge (Akamai) - see the cache comment above.
     const statusMap = {};
-    const statusFetches = [...pickedCompetitorIds].map(async (cId) => {
-      try {
-        const url = `https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/events/${eventId}/competitions/${eventId}/competitors/${cId}/status`;
-        const res = await fetch(url);
-        if (res.ok) {
-          statusMap[cId] = await res.json();
-        }
-      } catch (e) { /* ignore individual failures */ }
-    });
-    await Promise.all(statusFetches);
+    const pickedIds = [...pickedCompetitorIds];
+    const batchSize = 15;
+    const batchDelayMs = 200;
+    for (let i = 0; i < pickedIds.length; i += batchSize) {
+      if (i > 0) await sleep(batchDelayMs);
+      const batch = pickedIds.slice(i, i + batchSize);
+      await Promise.all(batch.map(async (cId) => {
+        try {
+          const url = `https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/events/${eventId}/competitions/${eventId}/competitors/${cId}/status`;
+          const res = await espnFetch(url);
+          if (res.ok) {
+            statusMap[cId] = await res.json();
+          }
+        } catch (e) { /* ignore individual failures */ }
+      }));
+    }
 
     // Use ESPN's scoreboard status to identify CUT/WD for the full field
     const cutWdIds = new Set();
@@ -544,27 +584,25 @@ exports.handler = async (event) => {
     // Assign ranks
     ownerStandings.forEach((o, i) => { o.rank = i + 1; });
 
-    return {
-      statusCode: 200,
-      headers: HEADERS,
-      body: JSON.stringify({
-        success: true,
-        tournament: {
-          id: tournament.id,
-          name: tournament.name,
-          short_name: tournament.short_name,
-          week_number: tournament.week_number,
-          purse_millions: tournament.purse_millions,
-          is_major: tournament.is_major
-        },
-        espn_event: espnEvent.name,
-        round_display: roundDisplay,
-        is_complete: isComplete,
-        is_in_progress: isInProgress,
-        updated_at: new Date().toISOString(),
-        standings: ownerStandings
-      })
-    };
+    const body = JSON.stringify({
+      success: true,
+      tournament: {
+        id: tournament.id,
+        name: tournament.name,
+        short_name: tournament.short_name,
+        week_number: tournament.week_number,
+        purse_millions: tournament.purse_millions,
+        is_major: tournament.is_major
+      },
+      espn_event: espnEvent.name,
+      round_display: roundDisplay,
+      is_complete: isComplete,
+      is_in_progress: isInProgress,
+      updated_at: new Date().toISOString(),
+      standings: ownerStandings
+    });
+    cache = { tournamentId: tournament.id, fetchedAt: Date.now(), isFallback: false, body };
+    return { statusCode: 200, headers: HEADERS, body };
   } catch (err) {
     return { statusCode: 500, headers: HEADERS, body: JSON.stringify({ success: false, error: err.message }) };
   }
