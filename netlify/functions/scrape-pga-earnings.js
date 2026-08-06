@@ -1,5 +1,6 @@
-// Netlify function - Scrape PGA Tour earnings from ESPN API
+// Netlify function - Fetch official PGA Tour earnings from the Live Golf Data API
 const { createClient } = require('@supabase/supabase-js');
+const { getSchedule, getLeaderboard, getEarnings, findScheduleEntry } = require('./lib/rapidapi-golf');
 
 const supabase = createClient(
   process.env.SUPABASE_URL || 'https://iqahjyoytzhhkvwmujha.supabase.co',
@@ -109,160 +110,85 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ success: true, results: [], total_golfers: 0, picked_golfers: 0, warning: 'No golfers picked for this tournament' }) };
     }
 
-    // Step 1: Find the ESPN event for this tournament date
-    const dateStr = tournament.start_date.replace(/-/g, '');
-    const scoreboardUrl = `https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=${dateStr}`;
-
-    const scoreboardRes = await fetch(scoreboardUrl);
-    if (!scoreboardRes.ok) {
-      return { statusCode: 502, headers: HEADERS, body: JSON.stringify({ error: 'Failed to fetch ESPN scoreboard', status: scoreboardRes.status }) };
+    // Step 1: Find the Live Golf Data schedule entry for this tournament
+    const year = new Date(tournament.start_date + 'T00:00:00Z').getFullYear();
+    let scheduleEntry;
+    try {
+      const schedule = await getSchedule(year);
+      scheduleEntry = findScheduleEntry(schedule.schedule, tournament);
+    } catch (e) {
+      return { statusCode: 502, headers: HEADERS, body: JSON.stringify({ error: `Schedule lookup failed: ${e.message}` }) };
     }
 
-    const scoreboardData = await scoreboardRes.json();
-    const espnEvent = scoreboardData.events?.[0];
-
-    if (!espnEvent) {
-      return { statusCode: 404, headers: HEADERS, body: JSON.stringify({ error: 'No ESPN event found for this date' }) };
+    if (!scheduleEntry) {
+      return { statusCode: 404, headers: HEADERS, body: JSON.stringify({ error: 'No matching tournament found in schedule' }) };
     }
 
-    const eventId = espnEvent.id;
-    const eventName = espnEvent.name;
-    const isComplete = espnEvent.status?.type?.completed === true;
-
-    // Step 2: Get competitor list from ESPN
-    // Scoreboard may truncate completed events, so also fetch from core API
-    let competitors = espnEvent.competitions?.[0]?.competitors || [];
-
-    // If scoreboard has few competitors, fetch full field from core API
-    if (competitors.length < 30) {
-      try {
-        const coreUrl = `https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/events/${eventId}/competitions/${eventId}/competitors?limit=100`;
-        const coreRes = await fetch(coreUrl);
-        if (coreRes.ok) {
-          const coreData = await coreRes.json();
-          const coreRefs = coreData.items || [];
-          // Fetch each competitor's details
-          const detailFetches = coreRefs.map(async (item, idx) => {
-            try {
-              const ref = item.$ref || item.href;
-              if (!ref) return null;
-              // Extract competitor ID from the ref URL
-              const idMatch = ref.match(/competitors\/(\d+)/);
-              const cId = idMatch ? idMatch[1] : null;
-              if (!cId) return null;
-              // Fetch athlete name from the athlete endpoint
-              const athleteUrl = `https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/events/${eventId}/competitions/${eventId}/competitors/${cId}`;
-              const aRes = await fetch(athleteUrl);
-              if (!aRes.ok) return null;
-              const aData = await aRes.json();
-              // Get athlete details
-              let athleteName = '';
-              if (aData.athlete && typeof aData.athlete === 'object' && aData.athlete.$ref) {
-                try {
-                  const nameRes = await fetch(aData.athlete.$ref);
-                  if (nameRes.ok) {
-                    const nameData = await nameRes.json();
-                    athleteName = nameData.displayName || nameData.fullName || '';
-                  }
-                } catch (e) { /* ignore */ }
-              }
-              // Get score from score endpoint
-              let score = '';
-              if (aData.score && typeof aData.score === 'object' && aData.score.$ref) {
-                try {
-                  const scoreRes = await fetch(aData.score.$ref);
-                  if (scoreRes.ok) {
-                    const scoreData = await scoreRes.json();
-                    score = scoreData.displayValue || '';
-                  }
-                } catch (e) { /* ignore */ }
-              }
-              return { id: cId, athlete: { displayName: athleteName }, score, order: idx + 1 };
-            } catch (e) { return null; }
-          });
-          const fullCompetitors = (await Promise.all(detailFetches)).filter(Boolean);
-          if (fullCompetitors.length > competitors.length) {
-            competitors = fullCompetitors;
-          }
-        }
-      } catch (e) { /* fall back to scoreboard competitors */ }
+    // Step 2: Fetch the final leaderboard (position/score) and official earnings
+    let leaderboard, earningsData;
+    try {
+      [leaderboard, earningsData] = await Promise.all([
+        getLeaderboard(scheduleEntry.tournId, year),
+        getEarnings(scheduleEntry.tournId, year)
+      ]);
+    } catch (e) {
+      return { statusCode: 502, headers: HEADERS, body: JSON.stringify({ error: `Live Golf Data fetch failed: ${e.message}` }) };
     }
 
-    const espnGolfers = competitors.map(c => ({
-      espnId: c.id,
-      name: c.athlete?.displayName || c.athlete?.fullName || '',
-      score: c.score || '',
-      order: c.order || 999
-    }));
+    const rows = leaderboard.leaderboardRows || [];
+    if (rows.length === 0) {
+      return { statusCode: 404, headers: HEADERS, body: JSON.stringify({ error: 'No leaderboard rows found for this event' }) };
+    }
 
-    // Step 3: For each picked golfer, find their ESPN match
-    const matchedPicked = pickedList.map(pg => {
-      const espnMatch = findEspnMatch(pg.name, espnGolfers);
-      return { ...pg, espnMatch };
+    const isComplete = leaderboard.status === 'Official';
+
+    const officialEarningsMap = {};
+    (earningsData.leaderboard || []).forEach(p => { officialEarningsMap[p.playerId] = p.earnings || 0; });
+    const hasOfficialEarnings = Object.keys(officialEarningsMap).length > 0;
+
+    // Build player rows with position/tie info, same approach as get-live-scores.js
+    const apiPlayers = rows.map(row => {
+      const isCut = row.status === 'cut' || row.position === 'CUT';
+      const isWD = row.status === 'wd' || row.position === 'WD';
+      const positionNum = (!isCut && !isWD) ? parseInt(String(row.position).replace(/\D/g, ''), 10) : NaN;
+      return {
+        playerId: row.playerId,
+        name: `${row.firstName} ${row.lastName}`.trim(),
+        position: isCut ? 'CUT' : isWD ? 'WD' : (row.position || '-'),
+        positionNum: Number.isNaN(positionNum) ? 999 : positionNum,
+        score: row.total || '-',
+        isCut,
+        isWD
+      };
     });
 
-    // Step 4: Fetch status for ALL competitors to calculate positions and ties
-    const allCompetitorIds = competitors.map(c => c.id);
-    const statusMap = {};
-    const fetchBatchSize = 25;
+    const positionCounts = {};
+    apiPlayers.forEach(p => {
+      if (p.positionNum === 999) return;
+      positionCounts[p.positionNum] = (positionCounts[p.positionNum] || 0) + 1;
+    });
 
-    for (let i = 0; i < allCompetitorIds.length; i += fetchBatchSize) {
-      const batch = allCompetitorIds.slice(i, i + fetchBatchSize);
-      await Promise.all(batch.map(async (cId) => {
-        try {
-          const url = `https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/events/${eventId}/competitions/${eventId}/competitors/${cId}/status`;
-          const res = await fetch(url);
-          if (res.ok) {
-            statusMap[cId] = await res.json();
-          }
-        } catch (e) { /* ignore */ }
-      }));
-    }
-
-    // Step 5: Try to get ESPN earnings for picked golfers
-    const espnEarningsMap = {};
-    const pickedEspnIds = matchedPicked.filter(pg => pg.espnMatch).map(pg => pg.espnMatch.espnId);
-
-    for (let i = 0; i < pickedEspnIds.length; i += fetchBatchSize) {
-      const batch = pickedEspnIds.slice(i, i + fetchBatchSize);
-      await Promise.all(batch.map(async (cId) => {
-        try {
-          const statsUrl = `https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/events/${eventId}/competitions/${eventId}/competitors/${cId}/statistics?lang=en&region=us`;
-          const statsRes = await fetch(statsUrl);
-          if (statsRes.ok) {
-            const statsData = await statsRes.json();
-            const stats = statsData.splits?.categories?.[0]?.stats || [];
-            const earningsStat = stats.find(s => s.name === 'amount' || s.name === 'officialAmount');
-            if (earningsStat && earningsStat.value > 0) {
-              espnEarningsMap[cId] = earningsStat.value;
-            }
-          }
-        } catch (e) { /* ignore */ }
-      }));
-    }
-
-    // Check if ESPN provided any earnings
-    const hasEspnEarnings = Object.keys(espnEarningsMap).length > 0;
-
-    // Step 6: Build position info from ESPN status API (authoritative source)
-    // Group by position number to determine tie counts
-    const positionGroups = {}; // posNum -> [espnId, ...]
-    allCompetitorIds.forEach(cId => {
-      const st = statusMap[cId];
-      if (!st) return;
-      const statusName = st?.type?.name || '';
-      if (statusName === 'STATUS_CUT' || statusName === 'STATUS_WITHDRAWN' || statusName === 'STATUS_DISQUALIFIED') return;
-      const posDisplay = st?.position?.displayName || '';
-      const posNum = parseInt(posDisplay.replace('T', ''));
-      if (!isNaN(posNum)) {
-        if (!positionGroups[posNum]) positionGroups[posNum] = [];
-        positionGroups[posNum].push(cId);
+    // Official earnings take precedence; fall back to the calculated payout
+    // table only when the earnings endpoint hasn't posted amounts yet.
+    apiPlayers.forEach(p => {
+      if (hasOfficialEarnings) {
+        p.earnings = officialEarningsMap[p.playerId] || 0;
+      } else if (!p.isCut && !p.isWD && p.positionNum !== 999) {
+        p.earnings = calculateTiedEarnings(p.positionNum, positionCounts[p.positionNum] || 1, purse, isMasters);
+      } else {
+        p.earnings = 0;
       }
     });
 
-    // Step 7: Build results — use ESPN earnings if available, otherwise calculate from position
+    // Step 3: For each picked golfer, find their match on the leaderboard
+    const matchedPicked = pickedList.map(pg => {
+      const apiMatch = findApiMatch(pg.name, apiPlayers);
+      return { ...pg, apiMatch };
+    });
+
+    // Step 4: Build results
     const results = matchedPicked.map(pg => {
-      if (!pg.espnMatch) {
+      if (!pg.apiMatch) {
         return {
           espn_name: null,
           espn_id: null,
@@ -276,40 +202,17 @@ exports.handler = async (event) => {
         };
       }
 
-      const espnId = pg.espnMatch.espnId;
-      const st = statusMap[espnId];
-      const statusName = st?.type?.name || '';
-      const isCut = statusName === 'STATUS_CUT';
-      const isWD = statusName === 'STATUS_WITHDRAWN' || statusName === 'STATUS_DISQUALIFIED';
-
-      // Use ESPN's position directly
-      const posDisplay = st?.position?.displayName || '-';
-      const position = isCut ? 'CUT' : isWD ? 'WD' : posDisplay;
-      const posNum = parseInt(posDisplay.replace('T', ''));
-      const positionNum = isNaN(posNum) ? 999 : posNum;
-      const isTied = posDisplay.startsWith('T');
-      const tiedCount = isTied ? (positionGroups[positionNum]?.length || 1) : 1;
-
-      let earnings = 0;
-      if (hasEspnEarnings) {
-        // Use actual ESPN earnings
-        earnings = espnEarningsMap[espnId] || 0;
-      } else if (!isCut && !isWD && positionNum < 999) {
-        // Fallback: calculate from position + payout table
-        earnings = calculateTiedEarnings(positionNum, tiedCount, purse, isMasters);
-      }
-
       return {
-        espn_name: pg.espnMatch.name,
-        espn_id: espnId,
-        score: pg.espnMatch.score,
-        earnings,
-        position,
+        espn_name: pg.apiMatch.name,
+        espn_id: pg.apiMatch.playerId,
+        score: pg.apiMatch.score,
+        earnings: pg.apiMatch.earnings,
+        position: pg.apiMatch.position,
         matched_db_name: pg.name,
         matched_db_id: pg.id,
-        confidence_score: pg.espnMatch.confidence,
+        confidence_score: pg.apiMatch.confidence,
         is_picked: true,
-        earnings_source: hasEspnEarnings ? 'espn' : 'calculated'
+        earnings_source: hasOfficialEarnings ? 'espn' : 'calculated'
       };
     });
 
@@ -323,15 +226,15 @@ exports.handler = async (event) => {
       headers: HEADERS,
       body: JSON.stringify({
         success: true,
-        espn_event: eventName,
-        espn_event_id: eventId,
+        espn_event: scheduleEntry.name,
+        espn_event_id: scheduleEntry.tournId,
         is_complete: isComplete,
         tournament_id: tournament_id,
         tournament_name: tournament.name,
         total_golfers: results.length,
         picked_golfers: results.length,
         unmatched_count: unmatched.length,
-        earnings_source: hasEspnEarnings ? 'espn' : 'calculated',
+        earnings_source: hasOfficialEarnings ? 'espn' : 'calculated',
         results: results
       })
     };
@@ -340,7 +243,7 @@ exports.handler = async (event) => {
   }
 };
 
-// Hardcoded name corrections: ESPN name -> DB name (or null to skip entirely)
+// Hardcoded name corrections: API name -> DB name (or null to skip entirely)
 const NAME_CORRECTIONS = {
   'Matt McCarty': 'Matt McCarty',
   'Denny McCarthy': 'Denny McCarthy',
@@ -356,15 +259,15 @@ const DB_NAME_LOCKS = {
 };
 
 const NAME_CORRECTIONS_NORM = {};
-Object.entries(NAME_CORRECTIONS).forEach(([espn, db]) => {
-  const key = espn.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
-  NAME_CORRECTIONS_NORM[key] = db ? db.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim() : null;
+Object.entries(NAME_CORRECTIONS).forEach(([api, db]) => {
+  const key = api.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
+  NAME_CORRECTIONS_NORM[key] = db ? db.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim() : null;
 });
 
-function findEspnMatch(dbName, espnGolfers) {
-  if (!dbName || !espnGolfers.length) return null;
+function findApiMatch(dbName, apiPlayers) {
+  if (!dbName || !apiPlayers.length) return null;
 
-  const normalize = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
+  const normalize = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
 
   const dbNorm = normalize(dbName);
   const dbParts = dbNorm.split(' ');
@@ -372,18 +275,18 @@ function findEspnMatch(dbName, espnGolfers) {
   const dbLast = dbParts[dbParts.length - 1];
 
   if (dbNorm in DB_NAME_LOCKS) {
-    const requiredEspn = DB_NAME_LOCKS[dbNorm];
-    const exactEspn = espnGolfers.find(eg => normalize(eg.name) === requiredEspn);
-    return exactEspn ? { ...exactEspn, confidence: 1.0 } : null;
+    const requiredApi = DB_NAME_LOCKS[dbNorm];
+    const exactApi = apiPlayers.find(ap => normalize(ap.name) === requiredApi);
+    return exactApi ? { ...exactApi, confidence: 1.0 } : null;
   }
 
-  for (const eg of espnGolfers) {
-    const espnNorm = normalize(eg.name);
-    if (espnNorm in NAME_CORRECTIONS_NORM) {
-      const correctedDb = NAME_CORRECTIONS_NORM[espnNorm];
+  for (const ap of apiPlayers) {
+    const apiNorm = normalize(ap.name);
+    if (apiNorm in NAME_CORRECTIONS_NORM) {
+      const correctedDb = NAME_CORRECTIONS_NORM[apiNorm];
       if (correctedDb === null) continue;
       if (correctedDb === dbNorm) {
-        return { ...eg, confidence: 1.0 };
+        return { ...ap, confidence: 1.0 };
       }
       continue;
     }
@@ -392,37 +295,37 @@ function findEspnMatch(dbName, espnGolfers) {
   let bestMatch = null;
   let bestScore = 0;
 
-  for (const eg of espnGolfers) {
-    const espnNorm = normalize(eg.name);
-    if (!espnNorm) continue;
-    if (espnNorm in NAME_CORRECTIONS_NORM) continue;
+  for (const ap of apiPlayers) {
+    const apiNorm = normalize(ap.name);
+    if (!apiNorm) continue;
+    if (apiNorm in NAME_CORRECTIONS_NORM) continue;
 
-    if (dbNorm === espnNorm) {
-      return { ...eg, confidence: 1.0 };
+    if (dbNorm === apiNorm) {
+      return { ...ap, confidence: 1.0 };
     }
 
-    const espnParts = espnNorm.split(' ');
-    const espnFirst = espnParts[0];
-    const espnLast = espnParts[espnParts.length - 1];
+    const apiParts = apiNorm.split(' ');
+    const apiFirst = apiParts[0];
+    const apiLast = apiParts[apiParts.length - 1];
 
-    const lastLev = levenshtein(dbLast, espnLast);
-    const lastMaxLen = Math.max(dbLast.length, espnLast.length);
+    const lastLev = levenshtein(dbLast, apiLast);
+    const lastMaxLen = Math.max(dbLast.length, apiLast.length);
     const lastSimilarity = 1 - (lastLev / lastMaxLen);
     if (lastSimilarity < 0.7) continue;
 
-    if (dbFirst[0] !== espnFirst[0]) continue;
+    if (dbFirst[0] !== apiFirst[0]) continue;
 
-    const firstLev = levenshtein(dbFirst, espnFirst);
-    const firstMaxLen = Math.max(dbFirst.length, espnFirst.length);
+    const firstLev = levenshtein(dbFirst, apiFirst);
+    const firstMaxLen = Math.max(dbFirst.length, apiFirst.length);
     const firstSimilarity = 1 - (firstLev / firstMaxLen);
 
-    const isAbbreviated = dbFirst.length <= 2 || espnFirst.length <= 2;
+    const isAbbreviated = dbFirst.length <= 2 || apiFirst.length <= 2;
     if (!isAbbreviated && firstSimilarity < 0.7) continue;
 
     let score;
-    if (dbFirst === espnFirst && dbLast === espnLast) {
+    if (dbFirst === apiFirst && dbLast === apiLast) {
       score = 0.95;
-    } else if (dbFirst === espnFirst && lastSimilarity >= 0.85) {
+    } else if (dbFirst === apiFirst && lastSimilarity >= 0.85) {
       score = 0.9;
     } else {
       score = (firstSimilarity * 0.4) + (lastSimilarity * 0.6);
@@ -430,7 +333,7 @@ function findEspnMatch(dbName, espnGolfers) {
 
     if (score > bestScore) {
       bestScore = score;
-      bestMatch = { ...eg, confidence: parseFloat(score.toFixed(2)) };
+      bestMatch = { ...ap, confidence: parseFloat(score.toFixed(2)) };
     }
   }
 
