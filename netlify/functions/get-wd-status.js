@@ -57,13 +57,10 @@ exports.handler = async (event) => {
 
     if (!tournament) return EMPTY;
 
-    console.log(`[get-wd-status] Target tournament: "${tournament.name}" (short: "${tournament.short_name}"), start_date: ${tournament.start_date}`);
-
     if (cache.tournamentId === tournament.id) {
       const ttl = cache.isFallback ? FALLBACK_CACHE_TTL_MS : SUCCESS_CACHE_TTL_MS;
       const age = Date.now() - cache.fetchedAt;
       if (age < ttl) {
-        console.log(`[get-wd-status] Serving cached result (${cache.isFallback ? 'fallback' : 'success'}, ${Math.round(age / 1000)}s old)`);
         return { statusCode: 200, headers: HEADERS, body: cache.body };
       }
     }
@@ -86,28 +83,22 @@ exports.handler = async (event) => {
       const schedule = await getSchedule(year);
       scheduleEntry = findScheduleEntry(schedule.schedule, tournament);
     } catch (e) {
-      console.log(`[get-wd-status] Schedule lookup failed: ${e.message}`);
       return fallback('schedule_error');
     }
 
     if (!scheduleEntry) {
-      console.log('[get-wd-status] No matching tournament found in Live Golf Data schedule - falling back to full Supabase golfer list');
       return fallback('no_schedule_match');
     }
-
-    console.log(`[get-wd-status] Matched schedule entry: "${scheduleEntry.name}" (tournId: ${scheduleEntry.tournId})`);
 
     let leaderboard;
     try {
       leaderboard = await getLeaderboard(scheduleEntry.tournId, year);
     } catch (e) {
-      console.log(`[get-wd-status] Leaderboard fetch failed: ${e.message}`);
       return fallback('leaderboard_error');
     }
 
     const rows = leaderboard.leaderboardRows || [];
     if (rows.length === 0) {
-      console.log('[get-wd-status] Leaderboard came back empty - falling back to full Supabase golfer list');
       return fallback('empty_field');
     }
 
@@ -128,8 +119,6 @@ exports.handler = async (event) => {
       }
     });
 
-    console.log(`[get-wd-status] Field resolved: ${fieldNames.length} active, ${wdNames.length} withdrawn`);
-
     // Auto-add field golfers not in DB at $15
     const newGolfers = [];
     for (const apiName of fieldNames) {
@@ -142,7 +131,6 @@ exports.handler = async (event) => {
 
     if (newGolfers.length > 0) {
       await supabase.from('golfers').insert(newGolfers);
-      console.log(`[get-wd-status] Added ${newGolfers.length} new golfer(s): ${newGolfers.map(g => g.name).join(', ')}`);
     }
 
     const body = JSON.stringify({
@@ -157,7 +145,6 @@ exports.handler = async (event) => {
     return { statusCode: 200, headers: HEADERS, body };
 
   } catch (err) {
-    console.log(`[get-wd-status] Unhandled error: ${err.message}`);
     return EMPTY;
   }
 };
