@@ -1,6 +1,6 @@
 // Netlify function - Get live tournament scores for CVC Fantasy Golf
 const { createClient } = require('@supabase/supabase-js');
-const { getSchedule, getLeaderboard, findScheduleEntry, normalizeName, formatTeeTime } = require('./lib/rapidapi-golf');
+const { getSchedule, getLeaderboard, findScheduleEntry, findGolferMatch, buildPlayersFromLeaderboard } = require('./lib/rapidapi-golf');
 
 const supabase = createClient(
   process.env.SUPABASE_URL || 'https://iqahjyoytzhhkvwmujha.supabase.co',
@@ -315,35 +315,13 @@ exports.handler = async (event) => {
     const currentRound = leaderboard.roundId || 0;
     const roundDisplay = `Round ${currentRound}: ${leaderboard.roundStatus || leaderboard.status || ''}`.trim();
 
-    // Build API golfer data directly from the leaderboard row - position,
-    // tie status, and this round's score are already resolved by the API,
-    // unlike ESPN which required reconstructing ties from raw scores.
-    const apiGolfers = rows.map(row => {
-      const isCut = row.status === 'cut' || row.position === 'CUT';
-      const isWD = row.status === 'wd' || row.position === 'WD';
-      const positionNum = (!isCut && !isWD) ? parseInt(String(row.position).replace(/\D/g, ''), 10) : NaN;
-
-      return {
-        playerId: row.playerId,
-        name: `${row.firstName} ${row.lastName}`.trim(),
-        position: isCut ? 'CUT' : isWD ? 'WD' : (row.position || '-'),
-        positionNum: Number.isNaN(positionNum) ? 999 : positionNum,
-        scoreToPar: row.total || '-',
-        today: currentRound > 1 ? (row.currentRoundScore || '-') : '-',
-        thru: row.thru || '-',
-        teeTime: formatTeeTime(row.teeTime) || '-',
-        isCut,
-        isWD
-      };
-    });
-
-    // Tie count = how many golfers share the same resolved position
-    const positionCounts = {};
-    apiGolfers.forEach(g => {
-      if (g.positionNum === 999) return;
-      positionCounts[g.positionNum] = (positionCounts[g.positionNum] || 0) + 1;
-    });
-    apiGolfers.forEach(g => { g.tiedCount = positionCounts[g.positionNum] || 1; });
+    // Position/tie info is already resolved by buildPlayersFromLeaderboard;
+    // just layer on the display fields specific to live scoring.
+    const apiGolfers = buildPlayersFromLeaderboard(rows).map(p => ({
+      ...p,
+      scoreToPar: p.score,
+      today: currentRound > 1 ? p.currentRoundScore : '-'
+    }));
 
     // Calculate earnings for each golfer using full-field tie counts
     const isMasters = tournament.is_major && tournament.short_name === 'Masters';
@@ -356,18 +334,7 @@ exports.handler = async (event) => {
 
     // Match our golfers to leaderboard rows by name
     function matchGolfer(dbName) {
-      const dbNorm = normalizeName(dbName);
-      const dbParts = dbNorm.split(' ');
-      const dbLast = dbParts[dbParts.length - 1];
-
-      let match = apiGolfers.find(g => normalizeName(g.name) === dbNorm);
-      if (match) return match;
-
-      match = apiGolfers.find(g => {
-        const parts = normalizeName(g.name).split(' ');
-        return parts[parts.length - 1] === dbLast && parts[0]?.[0] === dbParts[0]?.[0];
-      });
-      return match || null;
+      return findGolferMatch(dbName, apiGolfers);
     }
 
     // Build owner standings

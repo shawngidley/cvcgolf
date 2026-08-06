@@ -1,6 +1,6 @@
 // Netlify function - Fetch official PGA Tour earnings from the Live Golf Data API
 const { createClient } = require('@supabase/supabase-js');
-const { getSchedule, getLeaderboard, getEarnings, findScheduleEntry } = require('./lib/rapidapi-golf');
+const { getSchedule, getLeaderboard, getEarnings, findScheduleEntry, buildPlayersFromLeaderboard, findGolferMatch } = require('./lib/rapidapi-golf');
 
 const supabase = createClient(
   process.env.SUPABASE_URL || 'https://iqahjyoytzhhkvwmujha.supabase.co',
@@ -146,27 +146,7 @@ exports.handler = async (event) => {
     (earningsData.leaderboard || []).forEach(p => { officialEarningsMap[p.playerId] = p.earnings || 0; });
     const hasOfficialEarnings = Object.keys(officialEarningsMap).length > 0;
 
-    // Build player rows with position/tie info, same approach as get-live-scores.js
-    const apiPlayers = rows.map(row => {
-      const isCut = row.status === 'cut' || row.position === 'CUT';
-      const isWD = row.status === 'wd' || row.position === 'WD';
-      const positionNum = (!isCut && !isWD) ? parseInt(String(row.position).replace(/\D/g, ''), 10) : NaN;
-      return {
-        playerId: row.playerId,
-        name: `${row.firstName} ${row.lastName}`.trim(),
-        position: isCut ? 'CUT' : isWD ? 'WD' : (row.position || '-'),
-        positionNum: Number.isNaN(positionNum) ? 999 : positionNum,
-        score: row.total || '-',
-        isCut,
-        isWD
-      };
-    });
-
-    const positionCounts = {};
-    apiPlayers.forEach(p => {
-      if (p.positionNum === 999) return;
-      positionCounts[p.positionNum] = (positionCounts[p.positionNum] || 0) + 1;
-    });
+    const apiPlayers = buildPlayersFromLeaderboard(rows);
 
     // Official earnings take precedence; fall back to the calculated payout
     // table only when the earnings endpoint hasn't posted amounts yet.
@@ -174,7 +154,7 @@ exports.handler = async (event) => {
       if (hasOfficialEarnings) {
         p.earnings = officialEarningsMap[p.playerId] || 0;
       } else if (!p.isCut && !p.isWD && p.positionNum !== 999) {
-        p.earnings = calculateTiedEarnings(p.positionNum, positionCounts[p.positionNum] || 1, purse, isMasters);
+        p.earnings = calculateTiedEarnings(p.positionNum, p.tiedCount, purse, isMasters);
       } else {
         p.earnings = 0;
       }
@@ -182,7 +162,7 @@ exports.handler = async (event) => {
 
     // Step 3: For each picked golfer, find their match on the leaderboard
     const matchedPicked = pickedList.map(pg => {
-      const apiMatch = findApiMatch(pg.name, apiPlayers);
+      const apiMatch = findGolferMatch(pg.name, apiPlayers);
       return { ...pg, apiMatch };
     });
 
@@ -242,115 +222,3 @@ exports.handler = async (event) => {
     return { statusCode: 500, headers: HEADERS, body: JSON.stringify({ error: err.message, stack: err.stack }) };
   }
 };
-
-// Hardcoded name corrections: API name -> DB name (or null to skip entirely)
-const NAME_CORRECTIONS = {
-  'Matt McCarty': 'Matt McCarty',
-  'Denny McCarthy': 'Denny McCarthy',
-  'Nico Echavarria': 'Nico Echavarria',
-  'K.H. Lee': null,
-  'Ryan Palmer': null,
-  'Gordon Sargent': null,
-};
-
-const DB_NAME_LOCKS = {
-  'denny mccarthy': 'denny mccarthy',
-  'matt mccarty': 'matt mccarty',
-};
-
-const NAME_CORRECTIONS_NORM = {};
-Object.entries(NAME_CORRECTIONS).forEach(([api, db]) => {
-  const key = api.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
-  NAME_CORRECTIONS_NORM[key] = db ? db.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim() : null;
-});
-
-function findApiMatch(dbName, apiPlayers) {
-  if (!dbName || !apiPlayers.length) return null;
-
-  const normalize = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
-
-  const dbNorm = normalize(dbName);
-  const dbParts = dbNorm.split(' ');
-  const dbFirst = dbParts[0];
-  const dbLast = dbParts[dbParts.length - 1];
-
-  if (dbNorm in DB_NAME_LOCKS) {
-    const requiredApi = DB_NAME_LOCKS[dbNorm];
-    const exactApi = apiPlayers.find(ap => normalize(ap.name) === requiredApi);
-    return exactApi ? { ...exactApi, confidence: 1.0 } : null;
-  }
-
-  for (const ap of apiPlayers) {
-    const apiNorm = normalize(ap.name);
-    if (apiNorm in NAME_CORRECTIONS_NORM) {
-      const correctedDb = NAME_CORRECTIONS_NORM[apiNorm];
-      if (correctedDb === null) continue;
-      if (correctedDb === dbNorm) {
-        return { ...ap, confidence: 1.0 };
-      }
-      continue;
-    }
-  }
-
-  let bestMatch = null;
-  let bestScore = 0;
-
-  for (const ap of apiPlayers) {
-    const apiNorm = normalize(ap.name);
-    if (!apiNorm) continue;
-    if (apiNorm in NAME_CORRECTIONS_NORM) continue;
-
-    if (dbNorm === apiNorm) {
-      return { ...ap, confidence: 1.0 };
-    }
-
-    const apiParts = apiNorm.split(' ');
-    const apiFirst = apiParts[0];
-    const apiLast = apiParts[apiParts.length - 1];
-
-    const lastLev = levenshtein(dbLast, apiLast);
-    const lastMaxLen = Math.max(dbLast.length, apiLast.length);
-    const lastSimilarity = 1 - (lastLev / lastMaxLen);
-    if (lastSimilarity < 0.7) continue;
-
-    if (dbFirst[0] !== apiFirst[0]) continue;
-
-    const firstLev = levenshtein(dbFirst, apiFirst);
-    const firstMaxLen = Math.max(dbFirst.length, apiFirst.length);
-    const firstSimilarity = 1 - (firstLev / firstMaxLen);
-
-    const isAbbreviated = dbFirst.length <= 2 || apiFirst.length <= 2;
-    if (!isAbbreviated && firstSimilarity < 0.7) continue;
-
-    let score;
-    if (dbFirst === apiFirst && dbLast === apiLast) {
-      score = 0.95;
-    } else if (dbFirst === apiFirst && lastSimilarity >= 0.85) {
-      score = 0.9;
-    } else {
-      score = (firstSimilarity * 0.4) + (lastSimilarity * 0.6);
-    }
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestMatch = { ...ap, confidence: parseFloat(score.toFixed(2)) };
-    }
-  }
-
-  return bestMatch && bestScore >= 0.5 ? bestMatch : null;
-}
-
-function levenshtein(a, b) {
-  const m = a.length, n = b.length;
-  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-  for (let i = 0; i <= m; i++) dp[i][0] = i;
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      dp[i][j] = a[i - 1] === b[j - 1]
-        ? dp[i - 1][j - 1]
-        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
-    }
-  }
-  return dp[m][n];
-}

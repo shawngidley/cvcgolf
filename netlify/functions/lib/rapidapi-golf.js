@@ -94,6 +94,145 @@ function formatTeeTime(raw) {
   return `${m[1]}:${m[2]} ${m[3].toUpperCase()}`;
 }
 
+// Turns raw leaderboardRows into a flat player list with position/tie info
+// resolved - the API already computes ties (e.g. "T2"), so this just parses
+// that into a number and counts how many rows share it, instead of
+// reconstructing standings from raw scores the way the old ESPN code had to.
+function buildPlayersFromLeaderboard(rows) {
+  const players = (rows || []).map(row => {
+    const isCut = row.status === 'cut' || row.position === 'CUT';
+    const isWD = row.status === 'wd' || row.position === 'WD';
+    const positionNum = (!isCut && !isWD) ? parseInt(String(row.position).replace(/\D/g, ''), 10) : NaN;
+    return {
+      playerId: row.playerId,
+      name: `${row.firstName} ${row.lastName}`.trim(),
+      position: isCut ? 'CUT' : isWD ? 'WD' : (row.position || '-'),
+      positionNum: Number.isNaN(positionNum) ? 999 : positionNum,
+      score: row.total || '-',
+      currentRoundScore: row.currentRoundScore || '-',
+      thru: row.thru || '-',
+      teeTime: formatTeeTime(row.teeTime) || '-',
+      isCut,
+      isWD
+    };
+  });
+
+  const positionCounts = {};
+  players.forEach(p => {
+    if (p.positionNum === 999) return;
+    positionCounts[p.positionNum] = (positionCounts[p.positionNum] || 0) + 1;
+  });
+  players.forEach(p => { p.tiedCount = positionCounts[p.positionNum] || 1; });
+
+  return players;
+}
+
+// Hardcoded name corrections: API name -> DB name (or null to skip entirely).
+// Carried over from the ESPN-era matcher - these cover spellings our DB and
+// the data source have historically disagreed on.
+const NAME_CORRECTIONS = {
+  'Matt McCarty': 'Matt McCarty',
+  'Denny McCarthy': 'Denny McCarthy',
+  'Nico Echavarria': 'Nico Echavarria',
+  'K.H. Lee': null,
+  'Ryan Palmer': null,
+  'Gordon Sargent': null,
+};
+
+const DB_NAME_LOCKS = {
+  'denny mccarthy': 'denny mccarthy',
+  'matt mccarty': 'matt mccarty',
+};
+
+const NAME_CORRECTIONS_NORM = {};
+Object.entries(NAME_CORRECTIONS).forEach(([apiName, dbName]) => {
+  const key = normalizeName(apiName);
+  NAME_CORRECTIONS_NORM[key] = dbName ? normalizeName(dbName) : null;
+});
+
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+// Fuzzy-matches a DB golfer name against a list of { name, ... } candidates
+// (e.g. from buildPlayersFromLeaderboard), returning the best match plus a
+// 0-1 confidence score, or null if nothing scores high enough to trust.
+function findGolferMatch(dbName, candidates) {
+  if (!dbName || !candidates.length) return null;
+
+  const dbNorm = normalizeName(dbName);
+  const dbParts = dbNorm.split(' ');
+  const dbFirst = dbParts[0];
+  const dbLast = dbParts[dbParts.length - 1];
+
+  if (dbNorm in DB_NAME_LOCKS) {
+    const required = DB_NAME_LOCKS[dbNorm];
+    const exact = candidates.find(c => normalizeName(c.name) === required);
+    return exact ? { ...exact, confidence: 1.0 } : null;
+  }
+
+  for (const c of candidates) {
+    const cNorm = normalizeName(c.name);
+    if (cNorm in NAME_CORRECTIONS_NORM) {
+      const corrected = NAME_CORRECTIONS_NORM[cNorm];
+      if (corrected === null) continue;
+      if (corrected === dbNorm) return { ...c, confidence: 1.0 };
+      continue;
+    }
+  }
+
+  let bestMatch = null;
+  let bestScore = 0;
+
+  for (const c of candidates) {
+    const cNorm = normalizeName(c.name);
+    if (!cNorm || cNorm in NAME_CORRECTIONS_NORM) continue;
+
+    if (dbNorm === cNorm) return { ...c, confidence: 1.0 };
+
+    const cParts = cNorm.split(' ');
+    const cFirst = cParts[0];
+    const cLast = cParts[cParts.length - 1];
+
+    const lastLev = levenshtein(dbLast, cLast);
+    const lastSimilarity = 1 - (lastLev / Math.max(dbLast.length, cLast.length));
+    if (lastSimilarity < 0.7) continue;
+    if (dbFirst[0] !== cFirst[0]) continue;
+
+    const firstLev = levenshtein(dbFirst, cFirst);
+    const firstSimilarity = 1 - (firstLev / Math.max(dbFirst.length, cFirst.length));
+    const isAbbreviated = dbFirst.length <= 2 || cFirst.length <= 2;
+    if (!isAbbreviated && firstSimilarity < 0.7) continue;
+
+    let score;
+    if (dbFirst === cFirst && dbLast === cLast) {
+      score = 0.95;
+    } else if (dbFirst === cFirst && lastSimilarity >= 0.85) {
+      score = 0.9;
+    } else {
+      score = (firstSimilarity * 0.4) + (lastSimilarity * 0.6);
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = { ...c, confidence: parseFloat(score.toFixed(2)) };
+    }
+  }
+
+  return bestMatch && bestScore >= 0.5 ? bestMatch : null;
+}
+
 module.exports = {
   PGA_ORG_ID,
   getSchedule,
@@ -101,5 +240,7 @@ module.exports = {
   getEarnings,
   findScheduleEntry,
   normalizeName,
-  formatTeeTime
+  formatTeeTime,
+  buildPlayersFromLeaderboard,
+  findGolferMatch
 };

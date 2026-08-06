@@ -1,8 +1,9 @@
 // Netlify scheduled function - Auto-finalize tournament after completion
 // Runs every 30 min from 6 PM - midnight ET on Sundays
-// Checks if current tournament is complete on ESPN, then pulls earnings and updates standings
+// Checks if current tournament is complete via the Live Golf Data API, then pulls earnings and updates standings
 
 const { createClient } = require('@supabase/supabase-js');
+const { getSchedule, getLeaderboard, getEarnings, findScheduleEntry, buildPlayersFromLeaderboard, findGolferMatch } = require('./lib/rapidapi-golf');
 
 const supabase = createClient(
   process.env.SUPABASE_URL || 'https://iqahjyoytzhhkvwmujha.supabase.co',
@@ -63,7 +64,11 @@ function calculateTiedEarnings(position, tiedCount, purse, isMasters) {
   return Math.round(total / tiedCount);
 }
 
-const normalize = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
+function parseScoreToPar(scoreStr) {
+  if (!scoreStr || scoreStr === 'E') return 0;
+  const n = parseInt(scoreStr);
+  return isNaN(n) ? 0 : n;
+}
 
 exports.handler = async (event) => {
   console.log('[auto-finalize] Starting check...');
@@ -86,34 +91,44 @@ exports.handler = async (event) => {
       return { statusCode: 200, body: JSON.stringify({ status: 'skipped', reason: 'Already complete' }) };
     }
 
-    console.log(`[auto-finalize] Checking if "${tournament.name}" is complete on ESPN...`);
+    console.log(`[auto-finalize] Checking if "${tournament.name}" is complete...`);
 
     const purse = (tournament.purse_millions || 20) * 1000000;
     const isMasters = tournament.is_major && tournament.short_name === 'Masters';
 
-    // Step 2: Check ESPN scoreboard for completion
-    const dateStr = tournament.start_date.replace(/-/g, '');
-    const scoreboardUrl = `https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=${dateStr}`;
-    const scoreboardRes = await fetch(scoreboardUrl);
-
-    if (!scoreboardRes.ok) {
-      console.log('[auto-finalize] Failed to fetch ESPN scoreboard.');
-      return { statusCode: 200, body: JSON.stringify({ status: 'error', reason: 'ESPN fetch failed' }) };
+    // Step 2: Find the Live Golf Data schedule entry and check completion
+    const year = new Date(tournament.start_date + 'T00:00:00Z').getFullYear();
+    let scheduleEntry;
+    try {
+      const schedule = await getSchedule(year);
+      scheduleEntry = findScheduleEntry(schedule.schedule, tournament);
+    } catch (e) {
+      console.log(`[auto-finalize] Schedule lookup failed: ${e.message}`);
+      return { statusCode: 200, body: JSON.stringify({ status: 'error', reason: 'Schedule lookup failed' }) };
     }
 
-    const scoreboardData = await scoreboardRes.json();
-    const espnEvent = scoreboardData.events?.[0];
-
-    if (!espnEvent) {
-      console.log('[auto-finalize] No ESPN event found.');
-      return { statusCode: 200, body: JSON.stringify({ status: 'error', reason: 'No ESPN event' }) };
+    if (!scheduleEntry) {
+      console.log('[auto-finalize] No matching tournament found in schedule.');
+      return { statusCode: 200, body: JSON.stringify({ status: 'error', reason: 'No matching tournament found in schedule' }) };
     }
 
-    const eventId = espnEvent.id;
-    const isComplete = espnEvent.status?.type?.completed === true;
+    let leaderboard;
+    try {
+      leaderboard = await getLeaderboard(scheduleEntry.tournId, year);
+    } catch (e) {
+      console.log(`[auto-finalize] Leaderboard fetch failed: ${e.message}`);
+      return { statusCode: 200, body: JSON.stringify({ status: 'error', reason: 'Leaderboard fetch failed' }) };
+    }
 
+    const rows = leaderboard.leaderboardRows || [];
+    if (rows.length === 0) {
+      console.log('[auto-finalize] Leaderboard came back empty.');
+      return { statusCode: 200, body: JSON.stringify({ status: 'error', reason: 'Leaderboard came back empty' }) };
+    }
+
+    const isComplete = leaderboard.status === 'Official';
     if (!isComplete) {
-      console.log(`[auto-finalize] "${tournament.name}" not yet complete on ESPN. Will check again.`);
+      console.log(`[auto-finalize] "${tournament.name}" not yet complete. Will check again.`);
       return { statusCode: 200, body: JSON.stringify({ status: 'waiting', reason: 'Tournament not complete yet' }) };
     }
 
@@ -138,191 +153,78 @@ exports.handler = async (event) => {
       return { statusCode: 200, body: JSON.stringify({ status: 'error', reason: 'No lineups' }) };
     }
 
-    // Step 4: Get competitor list — full field from core API if scoreboard is truncated
-    let competitors = espnEvent.competitions?.[0]?.competitors || [];
-
-    if (competitors.length < 30) {
-      console.log(`[auto-finalize] Scoreboard has only ${competitors.length} competitors, fetching full field...`);
-      try {
-        const coreUrl = `https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/events/${eventId}/competitions/${eventId}/competitors?limit=100`;
-        const coreRes = await fetch(coreUrl);
-        if (coreRes.ok) {
-          const coreData = await coreRes.json();
-          const coreRefs = coreData.items || [];
-          const detailFetches = coreRefs.map(async (item) => {
-            try {
-              const ref = item.$ref || item.href;
-              if (!ref) return null;
-              const idMatch = ref.match(/competitors\/(\d+)/);
-              const cId = idMatch ? idMatch[1] : null;
-              if (!cId) return null;
-              const athleteUrl = `https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/events/${eventId}/competitions/${eventId}/competitors/${cId}`;
-              const aRes = await fetch(athleteUrl);
-              if (!aRes.ok) return null;
-              const aData = await aRes.json();
-              let athleteName = '';
-              if (aData.athlete && aData.athlete.$ref) {
-                try {
-                  const nameRes = await fetch(aData.athlete.$ref);
-                  if (nameRes.ok) {
-                    const nameData = await nameRes.json();
-                    athleteName = nameData.displayName || nameData.fullName || '';
-                  }
-                } catch (e) { /* ignore */ }
-              }
-              let score = '';
-              if (aData.score && aData.score.$ref) {
-                try {
-                  const scoreRes = await fetch(aData.score.$ref);
-                  if (scoreRes.ok) {
-                    const scoreData = await scoreRes.json();
-                    score = scoreData.displayValue || '';
-                  }
-                } catch (e) { /* ignore */ }
-              }
-              return { id: cId, athlete: { displayName: athleteName }, score };
-            } catch (e) { return null; }
-          });
-          const fullCompetitors = (await Promise.all(detailFetches)).filter(Boolean);
-          if (fullCompetitors.length > competitors.length) {
-            competitors = fullCompetitors;
-          }
-        }
-      } catch (e) { /* fall back to scoreboard */ }
+    // Step 4: Fetch official earnings and match picked golfers to leaderboard rows
+    let earningsData;
+    try {
+      earningsData = await getEarnings(scheduleEntry.tournId, year);
+    } catch (e) {
+      console.log(`[auto-finalize] Earnings fetch failed: ${e.message}`);
+      earningsData = { leaderboard: [] };
     }
 
-    console.log(`[auto-finalize] Found ${competitors.length} competitors.`);
+    const officialEarningsMap = {};
+    (earningsData.leaderboard || []).forEach(p => { officialEarningsMap[p.playerId] = p.earnings || 0; });
+    const hasOfficialEarnings = Object.keys(officialEarningsMap).length > 0;
+    const earningsSource = hasOfficialEarnings ? 'espn' : 'calculated';
+    console.log(`[auto-finalize] Earnings source: ${earningsSource}`);
 
-    const espnGolfers = competitors.map(c => ({
-      espnId: c.id,
-      name: c.athlete?.displayName || '',
-      score: c.score || ''
-    }));
-
-    // Step 5: Match picked golfers to ESPN
-    const matchedPicked = pickedList.map(pg => {
-      const espnMatch = findEspnMatch(pg.name, espnGolfers);
-      return { ...pg, espnMatch };
+    const apiPlayers = buildPlayersFromLeaderboard(rows);
+    apiPlayers.forEach(p => {
+      if (hasOfficialEarnings) {
+        p.earnings = officialEarningsMap[p.playerId] || 0;
+      } else if (!p.isCut && !p.isWD && p.positionNum !== 999) {
+        p.earnings = calculateTiedEarnings(p.positionNum, p.tiedCount, purse, isMasters);
+      } else {
+        p.earnings = 0;
+      }
     });
 
-    const unmatchedCount = matchedPicked.filter(pg => !pg.espnMatch).length;
+    const matchedPicked = pickedList.map(pg => ({ ...pg, apiMatch: findGolferMatch(pg.name, apiPlayers) }));
+
+    const unmatchedCount = matchedPicked.filter(pg => !pg.apiMatch).length;
     if (unmatchedCount > 0) {
       console.log(`[auto-finalize] WARNING: ${unmatchedCount} golfer(s) could not be matched.`);
     }
 
-    // Step 6: Fetch status for all competitors
-    const allCompetitorIds = competitors.map(c => c.id);
-    const statusMap = {};
-    const batchSize = 25;
-
-    for (let i = 0; i < allCompetitorIds.length; i += batchSize) {
-      const batch = allCompetitorIds.slice(i, i + batchSize);
-      await Promise.all(batch.map(async (cId) => {
-        try {
-          const url = `https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/events/${eventId}/competitions/${eventId}/competitors/${cId}/status`;
-          const res = await fetch(url);
-          if (res.ok) statusMap[cId] = await res.json();
-        } catch (e) { /* ignore */ }
-      }));
-    }
-
-    // Step 7: Try ESPN actual earnings
-    const espnEarningsMap = {};
-    const pickedEspnIds = matchedPicked.filter(pg => pg.espnMatch).map(pg => pg.espnMatch.espnId);
-
-    for (let i = 0; i < pickedEspnIds.length; i += batchSize) {
-      const batch = pickedEspnIds.slice(i, i + batchSize);
-      await Promise.all(batch.map(async (cId) => {
-        try {
-          const statsUrl = `https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/events/${eventId}/competitions/${eventId}/competitors/${cId}/statistics?lang=en&region=us`;
-          const statsRes = await fetch(statsUrl);
-          if (statsRes.ok) {
-            const statsData = await statsRes.json();
-            const stats = statsData.splits?.categories?.[0]?.stats || [];
-            const earningsStat = stats.find(s => s.name === 'amount' || s.name === 'officialAmount');
-            if (earningsStat && earningsStat.value > 0) {
-              espnEarningsMap[cId] = earningsStat.value;
-            }
-          }
-        } catch (e) { /* ignore */ }
-      }));
-    }
-
-    const hasEspnEarnings = Object.keys(espnEarningsMap).length > 0;
-    const earningsSource = hasEspnEarnings ? 'espn' : 'calculated';
-    console.log(`[auto-finalize] Earnings source: ${earningsSource}`);
-
-    // Step 8: Build position groups for tie calculation
-    const positionGroups = {};
-    allCompetitorIds.forEach(cId => {
-      const st = statusMap[cId];
-      if (!st) return;
-      const statusName = st?.type?.name || '';
-      if (statusName === 'STATUS_CUT' || statusName === 'STATUS_WITHDRAWN' || statusName === 'STATUS_DISQUALIFIED') return;
-      const posDisplay = st?.position?.displayName || '';
-      const posNum = parseInt(posDisplay.replace('T', ''));
-      if (!isNaN(posNum)) {
-        if (!positionGroups[posNum]) positionGroups[posNum] = [];
-        positionGroups[posNum].push(cId);
-      }
-    });
-
-    // Step 9: Calculate earnings and save
+    // Step 5: Save earnings and results
     let savedCount = 0;
     const players = await supabase.from('players').select('id').neq('is_guest', true);
     const playerIds = (players.data || []).map(p => p.id);
 
     for (const pg of matchedPicked) {
-      const espnId = pg.espnMatch?.espnId;
-      const st = espnId ? statusMap[espnId] : null;
-      const statusName = st?.type?.name || '';
-      const isCut = statusName === 'STATUS_CUT';
-      const isWD = statusName === 'STATUS_WITHDRAWN' || statusName === 'STATUS_DISQUALIFIED';
-
-      const posDisplay = st?.position?.displayName || '-';
-      const position = isCut ? 'CUT' : isWD ? 'WD' : posDisplay;
-      const posNum = parseInt((posDisplay || '').replace('T', ''));
-      const positionNum = isNaN(posNum) ? 999 : posNum;
-      const isTied = (posDisplay || '').startsWith('T');
-      const tiedCount = isTied ? (positionGroups[positionNum]?.length || 1) : 1;
-
-      let earnings = 0;
-      if (hasEspnEarnings) {
-        earnings = espnEarningsMap[espnId] || 0;
-      } else if (!isCut && !isWD && positionNum < 999) {
-        earnings = calculateTiedEarnings(positionNum, tiedCount, purse, isMasters);
-      }
+      const match = pg.apiMatch;
+      const position = match?.position || '-';
+      const earnings = match?.earnings || 0;
 
       // Always save to golfer_earnings — drives live scoring
       await supabase.from('golfer_earnings').upsert({
         golfer_id: pg.id,
         tournament_id: tournament.id,
-        earnings: earnings,
+        earnings,
         finish_position: position,
-        score: pg.espnMatch?.score || null,
+        score: match?.score || null,
         updated_at: new Date().toISOString()
       }, { onConflict: 'golfer_id,tournament_id' });
 
-      // Only save to results when ESPN returned real payouts — drives Breakdown page
+      // Only save to results when official earnings are available — drives Breakdown page
       // If only calculated estimates are available, sync-official-earnings will handle this later
-      if (hasEspnEarnings) {
-        const scoreToPar = pg.espnMatch?.score ? parseScoreToPar(pg.espnMatch.score) : 0;
+      if (hasOfficialEarnings) {
         await supabase.from('results').upsert({
           tournament_id: tournament.id,
           golfer_id: pg.id,
           finish_position: position,
-          score_to_par: scoreToPar,
-          earnings: earnings,
-          made_cut: !isCut
+          score_to_par: parseScoreToPar(match?.score),
+          earnings,
+          made_cut: !(match?.isCut)
         }, { onConflict: 'tournament_id,golfer_id' });
       }
 
       savedCount++;
     }
 
-    console.log(`[auto-finalize] Saved earnings for ${savedCount} golfers (source: ${earningsSource}). Results table updated: ${hasEspnEarnings}.`);
+    console.log(`[auto-finalize] Saved earnings for ${savedCount} golfers (source: ${earningsSource}). Results table updated: ${hasOfficialEarnings}.`);
 
-    // Step 10: Recalculate weekly scores
+    // Step 6: Recalculate weekly scores
     for (const playerId of playerIds) {
       const playerLineups = (lineups || []).filter(l => l.player_id === playerId);
       let totalEarnings = 0;
@@ -364,7 +266,7 @@ exports.handler = async (event) => {
       }, { onConflict: 'player_id,tournament_id' });
     }
 
-    // Step 11: Recalculate season standings
+    // Step 7: Recalculate season standings
     const { data: completedTournaments } = await supabase
       .from('tournaments')
       .select('id')
@@ -415,7 +317,7 @@ exports.handler = async (event) => {
       }, { onConflict: 'player_id' });
     }
 
-    // Step 12: Mark tournament complete, set next week as current
+    // Step 8: Mark tournament complete, set next week as current
     await supabase.from('tournaments').update({
       is_complete: true,
       is_current: false
@@ -451,108 +353,3 @@ exports.handler = async (event) => {
     return { statusCode: 500, body: JSON.stringify({ status: 'error', error: err.message }) };
   }
 };
-
-function parseScoreToPar(scoreStr) {
-  if (!scoreStr || scoreStr === 'E') return 0;
-  const n = parseInt(scoreStr);
-  return isNaN(n) ? 0 : n;
-}
-
-// Name matching (same logic as scrape-pga-earnings)
-const NAME_CORRECTIONS = {
-  'Matt McCarty': 'Matt McCarty',
-  'Denny McCarthy': 'Denny McCarthy',
-  'Nico Echavarria': 'Nico Echavarria',
-  'K.H. Lee': null,
-  'Ryan Palmer': null,
-  'Gordon Sargent': null,
-};
-
-const DB_NAME_LOCKS = {
-  'denny mccarthy': 'denny mccarthy',
-  'matt mccarty': 'matt mccarty',
-};
-
-const NAME_CORRECTIONS_NORM = {};
-Object.entries(NAME_CORRECTIONS).forEach(([espn, db]) => {
-  const key = espn.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
-  NAME_CORRECTIONS_NORM[key] = db ? db.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim() : null;
-});
-
-function findEspnMatch(dbName, espnGolfers) {
-  if (!dbName || !espnGolfers.length) return null;
-
-  const dbNorm = normalize(dbName);
-  const dbParts = dbNorm.split(' ');
-  const dbFirst = dbParts[0];
-  const dbLast = dbParts[dbParts.length - 1];
-
-  if (dbNorm in DB_NAME_LOCKS) {
-    const requiredEspn = DB_NAME_LOCKS[dbNorm];
-    const exactEspn = espnGolfers.find(eg => normalize(eg.name) === requiredEspn);
-    return exactEspn ? { ...exactEspn, confidence: 1.0 } : null;
-  }
-
-  for (const eg of espnGolfers) {
-    const espnNorm = normalize(eg.name);
-    if (espnNorm in NAME_CORRECTIONS_NORM) {
-      const correctedDb = NAME_CORRECTIONS_NORM[espnNorm];
-      if (correctedDb === null) continue;
-      if (correctedDb === dbNorm) return { ...eg, confidence: 1.0 };
-      continue;
-    }
-  }
-
-  let bestMatch = null;
-  let bestScore = 0;
-
-  for (const eg of espnGolfers) {
-    const espnNorm = normalize(eg.name);
-    if (!espnNorm) continue;
-    if (espnNorm in NAME_CORRECTIONS_NORM) continue;
-    if (dbNorm === espnNorm) return { ...eg, confidence: 1.0 };
-
-    const espnParts = espnNorm.split(' ');
-    const espnFirst = espnParts[0];
-    const espnLast = espnParts[espnParts.length - 1];
-
-    const lastLev = levenshtein(dbLast, espnLast);
-    const lastMaxLen = Math.max(dbLast.length, espnLast.length);
-    const lastSimilarity = 1 - (lastLev / lastMaxLen);
-    if (lastSimilarity < 0.7) continue;
-    if (dbFirst[0] !== espnFirst[0]) continue;
-
-    const firstLev = levenshtein(dbFirst, espnFirst);
-    const firstMaxLen = Math.max(dbFirst.length, espnFirst.length);
-    const firstSimilarity = 1 - (firstLev / firstMaxLen);
-    const isAbbreviated = dbFirst.length <= 2 || espnFirst.length <= 2;
-    if (!isAbbreviated && firstSimilarity < 0.7) continue;
-
-    let score;
-    if (dbFirst === espnFirst && dbLast === espnLast) score = 0.95;
-    else if (dbFirst === espnFirst && lastSimilarity >= 0.85) score = 0.9;
-    else score = (firstSimilarity * 0.4) + (lastSimilarity * 0.6);
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestMatch = { ...eg, confidence: parseFloat(score.toFixed(2)) };
-    }
-  }
-
-  return bestMatch && bestScore >= 0.5 ? bestMatch : null;
-}
-
-function levenshtein(a, b) {
-  const m = a.length, n = b.length;
-  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-  for (let i = 0; i <= m; i++) dp[i][0] = i;
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      dp[i][j] = a[i - 1] === b[j - 1]
-        ? dp[i - 1][j - 1]
-        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
-    }
-  }
-  return dp[m][n];
-}
